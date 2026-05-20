@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fantasy Text RPG</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background-color: #000;
+      color: #0f0;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    #game-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    #output {
+      background-color: #000;
+      border: 1px solid #0f0;
+      padding: 15px;
+      height: 400px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    #input-form {
+      display: flex;
+      gap: 10px;
+    }
+    #command-input {
+      flex-grow: 1;
+      background-color: #000;
+      color: #0f0;
+      border: 1px solid #0f0;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      padding: 8px;
+    }
+    #command-input:focus {
+      outline: none;
+      box-shadow: 0 0 5px #0f0;
+    }
+    .prompt {
+      color: #0f0;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="output"></div>
+    <form id="input-form">
+      <input type="text" id="command-input" autocomplete="off" autofocus>
+    </form>
+  </div>
+
+  <script>
+    const Game = {
+      version: "1.0.0",
+
+      data: {},
+      state: {},
+
+      ui: {},
+      parser: {},
+      engine: {},
+      checks: {},
+      inventory: {},
+      characterCreation: {},
+      clock: {},
+      schedules: {},
+      storage: {},
+      conditions: {},
+      combat: {},
+      dialogue: {},
+      utilities: {}
+    };
+  </script>
+</body>
+</html>
