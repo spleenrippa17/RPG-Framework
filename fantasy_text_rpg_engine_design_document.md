@@ -75,6 +75,7 @@ The engine should:
 12. Save and load using browser storage.
 13. Provide essential save export/import.
 14. Be expandable without rewriting the engine.
+15. Use an appealing aesthetic for the interface
 
 ## 2.2 Design Philosophy
 
