@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fantasy Text RPG</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      color: #0f0;
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    #output {
+      padding: 10px;
+      white-space: pre-wrap;
+      min-height: 400px;
+      max-height: 400px;
+      overflow-y: auto;
+      border-bottom: 1px solid #0f0;
+    }
+    #input {
+      width: 100%;
+      padding: 10px;
+      background: #000;
+      color: #0f0;
+      border: none;
+      font-family: monospace;
+      font-size: 14px;
+      outline: none;
+    }
+    #input::placeholder {
+      color: #060;
+    }
+  </style>
+</head>
+<body>
+  <pre id="output"></pre>
+  <input id="input" type="text" placeholder="Enter command...">
+  <script>
+    const Game = {
+      version: "1.0.0",
+
+      data: {},
+      state: {},
+
+      ui: {},
+      parser: {},
+      engine: {},
+      checks: {},
+      inventory: {},
+      characterCreation: {},
+      clock: {},
+      schedules: {},
+      storage: {},
+      conditions: {},
+      combat: {},
+      dialogue: {},
+      utilities: {}
+    };
+
+    Game.ui = {
+      output: function(text) {
+        document.getElementById('output').textContent += text + '\n';
+        document.getElementById('output').scrollTop = document.getElementById('output').scrollHeight;
+      },
+      clearInput: function() {
+        document.getElementById('input').value = '';
+      }
+    };
+
+    document.getElementById('input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        const command = e.target.value;
+        Game.ui.output('> ' + command);
+        Game.ui.clearInput();
+      }
+    });
+  </script>
+</body>
+</html>
