@@ -790,6 +790,403 @@
             }
         };
         /* eslint-enable no-unused-vars */
+
+        // ============================================================
+        // GAME MODE CONSTANTS  — Section 7
+        // The engine uses four distinct modes that determine how
+        // input is routed and which UI is shown.
+        // ============================================================
+        const GameModes = {
+            TITLE: "title",
+            CHARACTER_CREATION: "character_creation",
+            PLAYING: "playing",
+            GAME_OVER: "game_over"
+        };
+
+        // ============================================================
+        // UI SYSTEM  — Section 30
+        // Terminal-style output, input handling, and mode-aware display.
+        // ============================================================
+        const UI = {
+            /**
+             * Append a line of text to the output <div>.
+             * @param {string} text
+             */
+            print: function(text) {
+                var line = document.createElement("div");
+                line.textContent = text;
+                document.getElementById("output").appendChild(line);
+                this.scrollOutput();
+            },
+
+            /**
+             * Append a blank line to the output.
+             */
+            printBlank: function() {
+                this.print("");
+            },
+
+            /**
+             * Clear all output.
+             */
+            clear: function() {
+                document.getElementById("output").innerHTML = "";
+            },
+
+            /**
+             * Scroll the output area to the bottom.
+             */
+            scrollOutput: function() {
+                var el = document.getElementById("output");
+                el.scrollTop = el.scrollHeight;
+            },
+
+            /**
+             * Display the title screen banner.
+             */
+            showTitle: function() {
+                this.clear();
+                this.print("");
+                this.print("  ╔══════════════════════════════════════════════════╗");
+                this.print("  ║                                                  ║");
+                this.print("  ║     T H E   W A S T E   R I G H T S             ║");
+                this.print("  ║                                                  ║");
+                this.print("  ║            A Fantasy Text RPG                    ║");
+                this.print("  ║                                                  ║");
+                this.print("  ╚══════════════════════════════════════════════════╝");
+                this.print("");
+                this.print("  Type 'start' to begin your adventure.");
+                this.print("  Type 'help' for a list of commands.");
+                this.print("");
+            },
+
+            /**
+             * Display the game-over screen.
+             */
+            showGameOver: function() {
+                this.clear();
+                this.print("");
+                this.print("  ═══════════════════════════════════════════════════");
+                this.print("");
+                this.print("              Y O U R   S T O R Y   E N D S");
+                this.print("");
+                this.print("  ═══════════════════════════════════════════════════");
+                this.print("");
+                this.print("  Type 'restart' to begin again.");
+                this.print("");
+            },
+
+            /**
+             * Print common help text.
+             * @param {string} [context] — 'title' | 'playing' | 'character_creation'
+             */
+            showHelp: function(context) {
+                if (context === "title") {
+                    this.print("Commands:");
+                    this.print("  start     — Begin a new adventure");
+                    this.print("  help      — Show this list");
+                    this.print("");
+                    return;
+                }
+                if (context === "character_creation") {
+                    this.print("Commands:");
+                    this.print("  increase <stat>   — Raise a stat by 1");
+                    this.print("  decrease <stat>   — Lower a stat by 1");
+                    this.print("  set <stat> <n>    — Set a stat to n");
+                    this.print("  skills            — View available skills");
+                    this.print("  continue          — Confirm character and start");
+                    this.print("  back              — Go back a step");
+                    this.print("  help              — Show this list");
+                    this.print("");
+                    return;
+                }
+                // playing / default
+                this.print("Commands:");
+                this.print("  look                — Describe your surroundings");
+                this.print("  go <direction>      — Move north/south/east/west/up/down");
+                this.print("  take <item>         — Pick up an item");
+                this.print("  drop <item>         — Drop an item");
+                this.print("  inventory           — List your items");
+                this.print("  equip <item>        — Equip an item");
+                this.print("  unequip <slot>      — Remove an equipped item");
+                this.print("  examine <target>    — Look closely at something");
+                this.print("  use <item>          — Use a consumable or item");
+                this.print("  stats               — Show your character sheet");
+                this.print("  save / load         — Save or load your game");
+                this.print("  help                — Show this list");
+                this.print("");
+            }
+        };
+
+        // ============================================================
+        // GAME  — UI extension: title, mode routing, and event wiring
+        // ============================================================
+        /**
+         * Show the title screen and set mode to TITLE.
+         */
+        Game.ui = {
+            /**
+             * Display the title screen.
+             */
+            start: function() {
+                Game.gameMode(GameModes.TITLE);
+                UI.showTitle();
+            },
+
+            /**
+             * Handle a command when in TITLE mode.
+             * @param {string} inputText
+             */
+            handleTitleInput: function(inputText) {
+                var cmd = inputText.trim().toLowerCase();
+
+                if (cmd === "") {
+                    return;
+                }
+
+                switch (cmd) {
+                    case "start":
+                        // Transition to character creation — stub for now;
+                        // full builder is a later bead.
+                        Game.gameMode(GameModes.CHARACTER_CREATION);
+                        UI.clear();
+                        UI.print("╔══════════════════════════════════════╗");
+                        UI.print("║       C H A R A C T E R   C R E A T I O N       ║");
+                        UI.print("╚══════════════════════════════════════╝");
+                        UI.print("");
+                        UI.print("Character creation is being set up.");
+                        UI.print("Type 'help' for available commands, or 'continue' to play.");
+                        break;
+
+                    case "help":
+                        UI.showHelp("title");
+                        break;
+
+                    default:
+                        UI.print("Unknown command. Type 'help' for a list.");
+                        break;
+                }
+            },
+
+            /**
+             * Handle a command when in CHARACTER_CREATION mode.
+             * @param {string} inputText
+             */
+            handleCharacterCreationInput: function(inputText) {
+                var cmd = inputText.trim().toLowerCase();
+
+                if (cmd === "") {
+                    return;
+                }
+
+                switch (cmd) {
+                    case "help":
+                        UI.showHelp("character_creation");
+                        break;
+
+                    case "back":
+                        UI.print("Already at the first step. You cannot go back from here.");
+                        break;
+
+                    case "continue":
+                        // Build a default skeleton player so game can proceed.
+                        // Full builder arrives on a later bead.
+                        var skeletonPlayer = {
+                            id: "player",
+                            name: "Adventurer",
+                            background: "mercenary",
+                            level: 1,
+                            xp: 0,
+                            stats: {
+                                might: 1, agility: 1,
+                                endurance: 1, intellect: 1,
+                                will: 1, presence: 1
+                            },
+                            skills: {},
+                            conditions: [],
+                            inventory: [],
+                            equipment: {
+                                weapon: null,
+                                armor: null,
+                                accessory1: null,
+                                accessory2: null
+                            },
+                            maxHp: 12,
+                            hp: 12,
+                            maxStamina: 10,
+                            stamina: 10,
+                            maxMana: 0,
+                            mana: 0
+                        };
+                        Game.initState(skeletonPlayer);
+                        Game.gameMode(GameModes.PLAYING);
+                        UI.clear();
+                        UI.print("Welcome, " + skeletonPlayer.name + ".");
+                        UI.print("You wake to the smell of damp earth. The world awaits.");
+                        UI.printBlank();
+                        break;
+
+                    default:
+                        UI.print("Unknown command. Type 'help' for available commands.");
+                        break;
+                }
+            },
+
+            /**
+             * Handle a command when in PLAYING mode.
+             * Delegates to the game engine (a later bead: 3 / 6).
+             * For now echoes the command so the UI pipeline works end to end.
+             * @param {string} inputText
+             */
+            handlePlayingInput: function(inputText) {
+                var cmd = inputText.trim().toLowerCase();
+
+                if (cmd === "") {
+                    return;
+                }
+
+                if (cmd === "help") {
+                    UI.showHelp("playing");
+                    return;
+                }
+
+                if (cmd === "stats") {
+                    var player = Game.getPlayer();
+                    if (player) {
+                        UI.print("╔══════════════════════════════════╗");
+                        UI.print("║          C H A R A C T E R         ║");
+                        UI.print("╠══════════════════════════════════╣");
+                        UI.print("║  Name:        " + String(player.name).padEnd(21) + "║");
+                        UI.print("║  Level:       " + String(player.level).padEnd(21) + "║");
+                        UI.print("║  Background:  " + String(player.background).padEnd(21) + "║");
+                        UI.print("╠══════════════════════════════════╣");
+                        UI.print("║  STR  " + String(player.stats.might).padEnd(5) +
+                                 "  AGI  " + String(player.stats.agility).padEnd(5) +
+                                 "  END  " + String(player.stats.endurance).padEnd(5) + " ║");
+                        UI.print("║  INT  " + String(player.stats.intellect).padEnd(5) +
+                                 "  WIL  " + String(player.stats.will).padEnd(5) +
+                                 "  PRE  " + String(player.stats.presence).padEnd(5) + " ║");
+                        UI.print("╠══════════════════════════════════╣");
+                        UI.print("║  HP:   " + player.hp + " / " + player.maxHp +
+                                 "     STA:  " + player.stamina + " / " + player.maxStamina + "          ║");
+                        UI.print("╚══════════════════════════════════╝");
+                    }
+                    return;
+                }
+
+                if (cmd === "look") {
+                    UI.print("(World engine not yet connected — see bead 3.)");
+                    return;
+                }
+
+                // Placeholder for all other commands until the engine bead lands.
+                UI.print("(No engine handler for '" + cmd + "' yet — bead 6 is in progress.)");
+            },
+
+            /**
+             * Handle a command when in GAME_OVER mode.
+             * @param {string} inputText
+             */
+            handleGameOverInput: function(inputText) {
+                var cmd = inputText.trim().toLowerCase();
+
+                if (cmd === "restart") {
+                    UI.clear();
+                    this.start();
+                    return;
+                }
+
+                if (cmd === "") {
+                    return;
+                }
+
+                UI.print("Type 'restart' to begin a new game.");
+            },
+
+            /**
+             * Top-level input router.
+             * Dispatches to the correct handler based on the current game mode.
+             * This is the single entry point called by the DOM event listener.
+             * @param {string} rawInput
+             */
+            handleInput: function(rawInput) {
+                if (!rawInput) {
+                    return;
+                }
+
+                var mode = Game.hasState() ? Game.state.mode : GameModes.TITLE;
+
+                switch (mode) {
+                    case GameModes.TITLE:
+                        this.handleTitleInput(rawInput);
+                        break;
+
+                    case GameModes.CHARACTER_CREATION:
+                        this.handleCharacterCreationInput(rawInput);
+                        break;
+
+                    case GameModes.PLAYING:
+                        this.handlePlayingInput(rawInput);
+                        break;
+
+                    case GameModes.GAME_OVER:
+                        this.handleGameOverInput(rawInput);
+                        break;
+
+                    default:
+                        UI.print("Unknown game mode: " + mode);
+                        break;
+                }
+            }
+        };
+
+        // ============================================================
+        // DOM EVENT WIRING
+        // ============================================================
+        /**
+         * Called whenever the user presses a key inside the input field.
+         * Submits the command on Enter and then auto-focuses the input
+         * again so typing never stops.
+         */
+        function onInputKeydown(event) {
+            if (event.key === "Enter") {
+                var inputEl = document.getElementById("input");
+                var rawText  = inputEl.value;
+
+                UI.print("> " + rawText);
+                inputEl.value = "";
+
+                Game.ui.handleInput(rawText);
+
+                // Re-focus so the user can keep typing without clicking.
+                inputEl.focus();
+            }
+        }
+
+        /**
+         * Keep the output log scrolled to the bottom whenever new content
+         * changes the scrollHeight.
+         */
+        function onOutputResize() {
+            UI.scrollOutput();
+        }
+
+        /**
+         * Boot the game when the page finishes loading:
+         * focus the input field and show the title screen.
+         */
+        window.addEventListener("load", function() {
+            document.getElementById("input").focus();
+            Game.ui.start();
+        });
+
+        // Wire input event listener
+        document.getElementById("input").addEventListener("keydown", onInputKeydown);
+
+        // Watch DOM mutations on the output log so new lines auto-scroll.
+        var outputEl  = document.getElementById("output");
+        var observer  = new MutationObserver(onOutputResize);
+        observer.observe(outputEl, { childList: true });
     </script>
 </body>
 </html>
