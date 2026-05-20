@@ -41,10 +41,38 @@
   <pre id="output"></pre>
   <input id="input" type="text" placeholder="Enter command...">
   <script>
+    const DATA = {
+      locations: [],
+      items: [],
+      npcs: [],
+      monsters: [],
+      backgrounds: [],
+      schedules: [],
+      dialogues: [],
+      conditions: [],
+      spells: [],
+      skills: [],
+      quests: []
+    };
+
+    const IDFields = {
+      location: "id",
+      item: "id",
+      npc: "id",
+      monster: "id",
+      schedule: "id",
+      background: "id",
+      skill: "id",
+      condition: "id",
+      dialogue: "id",
+      quest: "id",
+      spell: "id"
+    };
+
     const Game = {
       version: "1.0.0",
 
-      data: {},
+      data: DATA,
       state: {},
 
       ui: {},
