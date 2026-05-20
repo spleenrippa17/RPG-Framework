@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantasy Text RPG Engine</title>
+    <style>
+        body {
+            font-family: monospace;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+        }
+        #output {
+            background-color: #0a0a0a;
+            border: 1px solid #333;
+            padding: 15px;
+            height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-bottom: 10px;
+        }
+        #input {
+            background-color: #0a0a0a;
+            border: 1px solid #333;
+            color: #e0e0e0;
+            font-family: monospace;
+            font-size: 16px;
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        #input:focus {
+            outline: none;
+            border-color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div id="output"></div>
+    <input type="text" id="input" placeholder="Enter command..." autocomplete="off" autocapitalize="none" spellcheck="false">
+
+    <script>
+        const Game = {
+            version: "1.0.0",
+
+            data: {},
+            state: {},
+
+            ui: {},
+            parser: {},
+            engine: {},
+            checks: {},
+            inventory: {},
+            characterCreation: {},
+            clock: {},
+            schedules: {},
+            storage: {},
+            conditions: {},
+            combat: {},
+            dialogue: {},
+            utilities: {}
+        };
+    </script>
+</body>
+</html>
