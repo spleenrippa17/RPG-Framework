@@ -42,26 +42,754 @@
     <input type="text" id="input" placeholder="Enter command..." autocomplete="off" autocapitalize="none" spellcheck="false">
 
     <script>
+        // ============================================================
+        // STATIC DATA SYSTEM  — Section 5.1
+        // Holds static JSON collections for the game world.
+        // These are read-only during gameplay and not saved to localStorage.
+        // ============================================================
+        const DATA = {
+            locations: [
+                {
+                    id: "village_square",
+                    name: "Village Square",
+                    descriptions: [
+                        { text: "You stand in the muddy square of a small frontier village. A stone well sits in the center.", conditions: [] }
+                    ],
+                    exits: {
+                        north:  { to: "general_store",       travelMinutes: 10, conditions: [] },
+                        south:  { to: "silver_stag_tavern",   travelMinutes: 10, conditions: [] },
+                        east:   { to: "temple_yard",          travelMinutes: 10, conditions: [] },
+                        west:   { to: "forest_edge",          travelMinutes: 15, conditions: [] }
+                    },
+                    items: ["village_notice"],
+                    tags: ["settlement", "outdoors"]
+                },
+                {
+                    id: "general_store",
+                    name: "General Store",
+                    descriptions: [
+                        { text: "A cramped shop stacked with crates, barrels, and shelves. The air smells of salt pork and herbs.", conditions: [] }
+                    ],
+                    exits: {
+                        south: { to: "village_square", travelMinutes: 10, conditions: [] }
+                    },
+                    items: [],
+                    tags: ["settlement", "indoors"]
+                },
+                {
+                    id: "silver_stag_tavern",
+                    name: "Silver Stag Tavern",
+                    descriptions: [
+                        { text: "The tavern is dim and warm. A fire crackles in the hearth and a few villagers nurse their drinks.", conditions: [] }
+                    ],
+                    exits: {
+                        north: { to: "village_square", travelMinutes: 10, conditions: [] }
+                    },
+                    items: [],
+                    tags: ["settlement", "indoors"]
+                },
+                {
+                    id: "temple_yard",
+                    name: "Temple Yard",
+                    descriptions: [
+                        { text: "A quiet courtyard ringed by weathered stone columns. Wild herbs grow between the flagstones.", conditions: [] }
+                    ],
+                    exits: {
+                        west:  { to: "village_square",  travelMinutes: 10, conditions: [] },
+                        east:  { to: "old_barrow",       travelMinutes: 20, conditions: [] }
+                    },
+                    items: [],
+                    tags: ["settlement", "outdoors", "holy"]
+                },
+                {
+                    id: "forest_edge",
+                    name: "Forest Edge",
+                    descriptions: [
+                        { text: "The trees crowd close here. The forest path continues northward into shadow.", conditions: [] }
+                    ],
+                    exits: {
+                        east:  { to: "village_square",  travelMinutes: 15, conditions: [] },
+                        north: { to: "north_wood",       travelMinutes: 20, conditions: [] }
+                    },
+                    items: [],
+                    tags: ["wilderness", "outdoors"]
+                },
+                {
+                    id: "north_wood",
+                    name: "North Wood",
+                    descriptions: [
+                        { text: "Old trees tower overhead. The path forks toward a crumbling burial mound to the east.", conditions: [] }
+                    ],
+                    exits: {
+                        south: { to: "forest_edge", travelMinutes: 20, conditions: [] },
+                        east:  { to: "old_barrow",  travelMinutes: 15, conditions: [] }
+                    },
+                    items: [],
+                    tags: ["wilderness", "outdoors", "dangerous"]
+                },
+                {
+                    id: "old_barrow",
+                    name: "Old Barrow",
+                    descriptions: [
+                        { text: "An ancient earthen mound half-buried in bramble. A dark entrance leads into the earth.", conditions: [] }
+                    ],
+                    exits: {
+                        west:  { to: "temple_yard",  travelMinutes: 20, conditions: [] },
+                        south: { to: "north_wood",   travelMinutes: 15, conditions: [] },
+                        down:  { to: "barrow_passage", travelMinutes: 0, conditions: [] }
+                    },
+                    items: [],
+                    tags: ["dungeon", "outdoors"]
+                },
+                {
+                    id: "barrow_passage",
+                    name: "Barrow Passage",
+                    descriptions: [
+                        { text: "A low, damp corridor of packed earth and stone. The air hangs thick with old dust.", conditions: [] }
+                    ],
+                    exits: {
+                        up: { to: "old_barrow", travelMinutes: 0, conditions: [] }
+                    },
+                    items: [],
+                    tags: ["dungeon", "indoors", "dangerous"]
+                }
+            ],
+
+            items: [
+                {
+                    id: "hunting_bow",
+                    name: "hunting bow",
+                    type: "weapon",
+                    aliases: ["bow", "yew bow"],
+                    description: "A simple but well-kept bow of yew wood.",
+                    weight: 2, stackable: false, portable: true,
+                    slot: "weapon", skill: "ranged", stat: "agility",
+                    damage: "1d6", attackBonus: 0, value: 15
+                },
+                {
+                    id: "rusty_sword",
+                    name: "rusty sword",
+                    type: "weapon",
+                    aliases: ["sword", "blade", "iron sword"],
+                    description: "A plain but reliable iron sword.",
+                    weight: 3, stackable: false, portable: true,
+                    slot: "weapon", skill: "melee", stat: "might",
+                    damage: "1d6", attackBonus: 0, value: 5
+                },
+                {
+                    id: "skinning_knife",
+                    name: "skinning knife",
+                    type: "weapon",
+                    aliases: ["knife", "hunting knife"],
+                    description: "A small sharp blade for dressing game.",
+                    weight: 1, stackable: false, portable: true,
+                    slot: "weapon", skill: "melee", stat: "agility",
+                    damage: "1d4", attackBonus: 0, value: 2
+                },
+                {
+                    id: "travel_cloak",
+                    name: "travel cloak",
+                    type: "armor",
+                    aliases: ["cloak"],
+                    description: "A heavy woolen cloak dyed forest green.",
+                    weight: 2, stackable: false, portable: true,
+                    slot: "armor", defenseBonus: 1, stealthPenalty: 0, agilityPenalty: 0, value: 10
+                },
+                {
+                    id: "chainmail",
+                    name: "chainmail",
+                    type: "armor",
+                    aliases: ["mail", "chain"],
+                    description: "Interlinked steel rings offering solid protection.",
+                    weight: 35, stackable: false, portable: true,
+                    slot: "armor", defenseBonus: 3, stealthPenalty: -2, agilityPenalty: -1, value: 75
+                },
+                {
+                    id: "travel_rations",
+                    name: "travel rations",
+                    type: "consumable",
+                    aliases: ["rations", "food"],
+                    description: "Dried meat, hard bread, and a little cheese wrapped in cloth.",
+                    weight: 1, stackable: true, portable: true, value: 1
+                },
+                {
+                    id: "old_iron_key",
+                    name: "old iron key",
+                    type: "key",
+                    aliases: ["key", "iron key"],
+                    description: "An old key with a dark red stain near the teeth.",
+                    weight: 0, stackable: false, portable: true, value: 0
+                },
+                {
+                    id: "torch",
+                    name: "torch",
+                    type: "light",
+                    aliases: ["light"],
+                    description: "A wooden torch wrapped in oil-soaked cloth. Burns for an hour.",
+                    weight: 1, stackable: true, portable: true,
+                    lightRadius: 6, burnMinutes: 60, value: 1
+                },
+                {
+                    id: "village_notice",
+                    name: "village notice",
+                    type: "book",
+                    aliases: ["notice", "parchment", "posted notice"],
+                    description: "A notice nailed to the well. 'Reward for clearing the old barrow of vermin. Speak to the Reeve.'",
+                    weight: 0, stackable: false, portable: true, value: 0
+                }
+            ],
+
+            npcs: [
+                {
+                    id: "borin_shopkeeper",
+                    name: "Borin the Shopkeeper",
+                    aliases: ["borin", "shopkeeper", "merchant"],
+                    type: "npc",
+                    description: "Borin is a broad man with careful eyes and ink-stained fingers.",
+                    stats:    { might: 1, agility: 0, endurance: 1, intellect: 1, will: 1, presence: 2 },
+                    skills:   { athletics: 0, stealth: 0, thievery: 0, survival: 0, lore: 1, investigation: 0, persuasion: 2, deception: 1, intimidation: 0, melee: 0, ranged: 0, defense: 0, magic: 0 },
+                    resources: { hp: 12, maxHp: 12 },
+                    defense: 10,
+                    disposition: { baseAttitude: 0, faction: "village" },
+                    dialogueId: "borin_dialogue",
+                    scheduleId: "borin_daily",
+                    defaultLocation: "general_store"
+                },
+                {
+                    id: "tavern_keeper",
+                    name: "Mara the Tavern Keeper",
+                    aliases: ["mara", "tavern keeper", "innkeeper"],
+                    type: "npc",
+                    description: "Mara keeps a close watch on her patrons and her coin box.",
+                    stats:    { might: 0, agility: 0, endurance: 1, intellect: 0, will: 1, presence: 1 },
+                    skills:   { athletics: 0, stealth: 0, thievery: 0, survival: 0, lore: 0, investigation: 1, persuasion: 2, deception: 1, intimidation: 0, melee: 0, ranged: 0, defense: 0, magic: 0 },
+                    resources: { hp: 10, maxHp: 10 },
+                    defense: 9,
+                    disposition: { baseAttitude: 0, faction: "village" },
+                    dialogueId: "mara_dialogue",
+                    scheduleId: "mara_daily",
+                    defaultLocation: "silver_stag_tavern"
+                },
+                {
+                    id: "goblin_scout",
+                    name: "goblin scout",
+                    aliases: ["goblin", "scout"],
+                    type: "npc",
+                    description: "A wiry goblin with yellow eyes and a jagged knife.",
+                    stats:    { might: 0, agility: 2, endurance: 0, intellect: -1, will: 0, presence: -1 },
+                    skills:   { athletics: 1, stealth: 2, thievery: 1, survival: 2, lore: 0, investigation: 0, persuasion: -1, deception: 0, intimidation: -1, melee: 1, ranged: 1, defense: 1, magic: 0 },
+                    resources: { hp: 8, maxHp: 8 },
+                    defense: 13,
+                    disposition: { baseAttitude: -3, faction: "goblins" },
+                    dialogueId: null,
+                    scheduleId: "goblin_patrol",
+                    defaultLocation: "north_wood"
+                },
+                {
+                    id: "reeve",
+                    name: "Reeve Halden",
+                    aliases: ["halden", "reeve"],
+                    type: "npc",
+                    description: "A weathered man with a frayed seal of office hanging around his neck. He looks tired but determined.",
+                    stats:    { might: 0, agility: 0, endurance: 1, intellect: 0, will: 1, presence: 1 },
+                    skills:   { athletics: 0, stealth: 0, thievery: 0, survival: 0, lore: 0, investigation: 0, persuasion: 1, deception: 0, intimidation: 0, melee: 0, ranged: 0, defense: 0, magic: 0 },
+                    resources: { hp: 14, maxHp: 14 },
+                    defense: 9,
+                    disposition: { baseAttitude: 0, faction: "village" },
+                    dialogueId: "reeve_dialogue",
+                    scheduleId: "reeve_daily",
+                    defaultLocation: "village_square"
+                }
+            ],
+
+            monsters: [],
+
+            backgrounds: [
+                {
+                    id: "mercenary",
+                    name: "Mercenary",
+                    description: "You fought for coin before you fought for anything else.",
+                    statBonuses:    { might: 1, endurance: 1 },
+                    skillBonuses:   { melee: 1, athletics: 1 },
+                    startingItems:  [
+                        { itemId: "rusty_sword", quantity: 1 },
+                        { itemId: "travel_rations", quantity: 2 },
+                        { itemId: "torch", quantity: 2 }
+                    ],
+                    startingEquipment: { weapon: "rusty_sword", armor: null },
+                    startingGold:  12,
+                    flags: {},
+                    reputation:    { village: 0, church: 0, thieves_guild: 0 }
+                },
+                {
+                    id: "village_hunter",
+                    name: "Village Hunter",
+                    description: "You know the old tracks, the deer paths, and the silence before danger.",
+                    statBonuses:    { agility: 1, endurance: 1 },
+                    skillBonuses:   { survival: 2, ranged: 1, stealth: 1 },
+                    startingItems:  [
+                        { itemId: "hunting_bow", quantity: 1 },
+                        { itemId: "skinning_knife", quantity: 1 },
+                        { itemId: "travel_cloak", quantity: 1 },
+                        { itemId: "travel_rations", quantity: 3 },
+                        { itemId: "flint_and_steel", quantity: 1 }
+                    ],
+                    startingEquipment: { weapon: "hunting_bow", armor: "travel_cloak" },
+                    startingGold:  8,
+                    flags: { knows_forest_paths: true },
+                    reputation:    { village: 1, goblins: -1 }
+                },
+                {
+                    id: "hedge_wizard",
+                    name: "Hedge Wizard",
+                    description: "You learned a handful of cantrips from an old book found in a dung heap.",
+                    statBonuses:    { will: 1, intellect: 1 },
+                    skillBonuses:   { magic: 1, lore: 1 },
+                    startingItems:  [
+                        { itemId: "torch", quantity: 2 },
+                        { itemId: "travel_rations", quantity: 2 },
+                        { itemId: "old_iron_key", quantity: 1 }
+                    ],
+                    startingEquipment: { weapon: null, armor: null },
+                    startingGold:  5,
+                    flags: {},
+                    reputation:    { church: -1 }
+                },
+                {
+                    id: "temple_acolyte",
+                    name: "Temple Acolyte",
+                    description: "You served a small shrine for years, learning faith and healing lore.",
+                    statBonuses:    { will: 1, endurance: 1 },
+                    skillBonuses:   { lore: 1, magic: 1 },
+                    startingItems:  [
+                        { itemId: "travel_rations", quantity: 2 },
+                        { itemId: "torch", quantity: 1 }
+                    ],
+                    startingEquipment: { weapon: null, armor: null },
+                    startingGold:  3,
+                    flags: {},
+                    reputation:    { church: 2 }
+                },
+                {
+                    id: "grave_robber",
+                    name: "Grave Robber",
+                    description: "You know how to move quietly. And how to break and enter.",
+                    statBonuses:    { agility: 1, intellect: 1 },
+                    skillBonuses:   { thievery: 1, stealth: 1, investigation: 1 },
+                    startingItems:  [
+                        { itemId: "skinning_knife", quantity: 1 },
+                        { itemId: "torch", quantity: 2 },
+                        { itemId: "old_iron_key", quantity: 1 },
+                        { itemId: "travel_rations", quantity: 1 }
+                    ],
+                    startingEquipment: { weapon: "skinning_knife", armor: null },
+                    startingGold:  15,
+                    flags: { knows_old_passages: true },
+                    reputation:    { thieves_guild: 1 }
+                },
+                {
+                    id: "street_urchin",
+                    name: "Street Urchin",
+                    description: "You survived by your wits and quick feet on narrow alleys.",
+                    statBonuses:    { agility: 1, presence: 1 },
+                    skillBonuses:   { stealth: 1, deception: 1, persuasion: 1 },
+                    startingItems:  [
+                        { itemId: "travel_rations", quantity: 1 },
+                        { itemId: "torch", quantity: 1 }
+                    ],
+                    startingEquipment: { weapon: null, armor: null },
+                    startingGold:  5,
+                    flags: {},
+                    reputation:    { village: 0 }
+                }
+            ],
+
+            skills: [
+                { id: "athletics",     name: "Athletics",     mainStat: "might"       },
+                { id: "stealth",       name: "Stealth",       mainStat: "agility"     },
+                { id: "thievery",      name: "Thievery",      mainStat: "agility"     },
+                { id: "survival",      name: "Survival",      mainStat: "endurance"   },
+                { id: "lore",          name: "Lore",          mainStat: "intellect"   },
+                { id: "investigation", name: "Investigation", mainStat: "intellect"   },
+                { id: "persuasion",    name: "Persuasion",    mainStat: "presence"    },
+                { id: "deception",     name: "Deception",     mainStat: "presence"    },
+                { id: "intimidation",  name: "Intimidation",  mainStat: "presence"    },
+                { id: "melee",         name: "Melee",         mainStat: "might"       },
+                { id: "ranged",        name: "Ranged",        mainStat: "agility"     },
+                { id: "defense",       name: "Defense",       mainStat: "agility"     },
+                { id: "magic",         name: "Magic",         mainStat: "will"        }
+            ],
+
+            conditions: [
+                {
+                    id: "poisoned",
+                    name: "Poisoned",
+                    description: "Your body aches and your hands tremble.",
+                    modifiers: { endurance: -1, agility: -1 }
+                },
+                {
+                    id: "blessed",
+                    name: "Blessed",
+                    description: "A faint warmth surrounds you. Fortune seems to smile.",
+                    modifiers: { will: +1 }
+                },
+                {
+                    id: "tired",
+                    name: "Tired",
+                    description: "You need sleep. Stamina recovery is reduced.",
+                    modifiers: { endurance: -1 }
+                },
+                {
+                    id: "exhausted",
+                    name: "Exhausted",
+                    description: "You can barely keep your eyes open.",
+                    modifiers: { agility: -2, might: -1, endurance: -1 }
+                },
+                {
+                    id: "cursed",
+                    name: "Cursed",
+                    description: "A cold weight presses on your spirit.",
+                    modifiers: { will: -2, presence: -1 }
+                }
+            ],
+
+            schedules: [
+                {
+                    id: "borin_daily",
+                    entries: [
+                        { start: 360,  end: 480,  location: "borin_home",            activity: "eating breakfast"  },
+                        { start: 480,  end: 1080, location: "general_store",          activity: "working behind the counter" },
+                        { start: 1080, end: 1260, location: "silver_stag_tavern",      activity: "drinking ale"       },
+                        { start: 1260, end: 360,  location: "borin_home",            activity: "sleeping"           }
+                    ]
+                },
+                {
+                    id: "mara_daily",
+                    entries: [
+                        { start: 420,  end: 1020, location: "silver_stag_tavern",     activity: "serving customers" },
+                        { start: 1020, end: 1280, location: "silver_stag_tavern",     activity: "closing up"        },
+                        { start: 1280, end: 1330, location: "mara_house",             activity: "eating dinner"     },
+                        { start: 1330, end: 420,  location: "mara_house",             activity: "sleeping"          }
+                    ]
+                },
+                {
+                    id: "goblin_patrol",
+                    entries: [
+                        { start: 360,  end: 720,  location: "north_wood",        activity: "patrolling the woods" },
+                        { start: 720,  end: 1140, location: "forest_edge",       activity: "skulking near the path" },
+                        { start: 1140, end: 360,  location: "north_wood",        activity: "resting in cover"     }
+                    ]
+                },
+                {
+                    id: "reeve_daily",
+                    entries: [
+                        { start: 480,  end: 960,  location: "village_square",    activity: "collecting tithes" },
+                        { start: 960,  end: 1200, location: "general_store",     activity: "haggling with Borin" },
+                        { start: 1200, end: 1320, location: "silver_stag_tavern", activity: "discussing village matters" },
+                        { start: 1320, end: 480,  location: "reeve_house",       activity: "sleeping"           }
+                    ]
+                }
+            ],
+
+            dialogues: [
+                {
+                    id: "borin_dialogue",
+                    nodeId: "borin_greeting",
+                    nodes: {
+                        "borin_greeting": {
+                            text: "\"Afternoon, traveller. Looking to buy — or sell?\"",
+                            choices: [
+                                { text: "\"I am looking to buy.\"",     next: "borin_sell",   effects: [] },
+                                { text: "\"Tell me about this place.\"", next: "borin_village", effects: [] },
+                                { text: "\"Nothing, thanks.\"",         next: "borin_farewell", effects: [] }
+                            ]
+                        },
+                        "borin_sell": {
+                            text: "\"Good stock and fair prices for the right coin.\"",
+                            choices: [
+                                { text: "\"What do you have?\"",         next: "borin_greeting", effects: [] },
+                                { text: "\"Thank you.\"",                next: "borin_farewell", effects: [] }
+                            ]
+                        },
+                        "borin_village": {
+                            text: "\"Small folk, hard winters. The barrow to the east is an old sacred site — folk say it holds foul things now. The Reeve pays for anyone bold enough to deal with it.\"",
+                            choices: [
+                                { text: "\"Who is the Reeve?\"",         next: "borin_reeve",   effects: [] },
+                                { text: "\"Understood.\"",               next: "borin_farewell", effects: [] }
+                            ]
+                        },
+                        "borin_reeve": {
+                            text: "\"Halden. Honest enough, but stubborn. He posts the reward on the notice, clear as anything.\"",
+                            choices: [
+                                { text: "\"Thanks for the information.\"", next: "borin_farewell", effects: [] }
+                            ]
+                        },
+                        "borin_farewell": {
+                            text: "\"Safe travels.\"",
+                            choices: [
+                                { text: "[End conversation]", next: null, effects: [] }
+                            ]
+                        }
+                    }
+                },
+                {
+                    id: "mara_dialogue",
+                    nodeId: "mara_greeting",
+                    nodes: {
+                        "mara_greeting": {
+                            text: "\"Thirsty or hungry?\" Mara wipes the bar with a rough cloth.",
+                            choices: [
+                                { text: "\"Just a drink.\"",          next: "mara_drink",   effects: [] },
+                                { text: "\"I heard there is a reward.\"", next: "mara_reward", effects: [] },
+                                { text: "\"Nothing, thank you.\"",    next: "mara_farewell", effects: [] }
+                            ]
+                        },
+                        "mara_drink": {
+                            text: "\"Ale is two coppers. Water is free.\"",
+                            choices: [
+                                { text: "\"Ale, then.\"",             next: "mara_greeting", effects: [{ addVariable: "gold", amount: -2 }] },
+                                { text: "\"Water is fine.\"",         next: "mara_greeting", effects: [] }
+                            ]
+                        },
+                        "mara_reward": {
+                            text: "\"Oh aye, the Reeve is offering reward for whoever clears out that old barrow. Saying it has never stopped being dangerous.\"",
+                            choices: [
+                                { text: "\"Thanks.\"",                next: "mara_farewell", effects: [] }
+                            ]
+                        },
+                        "mara_farewell": {
+                            text: "\"Don't loiter.\"",
+                            choices: [
+                                { text: "[End conversation]", next: null, effects: [] }
+                            ]
+                        }
+                    }
+                },
+                {
+                    id: "reeve_dialogue",
+                    nodeId: "reeve_greeting",
+                    nodes: {
+                        "reeve_greeting": {
+                            text: "The Reeve nods to you. \"Rough winter, you can see it plain on the walls. I want that barrow cleared. Vermin come from it at night — goblins mostly.\"",
+                            choices: [
+                                { text: "\"What is the reward?\"",     next: "reeve_reward", effects: [] },
+                                { text: "\"Tell me more about the goblins.\"", next: "reeve_goblins", effects: [] },
+                                { text: "\"I will look into it.\"",     next: "reeve_farewell", effects: [{ setFlag: "barrow_quest_accepted", value: true }] }
+                            ]
+                        },
+                        "reeve_reward": {
+                            text: "\"Ten silver and whatever you find in the barrow, fair? Not rich, but honest.\"",
+                            choices: [
+                                { text: "\"I will do it.\"",          next: "reeve_farewell", effects: [{ setFlag: "barrow_quest_accepted", value: true }] },
+                                { text: "\"Let me think about it.\"", next: "reeve_farewell", effects: [] }
+                            ]
+                        },
+                        "reeve_goblins": {
+                            text: "\"Nasty little brutes. They travel in threes at best. Knives and teeth — nothing a strong arm can not handle. Five head, ten silver.\"",
+                            choices: [
+                                { text: "\"I have seen worse.\"",      next: "reeve_farewell", effects: [] }
+                            ]
+                        },
+                        "reeve_farewell": {
+                            text: "The Reeve returns to his work with a resigned expression.",
+                            choices: [
+                                { text: "[End conversation]", next: null, effects: [] }
+                            ]
+                        }
+                    }
+                }
+            ],
+
+            spells: [
+                {
+                    id: "witchlight",
+                    name: "Witchlight",
+                    aliases: ["light"],
+                    cost: { mana: 1 },
+                    check: { stat: "will", skill: "magic", difficulty: 8 },
+                    effects: [{ setFlag: "player_has_light", value: true, durationMinutes: 180 }],
+                    successText: "A pale blue flame blossoms above your palm, giving steady light.",
+                    failureText: "The air chills, but the spell slips from your grasp."
+                }
+            ],
+
+            stats: [
+                { id: "might",       name: "Might"       },
+                { id: "agility",     name: "Agility"     },
+                { id: "endurance",   name: "Endurance"   },
+                { id: "intellect",   name: "Intellect"   },
+                { id: "will",        name: "Will"        },
+                { id: "presence",    name: "Presence"    }
+            ]
+        };
+
+        // ============================================================
+        // DYNAMIC STATE MANAGER  — Section 5.2
+        // Holds the current mutable game state. This is what gets saved.
+        // ============================================================
+        /* eslint-disable no-unused-vars */
         const Game = {
             version: "1.0.0",
 
-            data: {},
-            state: {},
+            // --- Static data (read-only during gameplay) ----------
+            data: DATA,
 
-            ui: {},
-            parser: {},
-            engine: {},
-            checks: {},
-            inventory: {},
-            characterCreation: {},
-            clock: {},
-            schedules: {},
-            storage: {},
-            conditions: {},
-            combat: {},
-            dialogue: {},
-            utilities: {}
+            // --- Dynamic game state (mutated during play) ---------
+            state: null,
+
+            /**
+             * Initializes fresh dynamic state on a new game.
+             * Called by the character builder after confirming the character.
+             * @param {Object} player  The fully built player object
+             */
+            initState: function(player) {
+                this.state = {
+                    mode: "playing",
+
+                    player: player,
+
+                    clock: {
+                        day: 1,
+                        hour: 8,
+                        minute: 0,
+                        month: "Frostwane"
+                    },
+
+                    flags:   {},
+                    variables: {},
+
+                    world: {
+                        itemLocations:   {},
+                        npcStates:       {},
+                        monsterStates:   {},
+                        locationStates:  {}
+                    }
+                };
+                return this.state;
+            },
+
+            /**
+             * Returns true when dynamic state has been initialised.
+             */
+            hasState: function() {
+                return this.state !== null && this.state !== undefined;
+            },
+
+            // --- State access helpers -----------------------------
+            /**
+             * @returns {Object|null} The clock object
+             */
+            getClock: function() {
+                return this.state ? this.state.clock : null;
+            },
+
+            /**
+             * @returns {Object|null} The flags object
+             */
+            getFlags: function() {
+                return this.state ? this.state.flags : null;
+            },
+
+            /**
+             * Get or set a single flag.
+             * @param {string} key
+             * @param {*} [value] — omit to read, pass to write
+             * @returns {*}
+             */
+            flag: function(key, value) {
+                if (!this.state) return;
+                if (value === undefined) return this.state.flags[key];
+                this.state.flags[key] = value;
+            },
+
+            /**
+             * Get or set a single variable.
+             * @param {string} key
+             * @param {*} [value] — omit to read, pass to write
+             * @returns {*}
+             */
+            variable: function(key, value) {
+                if (!this.state) return;
+                if (value === undefined) return this.state.variables[key];
+                this.state.variables[key] = value;
+            },
+
+            /**
+             * @returns {Object|null} The current player object
+             */
+            getPlayer: function() {
+                return this.state ? this.state.player : null;
+            },
+
+            /**
+             * Update the player reference (used after loading a save).
+             * @param {Object} player
+             */
+            setPlayer: function(player) {
+                if (this.state) this.state.player = player;
+            },
+
+            // --- World state helpers ------------------------------
+            /**
+             * Get the current location of an NPC or entity from world state
+             * overrides, falling back to entity default.
+             * @param {string} entityId
+             * @returns {string|null}
+             */
+            getNpcLocation: function(entityId) {
+                if (this.state && this.state.world.npcStates[entityId]?.location) {
+                    return this.state.world.npcStates[entityId].location;
+                }
+                const npc = DATA.npcs.find(n => n.id === entityId);
+                return npc ? npc.defaultLocation : null;
+            },
+
+            /**
+             * Override an NPC's current location (set by the schedule system).
+             * @param {string} entityId
+             * @param {string} locationId
+             */
+            setNpcLocation: function(entityId, locationId) {
+                if (!this.state) return;
+                this.state.world.npcStates[entityId] = this.state.world.npcStates[entityId] || {};
+                this.state.world.npcStates[entityId].location = locationId;
+            },
+
+            /**
+             * Get the state of a location (door open/closed, looted, etc.).
+             * @param {string} locationId
+             * @returns {Object}
+             */
+            getLocationState: function(locationId) {
+                if (!this.state) return {};
+                return this.state.world.locationStates[locationId] || {};
+            },
+
+            /**
+             * Set a property on a location's world state.
+             * @param {string} locationId
+             * @param {string} key
+             * @param {*} value
+             */
+            setLocationState: function(locationId, key, value) {
+                if (!this.state) return;
+                this.state.world.locationStates[locationId] = this.state.world.locationStates[locationId] || {};
+                this.state.world.locationStates[locationId][key] = value;
+            },
+
+            // --- Game mode ----------------------------------------
+            /**
+             * Set or read the current game mode.
+             * @param {string} [mode]
+             * @returns {string|void}
+             */
+            gameMode: function(mode) {
+                if (!this.state) return;
+                if (mode === undefined) return this.state.mode;
+                this.state.mode = mode;
+            }
         };
+        /* eslint-enable no-unused-vars */
     </script>
 </body>
 </html>
