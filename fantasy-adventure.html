@@ -85,6 +85,426 @@
       dialogue: {},
       utilities: {}
     };
+
+    // Clock System Implementation
+    Game.clock = {
+      // Initialize clock with default values
+      init() {
+        return {
+          day: 1,
+          hour: 8,
+          minute: 0,
+          month: "Frostwane"
+        };
+      },
+
+      // Advance time by specified minutes
+      advanceTime(minutes, state) {
+        if (!state.clock) {
+          state.clock = this.init();
+        }
+
+        state.clock.minute += minutes;
+
+        // Handle minute overflow
+        while (state.clock.minute >= 60) {
+          state.clock.minute -= 60;
+          state.clock.hour += 1;
+        }
+
+        // Handle hour overflow
+        while (state.clock.hour >= 24) {
+          state.clock.hour -= 24;
+          state.clock.day += 1;
+        }
+
+        // Update conditions and schedules when time advances
+        if (Game.conditions && typeof Game.conditions.update === 'function') {
+          Game.conditions.update(minutes);
+        }
+        if (Game.schedules && typeof Game.schedules.update === 'function') {
+          Game.schedules.update();
+        }
+      },
+
+      // Format time for atmospheric display
+      formatTime(clock) {
+        if (!clock) return "Unknown time";
+
+        // Define months
+        const months = [
+          "Frostwane", "Deepfrost", "Storm's End", "First Thaw",
+          "Springtide", "Brightsky", "Highsun", "Goldleaf",
+          "Harvest", "Ruinfall", "Longnight", "Darkveil"
+        ];
+
+        // Define day phases
+        let phase;
+        if (clock.hour >= 5 && clock.hour < 8) {
+          phase = "Dawn";
+        } else if (clock.hour >= 8 && clock.hour < 12) {
+          phase = "Morning";
+        } else if (clock.hour >= 12 && clock.hour < 14) {
+          phase = "Midday";
+        } else if (clock.hour >= 14 && clock.hour < 17) {
+          phase = "Afternoon";
+        } else if (clock.hour >= 17 && clock.hour < 19) {
+          phase = "Late afternoon";
+        } else if (clock.hour >= 19 && clock.hour < 21) {
+          phase = "Evening";
+        } else if (clock.hour >= 21 && clock.hour < 24) {
+          phase = "Night";
+        } else {
+          phase = "Deep night";
+        }
+
+        // Format ordinal day
+        const day = clock.day;
+        let daySuffix;
+        if (day % 10 === 1 && day % 100 !== 11) {
+          daySuffix = "st";
+        } else if (day % 10 === 2 && day % 100 !== 12) {
+          daySuffix = "nd";
+        } else if (day % 10 === 3 && day % 100 !== 13) {
+          daySuffix = "rd";
+        } else {
+          daySuffix = "th";
+        }
+
+        // Get month name
+        const monthIndex = months.indexOf(clock.month);
+        const monthName = monthIndex >= 0 ? months[monthIndex] : clock.month;
+
+        return `${phase}, ${day}${daySuffix} day of ${monthName}`;
+      }
+    };
+
+    // Initialize state when game starts
+    Game.initialize = function() {
+      // Initialize clock
+      if (!this.state.clock) {
+        this.state.clock = this.clock.init();
+      }
+      
+      // Initialize other systems as needed
+      // This would be expanded with other system initializations
+      
+      // Set initial game mode
+      this.state.mode = "playing";
+      
+      // Initial output
+      this.ui.addOutput("Welcome to the Fantasy Text RPG!");
+      this.ui.addOutput(`Current time: ${this.clock.formatTime(this.state.clock)}`);
+      this.ui.addOutput("Type 'help' for available commands.");
+    };
+
+    // UI System
+    Game.ui = {
+      // Add text to output
+      addOutput(text) {
+        const output = document.getElementById('output');
+        output.innerHTML += text + '\n';
+        output.scrollTop = output.scrollHeight;
+      },
+      
+      // Clear input
+      clearInput() {
+        document.getElementById('command-input').value = '';
+      }
+    };
+
+    // Parser System (basic implementation)
+    Game.parser = {
+      // Parse input into verb, directObject, preposition, indirectObject
+      parse(input) {
+        const trimmed = input.trim().toLowerCase();
+        if (!trimmed) return null;
+        
+        // Handle special cases like "look at", "pick up", etc.
+        const verbAliases = {
+          i: "inventory",
+          inv: "inventory",
+          inventory: "inventory",
+          equipment: "inventory",
+          status: "inventory",
+          gear: "inventory",
+          n: "go",
+          north: "go",
+          s: "go",
+          south: "go",
+          e: "go",
+          east: "go",
+          w: "go",
+          west: "go",
+          u: "go",
+          up: "go",
+          d: "go",
+          down: "go",
+          get: "take",
+          grab: "take",
+          pickup: "take",
+          "pick up": "take",
+          examine: "look",
+          inspect: "look",
+          x: "look",
+          wield: "equip",
+          wear: "equip",
+          "put on": "equip",
+          remove: "unequip",
+          "take off": "unequip",
+          strike: "attack",
+          hit: "attack",
+          fight: "attack"
+        };
+        
+        // Split into words
+        const words = trimmed.split(/\s+/);
+        
+        // Check for multi-word verbs first
+        let verb = words[0];
+        let remaining = words.slice(1).join(' ');
+        
+        // Check if first two words form a known alias
+        if (words.length >= 2) {
+          const twoWordVerb = `${words[0]} ${words[1]}`;
+          if (verbAliases[twoWordVerb]) {
+            verb = verbAliases[twoWordVerb];
+            remaining = words.slice(2).join(' ');
+          }
+        }
+        
+        // Check single word verb
+        if (verbAliases[verb]) {
+          verb = verbAliases[verb];
+        }
+        
+        // Parse direct object, preposition, indirect object
+        let directObjectText = null;
+        let preposition = null;
+        let indirectObjectText = null;
+        let quantity = null;
+        
+        // Check for quantity pattern (number followed by item)
+        const quantityMatch = remaining.match(/^(\d+)\s+(.+)$/);
+        if (quantityMatch) {
+          quantity = parseInt(quantityMatch[1]);
+          remaining = quantityMatch[2];
+        }
+        
+        // Check for preposition patterns
+        const prepositions = ['on', 'in', 'at', 'with', 'to', 'of'];
+        for (const prep of prepositions) {
+          const prepIndex = remaining.indexOf(` ${prep} `);
+          if (prepIndex !== -1) {
+            directObjectText = remaining.substring(0, prepIndex).trim();
+            preposition = prep;
+            indirectObjectText = remaining.substring(prepIndex + prep.length + 1).trim();
+            break;
+          }
+        }
+        
+        // If no preposition found, remaining is direct object
+        if (!directObjectText && !preposition && !indirectObjectText) {
+          directObjectText = remaining;
+        }
+        
+        return {
+          raw: input,
+          verb: verb,
+          directObjectText: directObjectText,
+          preposition: preposition,
+          indirectObjectText: indirectObjectText,
+          quantity: quantity
+        };
+      }
+    };
+
+    // Inventory System (basic implementation)
+    Game.inventory = {
+      // Add item to inventory
+      addItem(itemId, quantity = 1) {
+        // Implementation would go here
+        return true;
+      },
+      
+      // Remove item from inventory
+      removeItem(itemId, quantity = 1) {
+        // Implementation would go here
+        return true;
+      },
+      
+      // Check if player has item
+      hasItem(itemId) {
+        // Implementation would go here
+        return false;
+      },
+      
+      // Get carried weight
+      getCarriedWeight() {
+        // Implementation would go here
+        return 0;
+      }
+    };
+
+    // Equipment System (basic implementation)
+    Game.equipment = {
+      // Equip item
+      equip(itemId) {
+        // Implementation would go here
+        return true;
+      },
+      
+      // Unequip item
+      unequip(slot) {
+        // Implementation would go here
+        return true;
+      }
+    };
+
+    // Engine System
+    Game.engine = {
+      // Handle parsed command
+      handleCommand(parsed) {
+        if (!parsed) return "I didn't understand that command.";
+        
+        // Commands that don't advance time
+        const noTimeCommands = ['look', 'inventory', 'i', 'inv', 'equipment', 'status', 'gear', 'help'];
+        
+        let timeToAdvance = 0;
+        let resultMessage = "";
+        
+      switch (parsed.verb) {
+        case 'look':
+          resultMessage = this.handleLook(parsed);
+          break;
+        case 'inventory':
+        case 'i':
+        case 'inv':
+          resultMessage = this.handleInventory(parsed);
+          break;
+        case 'wait':
+          resultMessage = `You wait for ${this.handleWait(parsed)} minutes.`;
+          timeToAdvance = this.handleWait(parsed); // Set time to advance based on wait command result
+          break;
+        case 'go':
+          resultMessage = this.handleGo(parsed);
+          timeToAdvance = 10; // Default travel time
+          break;
+        case 'take':
+          resultMessage = this.handleTake(parsed);
+          timeToAdvance = 1; // Default pickup time
+          break;
+        case 'drop':
+          resultMessage = this.handleDrop(parsed);
+          timeToAdvance = 1; // Default drop time
+          break;
+        case 'equip':
+          resultMessage = this.handleEquip(parsed);
+          timeToAdvance = 5; // Default equip time (armor takes longer)
+          break;
+        case 'unequip':
+          resultMessage = this.handleUnequip(parsed);
+          timeToAdvance = 3; // Default unequip time
+          break;
+        default:
+          resultMessage = `I don't know how to '${parsed.verb}' yet.`;
+      }
+        
+        // Advance time if needed (except for certain commands)
+        if (timeToAdvance > 0 && !noTimeCommands.includes(parsed.verb)) {
+          Game.clock.advanceTime(timeToAdvance, Game.state);
+        }
+        
+        return resultMessage;
+      },
+      
+      // Handle look command
+      handleLook(parsed) {
+        return "You see nothing special.";
+      },
+      
+      // Handle inventory command
+      handleInventory(parsed) {
+        const timeStr = Game.clock.formatTime(Game.state.clock);
+        return `Current time: ${timeStr}\nYou are carrying nothing.`;
+      },
+      
+      // Handle wait command
+      handleWait(parsed) {
+        let minutes = 30; // Default wait time
+        if (parsed.quantity && !isNaN(parsed.quantity)) {
+          minutes = parsed.quantity;
+        } else if (parsed.directObjectText) {
+          const num = parseInt(parsed.directObjectText);
+          if (!isNaN(num)) {
+            minutes = num;
+          }
+        }
+        return minutes; // Return minutes so engine can set timeToAdvance
+      },
+      
+      // Handle go command
+      handleGo(parsed) {
+        const direction = parsed.directObjectText || "nowhere";
+        return `You head toward the ${direction}.`;
+      },
+      
+      // Handle take command
+      handleTake(parsed) {
+        const item = parsed.directObjectText || "something";
+        return `You take the ${item}.`;
+      },
+      
+      // Handle drop command
+      handleDrop(parsed) {
+        const item = parsed.directObjectText || "something";
+        return `You drop the ${item}.`;
+      },
+      
+      // Handle equip command
+      handleEquip(parsed) {
+        const item = parsed.directObjectText || "something";
+        return `You equip the ${item}.`;
+      },
+      
+      // Handle unequip command
+      handleUnequip(parsed) {
+        const slot = parsed.directObjectText || "something";
+        return `You unequip the ${slot}.`;
+      }
+    };
+
+    // Initialize game when page loads
+    window.addEventListener('DOMContentLoaded', () => {
+      Game.initialize();
+      
+      // Set up input handling
+      const form = document.getElementById('input-form');
+      const input = document.getElementById('command-input');
+      
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const commandInput = input.value.trim();
+        if (commandInput) {
+          // Add command to output
+          Game.ui.addOutput(`> ${commandInput}`);
+          
+          // Parse and handle command
+          const parsed = Game.parser.parse(commandInput);
+          const result = Game.engine.handleCommand(parsed);
+          
+          // Add result to output
+          Game.ui.addOutput(result);
+          
+          // Update time display in output
+          Game.ui.addOutput(`Current time: ${Game.clock.formatTime(Game.state.clock)}`);
+          
+          // Clear input
+          Game.ui.clearInput();
+        }
+      });
+    });
   </script>
 </body>
 </html>
