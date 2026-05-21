@@ -133,9 +133,24 @@
         remove: "unequip",
         "take off": "unequip",
 
-        strike: "attack",
-        hit: "attack",
-        fight: "attack",
+strike: "attack",
+         hit: "attack",
+         fight: "attack",
+
+         shoot: "shoot",
+         "fire at": "shoot",
+
+         cast: "cast",
+         "cast spell": "cast",
+
+         flee: "flee",
+         run: "flee",
+
+         defend: "defend",
+         "take cover": "defend",
+
+         use: "use",
+         "use potion": "use_potion",
 
         sayhi: "say hi",
         hallo: "say hi",
@@ -396,141 +411,209 @@
        * Every game entity must have a stable lowercase `id`.
        * Aliases are lowercased at registration; lookup is case-insensitive.
        */
-      const DATA = Object.freeze({ items: Object.freeze({
-        // ── Weapons ─────────────────────────────────────────────────────────────
-        skinning_knife: {
-          id: "skinning_knife", name: "skinning knife", type: "weapon",
-          aliases: ["knife", "skinny knife"],
-          description: "A small knife used for skinning game.",
-          weight: 1, stackable: false, portable: true,
-          slot: "weapon", stat: "might", skill: "melee", damage: "1d4",
-          attackBonus: 0, value: 5,
-        },
-        iron_sword: {
-          id: "iron_sword", name: "iron sword", type: "weapon",
-          aliases: ["sword", "blade"],
-          description: "A plain but reliable iron sword.",
-          weight: 3, stackable: false, portable: true,
-          slot: "weapon", stat: "might", skill: "melee", damage: "1d8",
-          attackBonus: 0, value: 20,
-        },
-        hunting_bow: {
-          id: "hunting_bow", name: "hunting bow", type: "weapon",
-          aliases: ["bow"],
-          description: "A well-strung yew bow, good for hunting.",
-          weight: 3, stackable: false, portable: true,
-          slot: "weapon", stat: "agility", skill: "bows", damage: "1d6",
-          attackBonus: 0, value: 25,
-        },
-        woodcutter_axe: {
-          id: "woodcutter_axe", name: "woodcutter axe", type: "weapon",
-          aliases: ["axe"],
-          description: "A heavy axe used for felling trees.",
-          weight: 4, stackable: false, portable: true,
-          slot: "weapon", stat: "might", skill: "melee", damage: "1d10",
-          attackBonus: -1, value: 8,
-        },
+const DATA = Object.freeze({ items: Object.freeze({
+         // ── Weapons ─────────────────────────────────────────────────────────────
+         skinning_knife: {
+           id: "skinning_knife", name: "skinning knife", type: "weapon",
+           aliases: ["knife", "skinny knife"],
+           description: "A small knife used for skinning game.",
+           weight: 1, stackable: false, portable: true,
+           slot: "weapon", stat: "might", skill: "melee", damage: "1d4",
+           attackBonus: 0, value: 5,
+         },
+         iron_sword: {
+           id: "iron_sword", name: "iron sword", type: "weapon",
+           aliases: ["sword", "blade"],
+           description: "A plain but reliable iron sword.",
+           weight: 3, stackable: false, portable: true,
+           slot: "weapon", stat: "might", skill: "melee", damage: "1d8",
+           attackBonus: 0, value: 20,
+         },
+hunting_bow: {
+           id: "hunting_bow", name: "hunting bow", type: "weapon",
+           aliases: ["bow"],
+           description: "A well-strung yew bow, good for hunting.",
+           weight: 3, stackable: false, portable: true,
+           slot: "weapon", stat: "agility", skill: "ranged", damage: "1d6",
+           attackBonus: 0, value: 25,
+         },
+         woodcutter_axe: {
+           id: "woodcutter_axe", name: "woodcutter axe", type: "weapon",
+           aliases: ["axe"],
+           description: "A heavy axe used for felling trees.",
+           weight: 4, stackable: false, portable: true,
+           slot: "weapon", stat: "might", skill: "melee", damage: "1d10",
+           attackBonus: -1, value: 8,
+         },
 
-        // ── Armor ───────────────────────────────────────────────────────────────
-        leather_tunic: {
-          id: "leather_tunic", name: "leather tunic", type: "armor",
-          aliases: ["leather", "tunic"],
-          description: "Thick leather that provides minimal protection.",
-          weight: 3, stackable: false, portable: true,
-          slot: "armor",
-          defenseBonus: 1, value: 15,
-        },
-        chainmail: {
-          id: "chainmail", name: "chainmail", type: "armor",
-          aliases: ["chain", "mail"],
-          description: "Interlocking metal rings offering solid defense.",
-          weight: 20, stackable: false, portable: true,
-          slot: "armor",
-          defenseBonus: 4, value: 75,
-        },
-        steel_plate: {
-          id: "steel_plate", name: "steel plate", type: "armor",
-          aliases: ["plate", "plate armor"],
-          description: "Heavy articulated steel plates worn over gambeson.",
-          weight: 35, stackable: false, portable: true,
-          slot: "armor",
-          defenseBonus: 7, value: 250,
-        },
-        travel_cloak: {
-          id: "travel_cloak", name: "travel cloak", type: "clothing",
-          aliases: ["cloak"],
-          description: "A thick woolen cloak for cold weather travel.",
-          weight: 2, stackable: false, portable: true,
-          slot: "cloak",
-          defenseBonus: 0, value: 12,
-        },
+         // ── Armor ───────────────────────────────────────────────────────────────
+         leather_tunic: {
+           id: "leather_tunic", name: "leather tunic", type: "armor",
+           aliases: ["leather", "tunic"],
+           description: "Thick leather that provides minimal protection.",
+           weight: 3, stackable: false, portable: true,
+           slot: "armor",
+           defenseBonus: 1, value: 15,
+         },
+         chainmail: {
+           id: "chainmail", name: "chainmail", type: "armor",
+           aliases: ["chain", "mail"],
+           description: "Interlocking metal rings offering solid defense.",
+           weight: 20, stackable: false, portable: true,
+           slot: "armor",
+           defenseBonus: 4, value: 75,
+         },
+         steel_plate: {
+           id: "steel_plate", name: "steel plate", type: "armor",
+           aliases: ["plate", "plate armor"],
+           description: "Heavy articulated steel plates worn over gambeson.",
+           weight: 35, stackable: false, portable: true,
+           slot: "armor",
+           defenseBonus: 7, value: 250,
+         },
+         travel_cloak: {
+           id: "travel_cloak", name: "travel cloak", type: "clothing",
+           aliases: ["cloak"],
+           description: "A thick woolen cloak for cold weather travel.",
+           weight: 2, stackable: false, portable: true,
+           slot: "cloak",
+           defenseBonus: 0, value: 12,
+         },
 
-        // ── Shields / Offhand ───────────────────────────────────────────────────
-        wooden_shield: {
-          id: "wooden_shield", name: "wooden shield", type: "shield",
-          aliases: ["shield", "round shield"],
-          description: "A buckler of seasoned oak, reinforced with iron.",
-          weight: 4, stackable: false, portable: true,
-          slot: "offhand",
-          defenseBonus: 2, blockBonus: 2, value: 15,
-        },
+         // ── Shields / Offhand ───────────────────────────────────────────────────
+         wooden_shield: {
+           id: "wooden_shield", name: "wooden shield", type: "shield",
+           aliases: ["shield", "round shield"],
+           description: "A buckler of seasoned oak, reinforced with iron.",
+           weight: 4, stackable: false, portable: true,
+           slot: "offhand",
+           defenseBonus: 2, blockBonus: 2, value: 15,
+         },
 
-        // ── Consumables ─────────────────────────────────────────────────────────
-        health_potion: {
-          id: "health_potion", name: "health potion", type: "consumable",
-          aliases: ["red potion", "potion"],
-          description: "A deep red liquid that restores vitality.",
-          weight: 0.5, stackable: true, portable: true,
-          healAmount: 10, value: 25,
-        },
-        travel_rations: {
-          id: "travel_rations", name: "travel rations", type: "consumable",
-          aliases: ["rations", "food"],
-          description: "Dried meat and hard bread for the road.",
-          weight: 1, stackable: true, portable: true,
-          healAmount: 3, value: 1,
-        },
-        mana_potion: {
-          id: "mana_potion", name: "mana potion", type: "consumable",
-          aliases: ["blue potion"],
-          description: "A deep blue liquid that restores magical energy.",
-          weight: 0.5, stackable: true, portable: true,
-          manaAmount: 10, value: 30,
-        },
+         // ── Consumables ─────────────────────────────────────────────────────────
+         health_potion: {
+           id: "health_potion", name: "health potion", type: "consumable",
+           aliases: ["red potion", "potion"],
+           description: "A deep red liquid that restores vitality.",
+           weight: 0.5, stackable: true, portable: true,
+           healAmount: 10, value: 25,
+         },
+         travel_rations: {
+           id: "travel_rations", name: "travel rations", type: "consumable",
+           aliases: ["rations", "food"],
+           description: "Dried meat and hard bread for the road.",
+           weight: 1, stackable: true, portable: true,
+           healAmount: 3, value: 1,
+         },
+         mana_potion: {
+           id: "mana_potion", name: "mana potion", type: "consumable",
+           aliases: ["blue potion"],
+           description: "A deep blue liquid that restores magical energy.",
+           weight: 0.5, stackable: true, portable: true,
+           manaAmount: 10, value: 30,
+         },
 
-        // ── Misc / Tool / Quest ─────────────────────────────────────────────────
-        torch: {
-          id: "torch", name: "torch", type: "light",
-          aliases: [],
-          description: "A resin-soaked strip of cloth wrapped around a wooden shaft.",
-          weight: 1, stackable: true, portable: true, slot: "offhand",
-          lightRadius: 2, value: 2,
-        },
-        rope: {
-          id: "rope", name: "rope", type: "tool",
-          aliases: ["coil of rope", "hemp rope"],
-          description: "A 50ft coil of sturdy hemp rope.",
-          weight: 10, stackable: false, portable: true,
-          value: 5,
-        },
-        iron_key: {
-          id: "iron_key", name: "iron key", type: "key",
-          aliases: ["old iron key", "key"],
-          description: "A cold iron key of unknown purpose.",
-          weight: 0, stackable: false, portable: true,
-          value: 0,
-        },
-        gold_pouch: {
-          id: "gold_pouch", name: "gold pouch", type: "treasure",
-          aliases: ["pouch"],
-          description: "A small leather pouch containing 8 gold coins.",
-          weight: 0.5, stackable: false, portable: true,
-          gold: 8, value: 8,
-        },
-      }) });
+         // ── Misc / Tool / Quest ─────────────────────────────────────────────────
+         torch: {
+           id: "torch", name: "torch", type: "light",
+           aliases: [],
+           description: "A resin-soaked strip of cloth wrapped around a wooden shaft.",
+           weight: 1, stackable: true, portable: true, slot: "offhand",
+           lightRadius: 2, value: 2,
+         },
+         rope: {
+           id: "rope", name: "rope", type: "tool",
+           aliases: ["coil of rope", "hemp rope"],
+           description: "A 50ft coil of sturdy hemp rope.",
+           weight: 10, stackable: false, portable: true,
+           value: 5,
+         },
+         iron_key: {
+           id: "iron_key", name: "iron key", type: "key",
+           aliases: ["old iron key", "key"],
+           description: "A cold iron key of unknown purpose.",
+           weight: 0, stackable: false, portable: true,
+           value: 0,
+         },
+         gold_pouch: {
+           id: "gold_pouch", name: "gold pouch", type: "treasure",
+           aliases: ["pouch"],
+           description: "A small leather pouch containing 8 gold coins.",
+           weight: 0.5, stackable: false, portable: true,
+           gold: 8, value: 8,
+         },
+       }) });
 
-      // Build aliases index so resolveItemId() can do fast lookup.
-      buildItemAliasMap();
+       // Monster templates for combat encounters
+       const DATA_MONSTERS = Object.freeze({
+         goblin_scout: {
+           id: "goblin_scout",
+           name: "goblin scout",
+           aliases: ["goblin", "scout"],
+           description: "A wiry goblin with yellow eyes and a jagged knife.",
+           stats: { might: 0, agility: 2, endurance: 0, intellect: -1, will: 0, presence: -1 },
+           skills: { stealth: 2, melee: 1, defense: 1 },
+           maxHp: 8,
+           defense: 13,
+           attacks: [{ id: "jagged_knife", name: "jagged knife", skill: "melee", stat: "agility", damage: "1d4+1" }],
+           behavior: { hostile: true, morale: 8, fleesAtHpPercent: 25 }
+         },
+         wolf: {
+           id: "wolf",
+           name: "wolf",
+           aliases: ["dire wolf"],
+           description: "A lean predator with gleaming teeth.",
+           stats: { might: 2, agility: 2, endurance: 1, intellect: -2, will: 1, presence: -1 },
+           skills: { stealth: 1, melee: 2, defense: 1 },
+           maxHp: 12,
+           defense: 12,
+           attacks: [{ id: "bite", name: "bite", skill: "melee", stat: "might", damage: "1d6+1" }],
+           behavior: { hostile: true, morale: 10, fleesAtHpPercent: 20 }
+         },
+         skeleton: {
+           id: "skeleton",
+           name: "skeleton",
+           aliases: ["animated skeleton"],
+           description: "Bones animated by dark magic, clutching a rusted blade.",
+           stats: { might: 1, agility: 0, endurance: -1, intellect: -2, will: -2, presence: -2 },
+           skills: { melee: 1, defense: 1 },
+           maxHp: 6,
+           defense: 11,
+           attacks: [{ id: "rusty_blade", name: "rusty blade", skill: "melee", stat: "might", damage: "1d6" }],
+           behavior: { hostile: true, morale: 15, undead: true }
+         }
+       });
+
+       // Item alias lookup map for fast name/alias → id resolution
+       const ITEM_ALIASES = {};
+
+       /**
+        * Build the alias lookup map from DATA.items.
+        * Called once after DATA is defined.
+        */
+       function buildItemAliasMap() {
+         for (const id in DATA.items) {
+           const item = DATA.items[id];
+           ITEM_ALIASES[id] = id;
+           if (item.aliases) {
+             for (const alias of item.aliases) {
+               ITEM_ALIASES[alias.toLowerCase()] = id;
+             }
+           }
+           ITEM_ALIASES[item.name.toLowerCase()] = id;
+         }
+       }
+
+       /**
+        * Resolve a name or alias string to an item ID.
+        */
+       function resolveItemId(text) {
+         if (!text) return null;
+         return ITEM_ALIASES[text.toLowerCase()] || null;
+       }
+
+       // Build aliases index so resolveItemId() can do fast lookup.
+       buildItemAliasMap();
 
       // ── Inventory / Equipment / Carry Capacity ─────────────────────────────────
 
@@ -1224,15 +1307,398 @@
         });
       };
 
-      /**
-       * Convert a raw slot string to a display label.
-       * "accessory1" → "Accessory 1", "armor" → "Armor", etc.
-       *
-       * @param {string} slot
-       * @returns {string}
-       */
-      Game.equipment.slotDisplayName = slotDisplayName;
+/**
+        * Convert a raw slot string to a display label.
+        * "accessory1" → "Accessory 1", "armor" → "Armor", etc.
+        *
+        * @param {string} slot
+        * @returns {string}
+        */
+       Game.equipment.slotDisplayName = slotDisplayName;
 
-    </script>
-  </body>
+       // ── UTILITIES: Dice and Random Number Helpers ───────────────────────────
+
+       /**
+        * Return a random integer between min and max (inclusive).
+        */
+       function randomInt(min, max) {
+         return Math.floor(Math.random() * (max - min + 1)) + min;
+       }
+
+       /**
+        * Roll dice from a dice string like "1d6", "2d4+1", "1d8-1".
+        * Returns the total including any modifier.
+        */
+       function rollDice(dice) {
+         const match = dice.match(/^(\d+)d(\d+)([+-]\d+)?$/);
+         if (!match) throw new Error("Invalid dice expression: " + dice);
+         const count = Number(match[1]);
+         const sides = Number(match[2]);
+         const bonus = Number(match[3] || 0);
+         let total = bonus;
+         for (let i = 0; i < count; i++) {
+           total += randomInt(1, sides);
+         }
+         return total;
+       }
+
+       // ════════════════════════════════════════════════════════════════════════════
+       // GAME COMBAT SUBSYSTEM
+       // ════════════════════════════════════════════════════════════════════════════
+
+       /**
+        * Combat state tracking.
+        */
+       Game.combat.state = {
+         inCombat: false,
+         enemies: [],
+         combatLog: []
+       };
+
+       /**
+        * Get the player's defense value.
+        * Formula: 10 + agility + defenseSkill + armorBonus + shieldBonus
+        */
+       function getPlayerDefense() {
+         const player = Game.state.player;
+         const agility = player?.stats?.agility || 0;
+         const defenseSkill = player?.skills?.defense || 0;
+
+         const armor = getEquippedItemObject("armor");
+         const offhand = getEquippedItemObject("offhand");
+
+         const armorBonus = armor?.defenseBonus || 0;
+         const shieldBonus = offhand?.defenseBonus || offhand?.blockBonus || 0;
+
+         return 10 + agility + defenseSkill + armorBonus + shieldBonus;
+       }
+
+       /**
+        * Perform an attack action.
+        * Formula: d20 + attackStat + weaponSkill + weaponBonus >= target defense
+        *
+        * @param {Object} attacker - The attacking entity (player or enemy)
+        * @param {Object} target - The target entity
+        * @param {Object} weapon - The weapon being used (optional)
+        * @returns {Object} - Result with hit, damage, and message
+        */
+       function performAttack(attacker, target, weapon) {
+         const attackStat = weapon?.stat || "might";
+         const attackSkill = weapon?.skill || "melee";
+         const weaponBonus = weapon?.attackBonus || 0;
+
+         const statValue = attacker.stats?.[attackStat] || 0;
+         const skillValue = attacker.skills?.[attackSkill] || 0;
+
+         const roll = randomInt(1, 20);
+         const total = roll + statValue + skillValue + weaponBonus;
+
+         let isHit = total >= target.defense;
+         let isCrit = roll === 20;
+         let isFumble = roll === 1;
+
+         let damage = 0;
+         if (isHit && !isFumble) {
+           const dice = weapon?.damage || "1d4";
+           damage = rollDice(dice);
+         }
+
+         return {
+           roll: roll,
+           total: total,
+           targetDefense: target.defense,
+           isHit: isHit,
+           isCrit: isCrit,
+           isFumble: isFumble,
+           damage: damage,
+           attackerName: attacker.name || "You",
+           targetName: target.name || "it"
+         };
+       }
+
+       /**
+        * Calculate damage for an attack.
+        */
+       function calculateDamage(weapon) {
+         if (!weapon?.damage) return 1;
+         return rollDice(weapon.damage);
+       }
+
+       /**
+        * Check morale for an enemy.
+        * Morale checks happen when enemy drops below HP thresholds.
+        * Formula: d20 + will >= moraleDifficulty
+        */
+       function checkMorale(enemy) {
+         const will = enemy.stats?.will || 0;
+         const roll = randomInt(1, 20);
+         const total = roll + will;
+
+         const hpPercent = enemy.currentHp / enemy.maxHp;
+         let moraleDifficulty = 15;
+
+         if (hpPercent <= 0.25) moraleDifficulty = 8;
+         else if (hpPercent <= 0.5) moraleDifficulty = 12;
+
+         const passes = total >= moraleDifficulty;
+         return { passes: passes, roll: roll, total: total, difficulty: moraleDifficulty };
+       }
+
+       /**
+        * Apply damage to a target.
+        */
+       function applyDamage(target, damage) {
+         if (!target.currentHp) target.currentHp = target.maxHp || 10;
+         target.currentHp = Math.max(0, target.currentHp - damage);
+         return target.currentHp <= 0;
+       }
+
+       /**
+        * Log a combat message.
+        */
+       function logCombat(message) {
+         Game.combat.state.combatLog.push(message);
+         Game.ui.print(message);
+       }
+
+       /**
+        * Start combat with a list of enemies.
+        */
+       Game.combat.startCombat = function(enemies) {
+         Game.combat.state.inCombat = true;
+         Game.combat.state.enemies = enemies.map(e => ({ ...e }));
+         Game.combat.state.combatLog = [];
+         Game.ui.print("Combat begins!");
+       };
+
+       /**
+        * End combat.
+        */
+       Game.combat.endCombat = function() {
+         Game.combat.state.inCombat = false;
+         Game.combat.state.enemies = [];
+         Game.combat.state.combatLog = [];
+       };
+
+       /**
+        * Process player's attack command.
+        */
+       Game.combat.playerAttack = function(targetName) {
+         const player = Game.state.player;
+         const enemy = Game.combat.state.enemies.find(e =>
+           e.name?.toLowerCase().includes(targetName?.toLowerCase())
+         );
+
+         if (!enemy) {
+           return { ok: false, msg: "You don't see " + targetName + " here." };
+         }
+
+         const weapon = getEquippedItemObject("weapon");
+         if (!weapon) {
+           return { ok: false, msg: "You have nothing equipped to attack with." };
+         }
+
+         const result = performAttack(player, enemy, weapon);
+
+         if (result.isCrit) {
+           logCombat("Critical hit! You strike " + enemy.name + " for " + result.damage + " damage!");
+         } else if (result.isFumble) {
+           logCombat("You fumble your attack against " + enemy.name + ".");
+         } else if (result.isHit) {
+           logCombat("You hit " + enemy.name + " for " + result.damage + " damage.");
+         } else {
+           logCombat("You miss " + enemy.name + ".");
+         }
+
+if (result.isHit && !result.isFumble) {
+            const defeated = applyDamage(enemy, result.damage);
+            if (defeated) {
+              logCombat(enemy.name + " is defeated!");
+              Game.combat.state.enemies = Game.combat.state.enemies.filter(e => e.name !== enemy.name);
+            } else {
+              const morale = checkMorale(enemy);
+              if (!morale.passes) {
+                logCombat(enemy.name + " looks afraid and may flee!");
+              }
+            }
+          }
+
+         if (Game.combat.state.enemies.length > 0) {
+           processEnemyTurn();
+         } else {
+           Game.combat.endCombat();
+           Game.ui.print("You have defeated all enemies.");
+         }
+
+         return { ok: true, msg: "" };
+       };
+
+       /**
+        * Process enemy turn in combat.
+        */
+       function processEnemyTurn() {
+         const enemies = Game.combat.state.enemies;
+         const player = Game.state.player;
+
+         for (const enemy of enemies) {
+           if (enemy.currentHp <= 0) continue;
+
+           const weapon = enemy.attacks?.[0];
+           if (weapon) {
+             const attackResult = performAttack(enemy, { defense: getPlayerDefense(), name: "You" }, weapon);
+
+             if (attackResult.isCrit) {
+               logCombat(enemy.name + " lands a critical hit for " + attackResult.damage + " damage!");
+             } else if (attackResult.isHit) {
+               logCombat(enemy.name + " hits you for " + attackResult.damage + " damage.");
+             } else {
+               logCombat(enemy.name + " misses you.");
+             }
+
+             if (attackResult.isHit) {
+               applyDamage(player, attackResult.damage);
+             }
+           }
+         }
+       }
+
+       /**
+        * Player uses a potion.
+        */
+       Game.combat.usePotion = function(potionType) {
+         const player = Game.state.player;
+         let potionId;
+
+         if (potionType === "health" || potionType === "healing") {
+           potionId = "health_potion";
+         } else if (potionType === "mana") {
+           potionId = "mana_potion";
+         } else {
+           return { ok: false, msg: "You don't have that type of potion." };
+         }
+
+         if (!inventoryHasItem(potionId, 1)) {
+           return { ok: false, msg: "You don't have any " + potionType + " potions." };
+         }
+
+         inventoryRemoveItem(potionId, 1);
+         const potion = DATA.items[potionId];
+
+         if (potion.healAmount) {
+           player.currentHp = Math.min(player.maxHp || 14, (player.currentHp || player.maxHp || 14) + potion.healAmount);
+           logCombat("You drink the health potion and recover " + potion.healAmount + " HP.");
+         }
+         if (potion.manaAmount) {
+           player.currentMan = Math.min(player.maxMan || 10, (player.currentMan || player.maxMan || 10) + potion.manaAmount);
+           logCombat("You drink the mana potion and recover " + potion.manaAmount + " mana.");
+         }
+
+         return { ok: true, msg: "" };
+       };
+
+       /**
+        * Player flees from combat.
+        */
+       Game.combat.flee = function() {
+         const roll = randomInt(1, 20);
+         const agility = Game.state.player?.stats?.agility || 0;
+         const total = roll + agility;
+
+         if (total >= 12) {
+           Game.combat.endCombat();
+           return { ok: true, msg: "You successfully flee from combat!" };
+         } else {
+           logCombat("You fail to flee! The enemies press the attack.");
+           processEnemyTurn();
+           return { ok: true, msg: "" };
+         }
+       };
+
+/**
+         * Player defends (increases defense for next round).
+         */
+        Game.combat.defend = function() {
+          const player = Game.state.player;
+          player.isDefending = true;
+          logCombat("You take a defensive stance.");
+          processEnemyTurn();
+          player.isDefending = false;
+          return { ok: true, msg: "" };
+        };
+
+        /**
+         * Player shoots with a ranged weapon (ranged attack).
+         */
+        Game.combat.shoot = function(targetName) {
+          return Game.combat.playerAttack(targetName);
+        };
+
+        /**
+         * Player casts a spell (placeholder for magic system).
+         */
+        Game.combat.cast = function(spellName, targetName) {
+          if (!Game.state.player) {
+            return { ok: false, msg: "You have no character loaded." };
+          }
+          const player = Game.state.player;
+          const manaCost = 3;
+          if ((player.currentMan || player.maxMan || 0) < manaCost) {
+            return { ok: false, msg: "You don't have enough mana." };
+          }
+          player.currentMan = (player.currentMan || player.maxMan || 10) - manaCost;
+
+          const enemy = Game.combat.state.enemies.find(e =>
+            e.name?.toLowerCase().includes(targetName?.toLowerCase())
+          );
+
+          if (!enemy) {
+            return { ok: false, msg: "You don't see " + targetName + " here." };
+          }
+
+          const damage = rollDice("1d6") + 2;
+          logCombat("You cast " + spellName + " at " + enemy.name + " for " + damage + " damage.");
+          const defeated = applyDamage(enemy, damage);
+          if (defeated) {
+            logCombat(enemy.name + " is defeated!");
+            Game.combat.state.enemies = Game.combat.state.enemies.filter(e => e.name !== enemy.name);
+          }
+
+          if (Game.combat.state.enemies.length > 0) {
+            processEnemyTurn();
+          } else {
+            Game.combat.endCombat();
+            Game.ui.print("You have defeated all enemies.");
+          }
+          return { ok: true, msg: "" };
+        };
+
+        /**
+         * Start combat with monsters by ID.
+         */
+        Game.combat.startCombatWith = function(monsterIds) {
+          const enemies = monsterIds.map(id => {
+            const template = DATA_MONSTERS[id];
+            if (!template) return null;
+            return {
+              id: template.id,
+              name: template.name,
+              aliases: template.aliases || [],
+              stats: { ...template.stats },
+              skills: { ...template.skills },
+              maxHp: template.maxHp,
+              currentHp: template.maxHp,
+              defense: template.defense,
+              attacks: template.attacks || []
+            };
+          }).filter(e => e);
+
+          Game.combat.startCombat(enemies);
+        };
+
+       // Expose utility functions
+       Game.utilities.rollDice = rollDice;
+       Game.utilities.randomInt = randomInt;
+
+     </script>
+   </body>
 </html>
