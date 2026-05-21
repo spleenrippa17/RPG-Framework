@@ -949,70 +949,76 @@
         return "Commands: choose [number/skill], unchoose [skill], done, back";
       };
 
-      Game.characterCreation.showReviewScreen = function () {
-        const draft = Game.characterCreation.characterDraft;
-        const bg = DATA.backgrounds.find(b => b.id === draft.backgroundId);
+Game.characterCreation.showReviewScreen = function () {
+         const draft = Game.characterCreation.characterDraft;
+         const bg = DATA.backgrounds.find(b => b.id === draft.backgroundId);
 
-        const finalStats = {};
-        const finalSkills = {};
-        STAT_NAMES.forEach(stat => {
-          finalStats[stat] = draft.baseStats[stat] + (bg.statBonuses?.[stat] || 0);
-        });
-        DATA.skills.forEach(sk => {
-          const bgBonus = bg.skillBonuses?.[sk.id] || 0;
-          const trained = draft.chosenSkills.includes(sk.id) ? 1 : 0;
-          finalSkills[sk.id] = bgBonus + trained;
-        });
+         const finalStats = {};
+         const finalSkills = {};
+         STAT_NAMES.forEach(stat => {
+           finalStats[stat] = draft.baseStats[stat] + (bg.statBonuses?.[stat] || 0);
+         });
+         DATA.skills.forEach(sk => {
+           const bgBonus = bg.skillBonuses?.[sk.id] || 0;
+           const trained = draft.chosenSkills.includes(sk.id) ? 1 : 0;
+           finalSkills[sk.id] = bgBonus + trained;
+         });
 
-        const maxHp = 10 + 2 * finalStats.endurance;
-        const maxStamina = 8 + finalStats.endurance + finalStats.might;
-        const hasMagic = finalSkills.magic > 0 || bg.id === "hedge_wizard" || bg.id === "temple_acolyte";
-        const maxMana = hasMagic ? 4 + finalStats.will + finalStats.intellect : 0;
+         const maxHp = Game.characterCreation.calculateMaxHp(finalStats.endurance);
+         const maxStamina = Game.characterCreation.calculateMaxStamina(finalStats.might, finalStats.endurance);
+         const hasMagic = finalSkills.magic > 0 || bg.id === "hedge_wizard" || bg.id === "temple_acolyte";
+         const maxMana = Game.characterCreation.calculateMaxMana(finalStats.will, finalStats.intellect, hasMagic);
 
-        Game.ui.print("==============================================");
-        Game.ui.print("CREATE YOUR CHARACTER");
-        Game.ui.print("==============================================");
-        Game.ui.print("");
-        Game.ui.print("Step 5 of 6: Review Starting Equipment");
-        Game.ui.print("");
-        Game.ui.print(`Name: ${draft.name}`);
-        Game.ui.print(`Background: ${bg.name}`);
-        Game.ui.print("");
-        Game.ui.print("Final Stats:");
-        STAT_NAMES.forEach(stat => {
-          Game.ui.print(`  ${stat.charAt(0).toUpperCase() + stat.slice(1)}: ${finalStats[stat]}`);
-        });
-        Game.ui.print("");
-        Game.ui.print("Final Skills:");
-        DATA.skills.forEach(sk => {
-          if (finalSkills[sk.id] > 0) {
-            Game.ui.print(`  ${sk.id}: ${finalSkills[sk.id]}`);
-          }
-        });
-        Game.ui.print("");
-        Game.ui.print("Starting Resources:");
-        Game.ui.print(`  HP: ${maxHp}`);
-        Game.ui.print(`  Stamina: ${maxStamina}`);
-        Game.ui.print(`  Mana: ${maxMana}`);
-        Game.ui.print(`  Gold: ${bg.startingGold}`);
-        Game.ui.print("");
-        Game.ui.print("Starting Equipment:");
-        bg.startingItems.forEach(item => {
-          const itemObj = DATA.items.find(i => i.id === item.itemId);
-          Game.ui.print(`  - ${item.quantity}x ${itemObj ? itemObj.name : item.itemId}`);
-        });
-        if (bg.startingEquipment) {
-          Object.entries(bg.startingEquipment).forEach(([slot, itemId]) => {
-            if (itemId) {
-              const itemObj = DATA.items.find(i => i.id === itemId);
-              Game.ui.print(`  - Equipped: ${slot} (${itemObj ? itemObj.name : itemId})`);
-            }
-          });
-        }
-        Game.ui.print("");
-        Game.ui.print("Commands: confirm, back, restart");
-        Game.ui.prompt("> ");
-      };
+         draft.finalStats = finalStats;
+         draft.finalSkills = finalSkills;
+         draft.startingMaxHp = maxHp;
+         draft.startingMaxStamina = maxStamina;
+         draft.startingMaxMana = maxMana;
+
+         Game.ui.print("==============================================");
+         Game.ui.print("CREATE YOUR CHARACTER");
+         Game.ui.print("==============================================");
+         Game.ui.print("");
+         Game.ui.print("Step 5 of 6: Review Starting Equipment");
+         Game.ui.print("");
+         Game.ui.print(`Name: ${draft.name}`);
+         Game.ui.print(`Background: ${bg.name}`);
+         Game.ui.print("");
+         Game.ui.print("Final Stats:");
+         STAT_NAMES.forEach(stat => {
+           Game.ui.print(`  ${stat.charAt(0).toUpperCase() + stat.slice(1)}: ${finalStats[stat]}`);
+         });
+         Game.ui.print("");
+         Game.ui.print("Final Skills:");
+         DATA.skills.forEach(sk => {
+           if (finalSkills[sk.id] > 0) {
+             Game.ui.print(`  ${sk.id}: ${finalSkills[sk.id]}`);
+           }
+         });
+         Game.ui.print("");
+         Game.ui.print("Starting Resources:");
+         Game.ui.print(`  HP: ${maxHp}`);
+         Game.ui.print(`  Stamina: ${maxStamina}`);
+         Game.ui.print(`  Mana: ${maxMana}`);
+         Game.ui.print(`  Gold: ${bg.startingGold}`);
+         Game.ui.print("");
+         Game.ui.print("Starting Equipment:");
+         bg.startingItems.forEach(item => {
+           const itemObj = DATA.items.find(i => i.id === item.itemId);
+           Game.ui.print(`  - ${item.quantity}x ${itemObj ? itemObj.name : item.itemId}`);
+         });
+         if (bg.startingEquipment) {
+           Object.entries(bg.startingEquipment).forEach(([slot, itemId]) => {
+             if (itemId) {
+               const itemObj = DATA.items.find(i => i.id === itemId);
+               Game.ui.print(`  - Equipped: ${slot} (${itemObj ? itemObj.name : itemId})`);
+             }
+           });
+         }
+         Game.ui.print("");
+         Game.ui.print("Commands: confirm, back, restart");
+         Game.ui.prompt("> ");
+       };
 
       Game.characterCreation.handleReviewInput = function (input) {
         const cmd = input.trim().toLowerCase();
@@ -1039,87 +1045,76 @@
         return "Commands: confirm, back, restart";
       };
 
-      Game.characterCreation.createFinalCharacter = function () {
-        const draft = Game.characterCreation.characterDraft;
-        const bg = DATA.backgrounds.find(b => b.id === draft.backgroundId);
+Game.characterCreation.createFinalCharacter = function () {
+         const draft = Game.characterCreation.characterDraft;
+         const bg = DATA.backgrounds.find(b => b.id === draft.backgroundId);
 
-        const finalStats = {};
-        STAT_NAMES.forEach(stat => {
-          finalStats[stat] = draft.baseStats[stat] + (bg.statBonuses?.[stat] || 0);
-        });
+         const finalStats = draft.finalStats || {};
+         const finalSkills = draft.finalSkills || {};
+         const maxHp = draft.startingMaxHp || Game.characterCreation.calculateMaxHp(finalStats.endurance);
+         const maxStamina = draft.startingMaxStamina || Game.characterCreation.calculateMaxStamina(finalStats.might, finalStats.endurance);
+         const maxMana = draft.startingMaxMana || 0;
 
-        const finalSkills = {};
-        DATA.skills.forEach(sk => {
-          const bgBonus = bg.skillBonuses?.[sk.id] || 0;
-          const trained = draft.chosenSkills.includes(sk.id) ? 1 : 0;
-          finalSkills[sk.id] = bgBonus + trained;
-        });
+         const inventory = [];
+         bg.startingItems.forEach(item => {
+           inventory.push({ itemId: item.itemId, quantity: item.quantity });
+         });
 
-        const maxHp = 10 + 2 * finalStats.endurance;
-        const maxStamina = 8 + finalStats.endurance + finalStats.might;
-        const hasMagic = finalSkills.magic > 0 || bg.id === "hedge_wizard" || bg.id === "temple_acolyte";
-        const maxMana = hasMagic ? 4 + finalStats.will + finalStats.intellect : 0;
+         const equipment = {
+           weapon: null,
+           offhand: null,
+           armor: null,
+           cloak: null,
+           accessory1: null,
+           accessory2: null
+         };
+         if (bg.startingEquipment) {
+           Object.entries(bg.startingEquipment).forEach(([slot, itemId]) => {
+             if (itemId && equipment.hasOwnProperty(slot)) {
+               equipment[slot] = itemId;
+             }
+           });
+         }
 
-        const inventory = [];
-        bg.startingItems.forEach(item => {
-          inventory.push({ itemId: item.itemId, quantity: item.quantity });
-        });
+         Game.state.player = {
+           id: "player",
+           name: draft.name,
+           background: bg.id,
+           level: 1,
+           xp: 0,
+           stats: finalStats,
+           skills: finalSkills,
+           resources: {
+             hp: maxHp,
+             maxHp: maxHp,
+             stamina: maxStamina,
+             maxStamina: maxStamina,
+             mana: maxMana,
+             maxMana: maxMana
+           },
+           inventory: inventory,
+           equipment: equipment,
+           gold: bg.startingGold,
+           conditions: [],
+           reputation: bg.reputation || {},
+           flags: bg.flags || {}
+         };
 
-        const equipment = {
-          weapon: null,
-          offhand: null,
-          armor: null,
-          cloak: null,
-          accessory1: null,
-          accessory2: null
-        };
-        if (bg.startingEquipment) {
-          Object.entries(bg.startingEquipment).forEach(([slot, itemId]) => {
-            if (itemId && equipment.hasOwnProperty(slot)) {
-              equipment[slot] = itemId;
-            }
-          });
-        }
+         Game.state.mode = GameModes.PLAYING;
+         Game.characterCreation.creationStep = "complete";
 
-        Game.state.player = {
-          id: "player",
-          name: draft.name,
-          background: bg.id,
-          level: 1,
-          xp: 0,
-          stats: finalStats,
-          skills: finalSkills,
-          resources: {
-            hp: maxHp,
-            maxHp: maxHp,
-            stamina: maxStamina,
-            maxStamina: maxStamina,
-            mana: maxMana,
-            maxMana: maxMana
-          },
-          inventory: inventory,
-          equipment: equipment,
-          gold: bg.startingGold,
-          conditions: [],
-          reputation: bg.reputation || {},
-          flags: bg.flags || {}
-        };
+         Game.ui.clear();
+         Game.ui.print("==============================================");
+         Game.ui.print("CHARACTER CREATED");
+         Game.ui.print("==============================================");
+         Game.ui.print("");
+         Game.ui.print(`Welcome, ${draft.name} the ${bg.name}.`);
+         Game.ui.print("");
+         Game.ui.print("Type 'look' to begin your adventure.");
+         Game.ui.prompt("> ");
 
-        Game.state.mode = GameModes.PLAYING;
-        Game.characterCreation.creationStep = "complete";
-
-        Game.ui.clear();
-        Game.ui.print("==============================================");
-        Game.ui.print("CHARACTER CREATED");
-        Game.ui.print("==============================================");
-        Game.ui.print("");
-        Game.ui.print(`Welcome, ${draft.name} the ${bg.name}.`);
-        Game.ui.print("");
-        Game.ui.print("Type 'look' to begin your adventure.");
-        Game.ui.prompt("> ");
-
-        return "";
-      };
+         return "";
+       };
 
       // ── Derived Stats Calculations ────────────────────────────────────────────
 
