@@ -1695,10 +1695,492 @@ if (result.isHit && !result.isFumble) {
           Game.combat.startCombat(enemies);
         };
 
+// ════════════════════════════════════════════════════════════════════════════
+       // Game.engine  —  main game loop and mode routing
+       // ════════════════════════════════════════════════════════════════════════════
+
+       const GameModes = {
+         TITLE: "title",
+         CHARACTER_CREATION: "character_creation",
+         PLAYING: "playing",
+         GAME_OVER: "game_over"
+       };
+
+       Game.state.mode = GameModes.TITLE;
+       Game.state.player = null;
+
+       // ── Clock System ───────────────────────────────────────────────────────────
+       const MONTHS = ["Frostwane", "Emberfall", "Dawnreach", "Suncrest"];
+       const DAY_PHASES = [
+         { name: "Deep night", min: 0, max: 459 },
+         { name: "Dawn", min: 500, max: 759 },
+         { name: "Morning", min: 800, max: 1159 },
+         { name: "Midday", min: 1200, max: 1359 },
+         { name: "Afternoon", min: 1400, max: 1659 },
+         { name: "Late afternoon", min: 1700, max: 1859 },
+         { name: "Evening", min: 1900, max: 2059 },
+         { name: "Night", min: 2100, max: 2359 }
+       ];
+
+       const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth",
+         "seventh", "eighth", "ninth", "tenth", "eleventh", "twelfth", "thirteenth",
+         "fourteenth", "fifteenth", "sixteenth", "seventeenth", "eighteenth",
+         "nineteenth", "twentieth"];
+
+       Game.clock = {
+         day: 1,
+         hour: 8,
+         minute: 0,
+         month: MONTHS[0],
+
+         advance: function(minutes) {
+           this.minute += minutes;
+           while (this.minute >= 60) {
+             this.minute -= 60;
+             this.hour += 1;
+           }
+           while (this.hour >= 24) {
+             this.hour -= 24;
+             this.day += 1;
+           }
+           Game.conditions?.update(minutes);
+           Game.schedules?.update();
+           return minutes;
+         },
+
+         formatTime: function() {
+           const totalMinutes = this.hour * 60 + this.minute;
+           let phase = "Night";
+           for (const p of DAY_PHASES) {
+             if (totalMinutes >= p.min && totalMinutes <= p.max) {
+               phase = p.name;
+               break;
+             }
+           }
+           const dayOrd = ORDINALS[this.day - 1] || this.day + "th";
+           return phase + ", " + dayOrd + " day of " + this.month;
+         },
+
+         reset: function() {
+           this.day = 1;
+           this.hour = 8;
+           this.minute = 0;
+           this.month = MONTHS[0];
+         }
+       };
+
+       // ── Conditions System ─────────────────────────────────────────────────────
+       Game.conditions = {
+         CONDITIONS: Object.freeze({
+           poisoned: { id: "poisoned", name: "Poisoned", description: "Your body aches and your hands tremble.", modifiers: { endurance: -1, agility: -1 } },
+           bleeding: { id: "bleeding", name: "Bleeding", description: "Blood flows from a wound.", modifiers: { stamina: -1 } },
+           wounded: { id: "wounded", name: "Wounded", description: "The pain of your injury slows you.", modifiers: { agility: -2 } }
+         }),
+
+         update: function(minutes) {
+           const player = Game.state.player;
+           if (!player || !player.conditions) return;
+           for (const c of player.conditions) {
+             if (c.remainingMinutes != null) {
+               c.remainingMinutes -= minutes;
+             }
+           }
+           player.conditions = player.conditions.filter(c =>
+             c.remainingMinutes == null || c.remainingMinutes > 0
+           );
+         },
+
+         add: function(conditionId, durationMinutes) {
+           const player = Game.state.player;
+           if (!player) return;
+           if (!player.conditions) player.conditions = [];
+           const existing = player.conditions.find(c => c.id === conditionId);
+           if (existing && existing.remainingMinutes != null) {
+             existing.remainingMinutes += durationMinutes;
+           } else {
+             player.conditions.push({ id: conditionId, remainingMinutes: durationMinutes });
+           }
+         },
+
+         has: function(conditionId) {
+           const player = Game.state.player;
+           return player?.conditions?.some(c => c.id === conditionId) || false;
+         }
+       };
+
+       // ── Schedules System ───────────────────────────────────────────────────────
+       Game.schedules = {
+         update: function() {},
+         getLocation: function(entity) {
+           return entity.defaultLocation || "village_square";
+         }
+       };
+
+       // ── Title Screen ──────────────────────────────────────────────────────────
+       function showTitleScreen() {
+         Game.ui.printSeparator();
+         Game.ui.print("       FANTASY TEXT RPG");
+         Game.ui.printSeparator();
+         Game.ui.print("");
+         Game.ui.print("          1. Start New Game");
+         Game.ui.print("          2. Continue");
+         Game.ui.print("          3. About");
+         Game.ui.print("");
+         Game.ui.print("Type '1', '2', or '3' to select.");
+         Game.ui.printSeparator();
+       }
+
+       // ── Game Over ───────────────────────────────────────────────────────────────
+       function checkGameOver() {
+         const player = Game.state.player;
+         if (!player) return false;
+         const hp = player.currentHp || player.maxHp || 0;
+         if (hp <= 0) {
+           Game.state.mode = GameModes.GAME_OVER;
+           Game.ui.print("");
+           Game.ui.printSeparator();
+           Game.ui.print("                GAME OVER");
+           Game.ui.printSeparator();
+           Game.ui.print("");
+           Game.ui.print("Your vision fades to black...");
+           Game.ui.print("");
+           Game.ui.print("Type 'restart' to begin again.");
+           return true;
+         }
+         return false;
+       }
+
+       // ── Main Input Handler ──────────────────────────────────────────────────────
+       function handleInput(input) {
+         const cmd = Game.parser.parse(input);
+         if (!cmd) return;
+
+         if (Game.state.mode === GameModes.TITLE) {
+           return handleTitleInput(cmd);
+         }
+         if (Game.state.mode === GameModes.CHARACTER_CREATION) {
+           return Game.characterCreation?.handleInput(cmd) || true;
+         }
+         if (Game.state.mode === GameModes.PLAYING) {
+           if (checkGameOver()) return;
+           return handlePlayingInput(cmd);
+         }
+         if (Game.state.mode === GameModes.GAME_OVER) {
+           return handleGameOverInput(cmd);
+         }
+       }
+
+       function handleTitleInput(cmd) {
+         const verb = cmd.verb;
+         if (verb === "1" || verb === "start" || verb === "new") {
+           startNewGame();
+         } else if (verb === "2" || verb === "continue") {
+           Game.ui.print("Continue - not yet implemented.");
+         } else if (verb === "3" || verb === "about") {
+           showAbout();
+         } else if (verb === "restart") {
+           restartGame();
+         } else {
+           Game.ui.print("Invalid choice. Type 1, 2, or 3.");
+         }
+       }
+
+       function handleGameOverInput(cmd) {
+         const verb = cmd.verb;
+         if (verb === "restart") {
+           restartGame();
+         } else {
+           Game.ui.print("Type 'restart' to begin again.");
+         }
+       }
+
+       function handlePlayingInput(cmd) {
+         const verb = cmd.verb;
+         const dobj = cmd.directObjectText;
+
+         switch (verb) {
+           case "look":
+             Game.ui.print("You see the area around you.");
+             break;
+           case "inventory":
+             displayInventory();
+             break;
+           case "take":
+             if (dobj) {
+               const itemId = resolveItemId(dobj);
+               if (itemId) {
+                 const result = Game.inventory.addItem(itemId, 1);
+                 Game.ui.print(result.msg);
+               } else {
+                 Game.ui.print("You don't see that here.");
+               }
+             } else {
+               Game.ui.print("Take what?");
+             }
+             break;
+           case "drop":
+             if (dobj) {
+               const itemId = resolveItemId(dobj);
+               if (itemId) {
+                 const result = Game.inventory.removeItem(itemId, 1);
+                 Game.ui.print(result.msg);
+               } else {
+                 Game.ui.print("Drop what?");
+               }
+             } else {
+               Game.ui.print("Drop what?");
+             }
+             break;
+           case "equip":
+             if (dobj) {
+               const itemId = resolveItemId(dobj);
+               if (itemId) {
+                 const result = Game.equipment.equip(itemId);
+                 Game.ui.print(result.msg);
+               } else {
+                 Game.ui.print("Equip what?");
+               }
+             } else {
+               Game.ui.print("Equip what?");
+             }
+             break;
+           case "unequip":
+             if (dobj) {
+               const slot = dobj.toLowerCase();
+               const result = Game.equipment.unequip(slot);
+               Game.ui.print(result.msg);
+             } else {
+               Game.ui.print("Unequip what?");
+             }
+             break;
+           case "attack":
+             if (dobj) {
+               Game.combat.startCombatWith(["goblin_scout"]);
+               Game.combat.playerAttack(dobj);
+             } else {
+               Game.ui.print("Attack what?");
+             }
+             break;
+           case "wait":
+             const minutes = parseWaitTime(dobj);
+             Game.clock.advance(minutes);
+             Game.ui.print("You wait for " + minutes + " minutes.");
+             break;
+           case "help":
+             Game.ui.print("Commands: look, inventory, take/drop/equip/unequip <item>, attack <target>, wait, help");
+             break;
+           default:
+             Game.ui.print("I don't understand '" + cmd.raw + "'.");
+         }
+       }
+
+       function parseWaitTime(text) {
+         if (!text) return 10;
+         const num = parseInt(text);
+         if (!isNaN(num) && num > 0) return num;
+         if (text.includes("hour")) return 60;
+         if (text.includes("minute")) return 10;
+         return 10;
+       }
+
+       // ── Game Initialization ─────────────────────────────────────────────────────
+       function startNewGame() {
+         Game.state.mode = GameModes.CHARACTER_CREATION;
+         Game.ui.print("");
+         Game.ui.print("Starting a new game...");
+         Game.ui.print("");
+         Game.characterCreation?.start() || startCharacterCreation();
+       }
+
+       function startCharacterCreation() {
+         Game.ui.printSeparator();
+         Game.ui.print("CHARACTER CREATION");
+         Game.ui.printSeparator();
+         Game.ui.print("");
+         Game.ui.print("Commands: name <name>, background <id>, increase <stat>, decrease <stat>, continue, back");
+         Game.ui.print("");
+       }
+
+       function showAbout() {
+         Game.ui.printSeparator();
+         Game.ui.print("FANTASY TEXT RPG v" + Game.version);
+         Game.ui.printSeparator();
+         Game.ui.print("");
+         Game.ui.print("A medieval fantasy text adventure engine.");
+         Game.ui.print("Commands: look, inventory, take/drop/equip/unequip, attack, wait, help");
+         Game.ui.print("");
+       }
+
+       function restartGame() {
+         Game.state.mode = GameModes.TITLE;
+         Game.state.player = null;
+         Game.clock.reset();
+         Game.combat.endCombat();
+         Game.ui.print("");
+         showTitleScreen();
+       }
+
+       // ── Character Creation System ─────────────────────────────────────────────
+       Game.characterCreation = {
+         draft: null,
+         step: 0,
+         backgrounds: Object.freeze({
+           mercenary: { id: "mercenary", name: "Mercenary", statBonuses: { might: 1 }, skillBonuses: { melee: 1 }, startingItems: ["iron_sword"], startingGold: 15 },
+           village_hunter: { id: "village_hunter", name: "Village Hunter", statBonuses: { agility: 1 }, skillBonuses: { survival: 1, ranged: 1 }, startingItems: ["hunting_bow", "travel_rations"], startingGold: 10 },
+           hedge_wizard: { id: "hedge_wizard", name: "Hedge Wizard", statBonuses: { intellect: 1 }, skillBonuses: { magic: 1 }, startingItems: ["health_potion"], startingGold: 5 }
+         }),
+
+         start: function() {
+           this.draft = {
+             name: "",
+             backgroundId: null,
+             baseStats: { might: 0, agility: 0, endurance: 0, intellect: 0, will: 0, presence: 0 },
+             allocatedStatPoints: 0,
+             maxStatPoints: 6,
+             chosenSkills: []
+           };
+           this.step = 1;
+           Game.ui.print("Step 1: Enter your character's name.");
+         },
+
+         handleInput: function(cmd) {
+           const verb = cmd.verb;
+           const dobj = cmd.directObjectText;
+
+           if (this.step === 1) {
+             if (verb === "name" || verb === "call") {
+               if (dobj) {
+                 this.draft.name = dobj;
+                 this.step = 2;
+                 Game.ui.print("Name: " + this.draft.name);
+                 Game.ui.print("Step 2: Choose background. Options: mercenary, village_hunter, hedge_wizard.");
+               }
+             } else {
+               Game.ui.print("What is your character's name?");
+             }
+           } else if (this.step === 2) {
+             if (verb === "background" || verb === "choose") {
+               if (dobj && this.backgrounds[dobj]) {
+                 this.draft.backgroundId = dobj;
+                 this.step = 3;
+                 Game.ui.print("Background: " + this.backgrounds[dobj].name);
+                 Game.ui.print("Step 3: Allocate stat points. You have 6 points.");
+                 Game.ui.print("Commands: increase <stat>, decrease <stat>, stats");
+               } else {
+                 Game.ui.print("Choose: mercenary, village_hunter, or hedge_wizard.");
+               }
+             }
+           } else if (this.step === 3) {
+             if (verb === "increase" && dobj && this.draft.baseStats[dobj] !== undefined) {
+               if (this.draft.allocatedStatPoints < this.draft.maxStatPoints && this.draft.baseStats[dobj] < 3) {
+                 this.draft.baseStats[dobj]++;
+                 this.draft.allocatedStatPoints++;
+                 Game.ui.print(dobj + ": " + this.draft.baseStats[dobj] + " (points left: " + (this.draft.maxStatPoints - this.draft.allocatedStatPoints) + ")");
+               } else {
+                 Game.ui.print("You cannot increase that stat further.");
+               }
+             } else if (verb === "decrease" && dobj && this.draft.baseStats[dobj] !== undefined) {
+               if (this.draft.baseStats[dobj] > 0) {
+                 this.draft.baseStats[dobj]--;
+                 this.draft.allocatedStatPoints--;
+                 Game.ui.print(dobj + ": " + this.draft.baseStats[dobj]);
+               }
+             } else if (verb === "stats") {
+               Game.ui.print("Stats: might " + this.draft.baseStats.might + ", agility " + this.draft.baseStats.agility + ", endurance " + this.draft.baseStats.endurance + ", intellect " + this.draft.baseStats.intellect + ", will " + this.draft.baseStats.will + ", presence " + this.draft.baseStats.presence);
+             } else if (verb === "continue") {
+               if (this.draft.allocatedStatPoints === this.draft.maxStatPoints) {
+                 this.finalizeCharacter();
+               } else {
+                 Game.ui.print("Allocate all 6 stat points first.");
+               }
+             }
+           }
+         },
+
+         finalizeCharacter: function() {
+           const bg = this.backgrounds[this.draft.backgroundId];
+           const stats = { ...this.draft.baseStats };
+           const skills = { athletics: 0, stealth: 0, thievery: 0, survival: 0, lore: 0, investigation: 0, persuasion: 0, deception: 0, intimidation: 0, melee: 0, ranged: 0, defense: 0, magic: 0 };
+           for (const [stat, val] of Object.entries(bg.statBonuses || {})) {
+             stats[stat] = (stats[stat] || 0) + val;
+           }
+           for (const [skill, val] of Object.entries(bg.skillBonuses || {})) {
+             skills[skill] = (skills[skill] || 0) + val;
+           }
+           skills[bg.id === "village_hunter" ? "ranged" : bg.id === "mercenary" ? "melee" : "magic"] += 1;
+
+           const maxHp = 10 + 2 * stats.endurance;
+           const maxSta = 8 + stats.endurance + stats.might;
+           const maxMan = bg.id === "hedge_wizard" ? 4 + stats.will + stats.intellect : 0;
+
+           Game.state.player = {
+             id: "player",
+             name: this.draft.name,
+             background: this.draft.backgroundId,
+             level: 1,
+             xp: 0,
+             stats: stats,
+             skills: skills,
+             maxHp: maxHp,
+             currentHp: maxHp,
+             maxSta: maxSta,
+             currentSta: maxSta,
+             maxMan: maxMan,
+             currentMan: maxMan,
+             inventory: [],
+             equipment: {},
+             gold: bg.startingGold || 10,
+             conditions: [],
+             flags: {},
+             reputation: { village: 0 }
+           };
+
+           initialiseEquipment();
+           for (const itemId of bg.startingItems || []) {
+             Game.inventory.addItem(itemId, 1);
+           }
+           if (bg.startingItems?.includes("hunting_bow")) {
+             Game.equipment.equip("hunting_bow");
+           }
+           if (bg.startingItems?.includes("leather_tunic")) {
+             Game.equipment.equip("leather_tunic");
+           }
+
+           Game.state.mode = GameModes.PLAYING;
+           Game.ui.print("");
+           Game.ui.print("Your adventure begins...");
+           Game.ui.print("");
+           Game.ui.print("You stand in the village square. The morning air is crisp.");
+         }
+       };
+
+       // ── Main Init Function ──────────────────────────────────────────────────────
+       function initGame() {
+         showTitleScreen();
+         const form = document.getElementById("input-form");
+         const input = document.getElementById("command-input");
+         form.addEventListener("submit", function(e) {
+           e.preventDefault();
+           const text = input.value.trim();
+           if (text) {
+             input.value = "";
+             handleInput(text);
+           }
+         });
+       }
+
+       initGame();
+
+       // Expose engine API
+       Game.engine.handleInput = handleInput;
+       Game.engine.checkGameOver = checkGameOver;
+       Game.engine.advanceClock = Game.clock.advance.bind(Game.clock);
+
        // Expose utility functions
        Game.utilities.rollDice = rollDice;
        Game.utilities.randomInt = randomInt;
+       Game.utilities.resolveItemId = resolveItemId;
 
-     </script>
-   </body>
+      </script>
+    </body>
 </html>
