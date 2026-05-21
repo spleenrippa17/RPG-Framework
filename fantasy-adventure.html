@@ -93,8 +93,167 @@
        * the input is split on whitespace.
        * Keys are lower-case; parser lower-cases input before lookup.
        */
+      // ── Data Tables ───────────────────────────────────────────────────────────
+
+      const DATA = {
+        backgrounds: [
+          {
+            id: "mercenary",
+            name: "Mercenary",
+            description: "You earned your coin through sword and shield.",
+            statBonuses: { might: 1, endurance: 1 },
+            skillBonuses: { melee: 2, defense: 1, athletics: 1 },
+            startingItems: [
+              { itemId: "short_sword", quantity: 1 },
+              { itemId: "leather_armor", quantity: 1 },
+              { itemId: "travel_rations", quantity: 2 }
+            ],
+            startingEquipment: { weapon: "short_sword", armor: "leather_armor" },
+            startingGold: 15,
+            flags: {},
+            reputation: { soldiers: 1, mercenaries: 1 }
+          },
+          {
+            id: "village_hunter",
+            name: "Village Hunter",
+            description: "You know the old tracks, the deer paths, and the silence before danger.",
+            statBonuses: { agility: 1, endurance: 1 },
+            skillBonuses: { survival: 2, ranged: 1, stealth: 1 },
+            startingItems: [
+              { itemId: "hunting_bow", quantity: 1 },
+              { itemId: "skinning_knife", quantity: 1 },
+              { itemId: "travel_cloak", quantity: 1 },
+              { itemId: "travel_rations", quantity: 3 },
+              { itemId: "flint_and_steel", quantity: 1 }
+            ],
+            startingEquipment: { weapon: "hunting_bow", armor: "travel_cloak" },
+            startingGold: 8,
+            flags: { knows_forest_paths: true },
+            reputation: { village: 1, goblins: -1 }
+          },
+          {
+            id: "hedge_wizard",
+            name: "Hedge Wizard",
+            description: "You dabble in the arcane arts, drawing power from dusty tomes.",
+            statBonuses: { intellect: 1, will: 1 },
+            skillBonuses: { magic: 2, lore: 1, investigation: 1 },
+            startingItems: [
+              { itemId: "spellbook", quantity: 1 },
+              { itemId: "component_pouch", quantity: 1 },
+              { itemId: "travel_rations", quantity: 2 }
+            ],
+            startingEquipment: {},
+            startingGold: 20,
+            flags: {},
+            reputation: {}
+          },
+          {
+            id: "temple_acolyte",
+            name: "Temple Acolyte",
+            description: "You serve the gods and tend to the spiritual needs of others.",
+            statBonuses: { will: 1, presence: 1 },
+            skillBonuses: { persuasion: 2, lore: 1, magic: 1 },
+            startingItems: [
+              { itemId: "holy_symbol", quantity: 1 },
+              { itemId: "travel_rations", quantity: 2 }
+            ],
+            startingEquipment: {},
+            startingGold: 12,
+            flags: {},
+            reputation: { church: 1 }
+          },
+          {
+            id: "street_urchin",
+            name: "Street Urchin",
+            description: "You grew up on the streets, surviving by wit and stealth.",
+            statBonuses: { agility: 1, presence: 1 },
+            skillBonuses: { stealth: 2, thievery: 1, deception: 1 },
+            startingItems: [
+              { itemId: "dagger", quantity: 1 },
+              { itemId: "lockpicks", quantity: 1 },
+              { itemId: "travel_rations", quantity: 1 }
+            ],
+            startingEquipment: { weapon: "dagger" },
+            startingGold: 5,
+            flags: {},
+            reputation: { thieves_guild: 1 }
+          },
+          {
+            id: "disgraced_noble",
+            name: "Disgraced Noble",
+            description: "You fell from grace but retain knowledge of court and command.",
+            statBonuses: { presence: 1, intellect: 1 },
+            skillBonuses: { persuasion: 2, deception: 1, intimidation: 1 },
+            startingItems: [
+              { itemId: "fine_clothing", quantity: 1 },
+              { itemId: "travel_rations", quantity: 2 }
+            ],
+            startingEquipment: {},
+            startingGold: 25,
+            flags: {},
+            reputation: { nobles: -1 }
+          },
+          {
+            id: "grave_robber",
+            name: "Grave Robber",
+            description: "You know the old burial grounds and what lies beneath.",
+            statBonuses: { agility: 1, intellect: 1 },
+            skillBonuses: { thievery: 2, investigation: 1, lore: 1 },
+            startingItems: [
+              { itemId: "shovel", quantity: 1 },
+              { itemId: "dagger", quantity: 1 },
+              { itemId: "travel_rations", quantity: 2 }
+            ],
+            startingEquipment: { weapon: "dagger" },
+            startingGold: 10,
+            flags: {},
+            reputation: {}
+          }
+        ],
+        items: [
+          { id: "short_sword", name: "short sword", type: "weapon", weight: 3, slot: "weapon", skill: "melee", stat: "might", damage: "1d6", value: 10 },
+          { id: "leather_armor", name: "leather armor", type: "armor", weight: 15, slot: "armor", defenseBonus: 2, value: 25 },
+          { id: "hunting_bow", name: "hunting bow", type: "weapon", weight: 2, slot: "weapon", skill: "ranged", stat: "agility", damage: "1d6", value: 15 },
+          { id: "skinning_knife", name: "skinning knife", type: "weapon", weight: 1, slot: "weapon", skill: "melee", stat: "agility", damage: "1d4", value: 5 },
+          { id: "travel_cloak", name: "travel cloak", type: "clothing", weight: 2, slot: "armor", defenseBonus: 1, value: 5 },
+          { id: "travel_rations", name: "travel rations", type: "consumable", weight: 1, stackable: true, value: 1 },
+          { id: "flint_and_steel", name: "flint and steel", type: "tool", weight: 0, value: 2 },
+          { id: "spellbook", name: "spellbook", type: "book", weight: 3, value: 20 },
+          { id: "component_pouch", name: "component pouch", type: "tool", weight: 1, value: 10 },
+          { id: "holy_symbol", name: "holy symbol", type: "tool", weight: 0, value: 15 },
+          { id: "dagger", name: "dagger", type: "weapon", weight: 1, slot: "weapon", skill: "melee", stat: "might", damage: "1d4", value: 4 },
+          { id: "lockpicks", name: "lockpicks", type: "tool", weight: 0, value: 15 },
+          { id: "fine_clothing", name: "fine clothing", type: "clothing", weight: 1, slot: "armor", value: 20 },
+          { id: "shovel", name: "shovel", type: "tool", weight: 4, value: 3 }
+        ],
+        skills: [
+          { id: "athletics", stat: "might" },
+          { id: "stealth", stat: "agility" },
+          { id: "thievery", stat: "agility" },
+          { id: "survival", stat: "endurance" },
+          { id: "lore", stat: "intellect" },
+          { id: "investigation", stat: "intellect" },
+          { id: "persuasion", stat: "presence" },
+          { id: "deception", stat: "presence" },
+          { id: "intimidation", stat: "presence" },
+          { id: "melee", stat: "might" },
+          { id: "ranged", stat: "agility" },
+          { id: "defense", stat: "agility" },
+          { id: "magic", stat: "will" }
+        ]
+      };
+
+      const STAT_NAMES = ["might", "agility", "endurance", "intellect", "will", "presence"];
+      const GameModes = {
+        TITLE: "title",
+        CHARACTER_CREATION: "character_creation",
+        PLAYING: "playing",
+        GAME_OVER: "game_over"
+      };
+
+      // ── Verb Aliases ───────────────────────────────────────────────────────────
+
       const VERB_ALIASES = {
-        i: "inventory",
         inv: "inventory",
         inventory: "inventory",
         equipment: "inventory",
@@ -360,15 +519,735 @@
         return [...new Set(Object.values(VERB_ALIASES))].sort();
       };
 
-      /**
-       * Add extra aliases at runtime (for mod content, etc.).
-       * Example: Game.parser.addAliases({ "say hello": "say hi" });
-       */
+/**
+        * Add extra aliases at runtime (for mod content, etc.).
+        * Example: Game.parser.addAliases({ "say hello": "say hi" });
+        */
       Game.parser.addAliases = function (extraAliases) {
         Object.assign(VERB_ALIASES, extraAliases);
       };
-    </script>
+
+      // ── UI System ───────────────────────────────────────────────────────────────
+
+      Game.ui = {
+        output: null,
+        input: null,
+        print: function (text) {
+          if (!Game.ui.output) Game.ui.output = document.getElementById('output');
+          Game.ui.output.textContent += text + '\n';
+          Game.ui.output.scrollTop = Game.ui.output.scrollHeight;
+        },
+        clear: function () {
+          if (!Game.ui.output) Game.ui.output = document.getElementById('output');
+          Game.ui.output.textContent = '';
+        },
+        prompt: function (text) {
+          Game.ui.print(text);
+          if (!Game.ui.input) Game.ui.input = document.getElementById('command-input');
+          Game.ui.input.focus();
+        }
+      };
+
+      // ── State Management ───────────────────────────────────────────────────────
+
+      Game.state = {
+        mode: GameModes.TITLE,
+        player: null,
+        clock: { day: 1, hour: 8, minute: 0, month: "Frostwane" },
+        flags: {},
+        variables: {},
+        world: {
+          itemLocations: {},
+          npcOverrides: {},
+          monsterStates: {},
+          locationStates: {}
+        }
+      };
+
+      // ── Character Creation System ─────────────────────────────────────────────
+
+      Game.characterCreation = {
+        characterDraft: {
+          name: "",
+          backgroundId: null,
+          baseStats: {
+            might: 0, agility: 0, endurance: 0,
+            intellect: 0, will: 0, presence: 0
+          },
+          allocatedStatPoints: 0,
+          maxStatPoints: 6,
+          chosenSkills: [],
+          finalStats: {},
+          finalSkills: {},
+          startingItems: [],
+          startingGold: 0
+        },
+        creationStep: "name"
+      };
+
+      Game.characterCreation.start = function () {
+        Game.state.mode = GameModes.CHARACTER_CREATION;
+        Game.characterCreation.creationStep = "name";
+        Game.characterCreation.characterDraft = {
+          name: "",
+          backgroundId: null,
+          baseStats: { might: 0, agility: 0, endurance: 0, intellect: 0, will: 0, presence: 0 },
+          allocatedStatPoints: 0,
+          maxStatPoints: 6,
+          chosenSkills: [],
+          finalStats: {},
+          finalSkills: {},
+          startingItems: [],
+          startingGold: 0
+        };
+        Game.ui.clear();
+        Game.ui.print("==============================================");
+        Game.ui.print("CREATE YOUR CHARACTER");
+        Game.ui.print("==============================================");
+        Game.ui.print("");
+        Game.ui.print("Step 1 of 6: Enter Your Name");
+        Game.ui.print("");
+        Game.ui.print("What is your character's name?");
+        Game.ui.print("");
+        Game.ui.prompt("> ");
+      };
+
+      Game.characterCreation.handleInput = function (input) {
+        const step = Game.characterCreation.creationStep;
+        const draft = Game.characterCreation.characterDraft;
+
+        if (step === "name") {
+          return Game.characterCreation.handleNameInput(input);
+        } else if (step === "background") {
+          return Game.characterCreation.handleBackgroundInput(input);
+        } else if (step === "stats") {
+          return Game.characterCreation.handleStatsInput(input);
+        } else if (step === "tradeoff") {
+          return Game.characterCreation.handleTradeoffInput(input);
+        } else if (step === "skills") {
+          return Game.characterCreation.handleSkillsInput(input);
+        } else if (step === "review") {
+          return Game.characterCreation.handleReviewInput(input);
+        }
+        return "Unknown step in character creation.";
+      };
+
+      Game.characterCreation.handleNameInput = function (input) {
+        const name = input.trim();
+        if (name.length === 0) {
+          return "Please enter a name.";
+        }
+        Game.characterCreation.characterDraft.name = name;
+        Game.characterCreation.creationStep = "background";
+        Game.ui.print("");
+        Game.ui.print(`Name set: ${name}`);
+        Game.ui.print("");
+        return Game.characterCreation.showBackgroundScreen();
+      };
+
+      Game.characterCreation.showBackgroundScreen = function () {
+        Game.ui.print("==============================================");
+        Game.ui.print("CREATE YOUR CHARACTER");
+        Game.ui.print("==============================================");
+        Game.ui.print("");
+        Game.ui.print("Step 2 of 6: Choose Your Background");
+        Game.ui.print("");
+        Game.ui.print("Choose a background:");
+        Game.ui.print("");
+        DATA.backgrounds.forEach((bg, i) => {
+          Game.ui.print(`  ${i + 1}. ${bg.name} - ${bg.description}`);
+        });
+        Game.ui.print("");
+        Game.ui.print("Commands: [number] to choose, back, help");
+        Game.ui.prompt("> ");
+      };
+
+      Game.characterCreation.handleBackgroundInput = function (input) {
+        const cmd = input.trim().toLowerCase();
+        const idx = parseInt(cmd) - 1;
+
+        if (cmd === "back") {
+          Game.characterCreation.creationStep = "name";
+          Game.ui.print("");
+          Game.ui.print("Returning to name entry.");
+          Game.ui.print("");
+          return Game.characterCreation.showNameScreen();
+        }
+
+        if (idx >= 0 && idx < DATA.backgrounds.length) {
+          const bg = DATA.backgrounds[idx];
+          Game.characterCreation.characterDraft.backgroundId = bg.id;
+          Game.characterCreation.creationStep = "stats";
+          Game.ui.print("");
+          Game.ui.print(`Background chosen: ${bg.name}`);
+          Game.ui.print("");
+          return Game.characterCreation.showStatsScreen();
+        }
+
+        return "Please enter a valid number to choose a background.";
+      };
+
+      Game.characterCreation.showNameScreen = function () {
+        Game.ui.print("==============================================");
+        Game.ui.print("CREATE YOUR CHARACTER");
+        Game.ui.print("==============================================");
+        Game.ui.print("");
+        Game.ui.print("Step 1 of 6: Enter Your Name");
+        Game.ui.print("");
+        Game.ui.print("What is your character's name?");
+        Game.ui.prompt("> ");
+      };
+
+      Game.characterCreation.showStatsScreen = function () {
+        const draft = Game.characterCreation.characterDraft;
+        const bg = DATA.backgrounds.find(b => b.id === draft.backgroundId);
+        const remaining = draft.maxStatPoints - draft.allocatedStatPoints;
+
+        Game.ui.print("==============================================");
+        Game.ui.print("CREATE YOUR CHARACTER");
+        Game.ui.print("==============================================");
+        Game.ui.print("");
+        Game.ui.print("Step 3 of 6: Allocate Stat Points");
+        Game.ui.print("");
+        Game.ui.print(`Background: ${bg.name}`);
+        if (bg.statBonuses) {
+          Game.ui.print("Background stat bonuses are applied after allocation.");
+        }
+        Game.ui.print("");
+        Game.ui.print(`You have ${remaining} points to spend.`);
+        Game.ui.print("No stat may be raised above 3.");
+        Game.ui.print("Optional: Lower one stat to -1 to gain an extra point (type 'tradeoff').");
+        Game.ui.print("");
+
+        STAT_NAMES.forEach(stat => {
+          const bgBonus = bg.statBonuses?.[stat] || 0;
+          const baseVal = draft.baseStats[stat];
+          const finalVal = baseVal + bgBonus;
+          Game.ui.print(`  ${stat.charAt(0).toUpperCase() + stat.slice(1)}: ${baseVal} (base) + ${bgBonus} (bg) = ${finalVal} (final)`);
+        });
+
+        Game.ui.print("");
+        Game.ui.print("Commands: increase [stat], decrease [stat], set [stat] [value], tradeoff, done, back");
+        Game.ui.prompt("> ");
+      };
+
+      Game.characterCreation.handleStatsInput = function (input) {
+        const draft = Game.characterCreation.characterDraft;
+        const tokens = input.trim().toLowerCase().split(/\s+/);
+        const cmd = tokens[0];
+
+        if (cmd === "back") {
+          Game.characterCreation.creationStep = "background";
+          Game.ui.print("");
+          Game.ui.print("Returning to background selection.");
+          Game.ui.print("");
+          return Game.characterCreation.showBackgroundScreen();
+        }
+
+        if (cmd === "done") {
+          if (draft.allocatedStatPoints !== draft.maxStatPoints) {
+            return `You must allocate all ${draft.maxStatPoints} points. You have ${draft.allocatedStatPoints} allocated.`;
+          }
+          Game.characterCreation.creationStep = "skills";
+          Game.ui.print("");
+          Game.ui.print("Stats confirmed.");
+          Game.ui.print("");
+          return Game.characterCreation.showSkillsScreen();
+        }
+
+        if (cmd === "tradeoff") {
+          Game.characterCreation.creationStep = "tradeoff";
+          return Game.characterCreation.showTradeoffScreen();
+        }
+
+        const stat = tokens[1];
+        if (!STAT_NAMES.includes(stat)) {
+          return "Invalid stat. Use: might, agility, endurance, intellect, will, presence.";
+        }
+
+        if (cmd === "increase" || cmd === "inc") {
+          const current = draft.baseStats[stat];
+          const remaining = draft.maxStatPoints - draft.allocatedStatPoints;
+          if (current >= 3) {
+            return `${stat} is already at maximum (3).`;
+          }
+          if (remaining <= 0) {
+            return "You have no points remaining to allocate.";
+          }
+          draft.baseStats[stat]++;
+          draft.allocatedStatPoints++;
+          return Game.characterCreation.showStatsScreen();
+        }
+
+        if (cmd === "decrease" || cmd === "dec") {
+          const current = draft.baseStats[stat];
+          if (current <= 0) {
+            return `${stat} is already at minimum (0).`;
+          }
+          draft.baseStats[stat]--;
+          draft.allocatedStatPoints--;
+          return Game.characterCreation.showStatsScreen();
+        }
+
+        if (cmd === "set") {
+          const value = parseInt(tokens[2]);
+          if (isNaN(value)) {
+            return "Please specify a value: set [stat] [value]";
+          }
+          const current = draft.baseStats[stat];
+          const diff = value - current;
+          const remaining = draft.maxStatPoints - draft.allocatedStatPoints;
+
+          if (value < 0 || value > 3) {
+            return "Stat values must be between 0 and 3.";
+          }
+
+          if (diff > remaining) {
+            return `You don't have enough points. Need ${diff}, have ${remaining}.`;
+          }
+
+          draft.baseStats[stat] = value;
+          draft.allocatedStatPoints += diff;
+          return Game.characterCreation.showStatsScreen();
+        }
+
+        return "Commands: increase [stat], decrease [stat], set [stat] [value], tradeoff, done, back";
+      };
+
+      Game.characterCreation.showTradeoffScreen = function () {
+        Game.ui.print("");
+        Game.ui.print("Trade-off: Lower one stat to -1 to gain an extra point.");
+        Game.ui.print("Current stats:");
+        STAT_NAMES.forEach(stat => {
+          Game.ui.print(`  ${stat}: ${Game.characterCreation.characterDraft.baseStats[stat]}`);
+        });
+        Game.ui.print("");
+        Game.ui.print("Command: tradeoff [stat]");
+        Game.ui.print("Or 'cancel' to return to stats.");
+        Game.ui.prompt("> ");
+      };
+
+      Game.characterCreation.handleTradeoffInput = function (input) {
+        const tokens = input.trim().toLowerCase().split(/\s+/);
+        const cmd = tokens[0];
+
+        if (cmd === "cancel") {
+          return Game.characterCreation.showStatsScreen();
+        }
+
+        const stat = tokens[1];
+        if (!STAT_NAMES.includes(stat)) {
+          return "Invalid stat. Use: tradeoff [stat]";
+        }
+
+        const draft = Game.characterCreation.characterDraft;
+        const current = draft.baseStats[stat];
+
+        if (current !== 0) {
+          return "You can only trade off a stat that is currently 0.";
+        }
+
+        draft.baseStats[stat] = -1;
+        draft.maxStatPoints += 1;
+        Game.ui.print(`Trade-off applied: ${stat} is now -1, you gained 1 extra point.`);
+        return Game.characterCreation.showStatsScreen();
+      };
+
+      Game.characterCreation.showSkillsScreen = function () {
+        const draft = Game.characterCreation.characterDraft;
+        const bg = DATA.backgrounds.find(b => b.id === draft.backgroundId);
+        const chosen = draft.chosenSkills;
+        const remaining = 4 - chosen.length;
+
+        Game.ui.print("==============================================");
+        Game.ui.print("CREATE YOUR CHARACTER");
+        Game.ui.print("==============================================");
+        Game.ui.print("");
+        Game.ui.print("Step 4 of 6: Choose Trained Skills");
+        Game.ui.print("");
+        Game.ui.print("Choose 4 skills to train. Trained skills start at +1.");
+        Game.ui.print(`Skills from background: ${Object.keys(bg.skillBonuses || {}).map(s => s + " +" + (bg.skillBonuses[s])).join(", ") || "None"}`);
+        Game.ui.print("");
+        Game.ui.print(`You need to choose ${remaining} more skills.`);
+        Game.ui.print("");
+        Game.ui.print("Available skills:");
+        DATA.skills.forEach((sk, i) => {
+          const isChosen = chosen.includes(sk.id);
+          const bgBonus = bg.skillBonuses?.[sk.id] || 0;
+          const status = isChosen ? "chosen" : `base 0 + bg ${bgBonus}`;
+          Game.ui.print(`  ${i + 1}. ${sk.id} (${sk.stat}) - ${status}`);
+        });
+        Game.ui.print("");
+        Game.ui.print("Commands: choose [number/skill], unchoose [skill], done, back");
+        Game.ui.prompt("> ");
+      };
+
+      Game.characterCreation.handleSkillsInput = function (input) {
+        const draft = Game.characterCreation.characterDraft;
+        const bg = DATA.backgrounds.find(b => b.id === draft.backgroundId);
+        const tokens = input.trim().toLowerCase().split(/\s+/);
+        const cmd = tokens[0];
+
+        if (cmd === "back") {
+          Game.characterCreation.creationStep = "stats";
+          Game.ui.print("");
+          Game.ui.print("Returning to stat allocation.");
+          Game.ui.print("");
+          return Game.characterCreation.showStatsScreen();
+        }
+
+        if (cmd === "done") {
+          if (draft.chosenSkills.length !== 4) {
+            return `You must choose exactly 4 skills. You have chosen ${draft.chosenSkills.length}.`;
+          }
+          Game.characterCreation.creationStep = "review";
+          Game.ui.print("");
+          Game.ui.print("Skills confirmed.");
+          Game.ui.print("");
+          return Game.characterCreation.showReviewScreen();
+        }
+
+        if (cmd === "choose") {
+          const skillRef = tokens[1];
+          let skillId = null;
+
+          if (isNaN(parseInt(skillRef))) {
+            skillId = skillRef;
+          } else {
+            const idx = parseInt(skillRef) - 1;
+            if (idx >= 0 && idx < DATA.skills.length) {
+              skillId = DATA.skills[idx].id;
+            }
+          }
+
+          if (!skillId || !DATA.skills.find(s => s.id === skillId)) {
+            return "Invalid skill. Use the skill name or number.";
+          }
+
+          if (draft.chosenSkills.includes(skillId)) {
+            return `${skillId} is already chosen.`;
+          }
+
+          if (draft.chosenSkills.length >= 4) {
+            return "You can only choose 4 skills.";
+          }
+
+          draft.chosenSkills.push(skillId);
+          return Game.characterCreation.showSkillsScreen();
+        }
+
+        if (cmd === "unchoose") {
+          const skillId = tokens[1];
+          const idx = draft.chosenSkills.indexOf(skillId);
+          if (idx === -1) {
+            return `${skillId} is not chosen.`;
+          }
+          draft.chosenSkills.splice(idx, 1);
+          return Game.characterCreation.showSkillsScreen();
+        }
+
+        return "Commands: choose [number/skill], unchoose [skill], done, back";
+      };
+
+      Game.characterCreation.showReviewScreen = function () {
+        const draft = Game.characterCreation.characterDraft;
+        const bg = DATA.backgrounds.find(b => b.id === draft.backgroundId);
+
+        const finalStats = {};
+        const finalSkills = {};
+        STAT_NAMES.forEach(stat => {
+          finalStats[stat] = draft.baseStats[stat] + (bg.statBonuses?.[stat] || 0);
+        });
+        DATA.skills.forEach(sk => {
+          const bgBonus = bg.skillBonuses?.[sk.id] || 0;
+          const trained = draft.chosenSkills.includes(sk.id) ? 1 : 0;
+          finalSkills[sk.id] = bgBonus + trained;
+        });
+
+        const maxHp = 10 + 2 * finalStats.endurance;
+        const maxStamina = 8 + finalStats.endurance + finalStats.might;
+        const hasMagic = finalSkills.magic > 0 || bg.id === "hedge_wizard" || bg.id === "temple_acolyte";
+        const maxMana = hasMagic ? 4 + finalStats.will + finalStats.intellect : 0;
+
+        Game.ui.print("==============================================");
+        Game.ui.print("CREATE YOUR CHARACTER");
+        Game.ui.print("==============================================");
+        Game.ui.print("");
+        Game.ui.print("Step 5 of 6: Review Starting Equipment");
+        Game.ui.print("");
+        Game.ui.print(`Name: ${draft.name}`);
+        Game.ui.print(`Background: ${bg.name}`);
+        Game.ui.print("");
+        Game.ui.print("Final Stats:");
+        STAT_NAMES.forEach(stat => {
+          Game.ui.print(`  ${stat.charAt(0).toUpperCase() + stat.slice(1)}: ${finalStats[stat]}`);
+        });
+        Game.ui.print("");
+        Game.ui.print("Final Skills:");
+        DATA.skills.forEach(sk => {
+          if (finalSkills[sk.id] > 0) {
+            Game.ui.print(`  ${sk.id}: ${finalSkills[sk.id]}`);
+          }
+        });
+        Game.ui.print("");
+        Game.ui.print("Starting Resources:");
+        Game.ui.print(`  HP: ${maxHp}`);
+        Game.ui.print(`  Stamina: ${maxStamina}`);
+        Game.ui.print(`  Mana: ${maxMana}`);
+        Game.ui.print(`  Gold: ${bg.startingGold}`);
+        Game.ui.print("");
+        Game.ui.print("Starting Equipment:");
+        bg.startingItems.forEach(item => {
+          const itemObj = DATA.items.find(i => i.id === item.itemId);
+          Game.ui.print(`  - ${item.quantity}x ${itemObj ? itemObj.name : item.itemId}`);
+        });
+        if (bg.startingEquipment) {
+          Object.entries(bg.startingEquipment).forEach(([slot, itemId]) => {
+            if (itemId) {
+              const itemObj = DATA.items.find(i => i.id === itemId);
+              Game.ui.print(`  - Equipped: ${slot} (${itemObj ? itemObj.name : itemId})`);
+            }
+          });
+        }
+        Game.ui.print("");
+        Game.ui.print("Commands: confirm, back, restart");
+        Game.ui.prompt("> ");
+      };
+
+      Game.characterCreation.handleReviewInput = function (input) {
+        const cmd = input.trim().toLowerCase();
+        const draft = Game.characterCreation.characterDraft;
+        const bg = DATA.backgrounds.find(b => b.id === draft.backgroundId);
+
+        if (cmd === "back") {
+          Game.characterCreation.creationStep = "skills";
+          Game.ui.print("");
+          Game.ui.print("Returning to skill selection.");
+          Game.ui.print("");
+          return Game.characterCreation.showSkillsScreen();
+        }
+
+        if (cmd === "restart") {
+          Game.characterCreation.start();
+          return "";
+        }
+
+        if (cmd === "confirm") {
+          return Game.characterCreation.createFinalCharacter();
+        }
+
+        return "Commands: confirm, back, restart";
+      };
+
+      Game.characterCreation.createFinalCharacter = function () {
+        const draft = Game.characterCreation.characterDraft;
+        const bg = DATA.backgrounds.find(b => b.id === draft.backgroundId);
+
+        const finalStats = {};
+        STAT_NAMES.forEach(stat => {
+          finalStats[stat] = draft.baseStats[stat] + (bg.statBonuses?.[stat] || 0);
+        });
+
+        const finalSkills = {};
+        DATA.skills.forEach(sk => {
+          const bgBonus = bg.skillBonuses?.[sk.id] || 0;
+          const trained = draft.chosenSkills.includes(sk.id) ? 1 : 0;
+          finalSkills[sk.id] = bgBonus + trained;
+        });
+
+        const maxHp = 10 + 2 * finalStats.endurance;
+        const maxStamina = 8 + finalStats.endurance + finalStats.might;
+        const hasMagic = finalSkills.magic > 0 || bg.id === "hedge_wizard" || bg.id === "temple_acolyte";
+        const maxMana = hasMagic ? 4 + finalStats.will + finalStats.intellect : 0;
+
+        const inventory = [];
+        bg.startingItems.forEach(item => {
+          inventory.push({ itemId: item.itemId, quantity: item.quantity });
+        });
+
+        const equipment = {
+          weapon: null,
+          offhand: null,
+          armor: null,
+          cloak: null,
+          accessory1: null,
+          accessory2: null
+        };
+        if (bg.startingEquipment) {
+          Object.entries(bg.startingEquipment).forEach(([slot, itemId]) => {
+            if (itemId && equipment.hasOwnProperty(slot)) {
+              equipment[slot] = itemId;
+            }
+          });
+        }
+
+        Game.state.player = {
+          id: "player",
+          name: draft.name,
+          background: bg.id,
+          level: 1,
+          xp: 0,
+          stats: finalStats,
+          skills: finalSkills,
+          resources: {
+            hp: maxHp,
+            maxHp: maxHp,
+            stamina: maxStamina,
+            maxStamina: maxStamina,
+            mana: maxMana,
+            maxMana: maxMana
+          },
+          inventory: inventory,
+          equipment: equipment,
+          gold: bg.startingGold,
+          conditions: [],
+          reputation: bg.reputation || {},
+          flags: bg.flags || {}
+        };
+
+        Game.state.mode = GameModes.PLAYING;
+        Game.characterCreation.creationStep = "complete";
+
+        Game.ui.clear();
+        Game.ui.print("==============================================");
+        Game.ui.print("CHARACTER CREATED");
+        Game.ui.print("==============================================");
+        Game.ui.print("");
+        Game.ui.print(`Welcome, ${draft.name} the ${bg.name}.`);
+        Game.ui.print("");
+        Game.ui.print("Type 'look' to begin your adventure.");
+        Game.ui.prompt("> ");
+
+        return "";
+      };
+
+      // ── Derived Stats Calculations ────────────────────────────────────────────
+
+      Game.characterCreation.calculateMaxHp = function (endurance) {
+        return 10 + 2 * endurance;
+      };
+
+      Game.characterCreation.calculateMaxStamina = function (might, endurance) {
+        return 8 + endurance + might;
+      };
+
+      Game.characterCreation.calculateMaxMana = function (will, intellect, hasMagicBackground) {
+        return hasMagicBackground ? 4 + will + intellect : 0;
+      };
+
+      // ── Engine System (main game loop) ───────────────────────────────────────
+
+      Game.engine = {
+        handleCommand: function (input) {
+          const cmd = Game.parser.parse(input);
+          if (!cmd) return "I don't understand that command.";
+
+          if (cmd.verb === "look") {
+            if (Game.state.mode === GameModes.PLAYING) {
+              if (!Game.state.player) {
+                return "You haven't created a character yet. Type 'new game' to begin.";
+              }
+              return "You stand at the crossroads of destiny. (Game world not yet implemented)";
+            }
+          }
+
+          return "Command not implemented in playing mode.";
+        }
+      };
+
+      // ── Clock System ───────────────────────────────────────────────────────────
+
+      Game.clock = {
+        advanceTime: function (minutes) {
+          const clock = Game.state.clock;
+          clock.minute += minutes;
+          while (clock.minute >= 60) {
+            clock.minute -= 60;
+            clock.hour += 1;
+          }
+          while (clock.hour >= 24) {
+            clock.hour -= 24;
+            clock.day += 1;
+          }
+        },
+        formatTime: function (clock) {
+          const hour = clock.hour;
+          let phase;
+          if (hour >= 5 && hour < 8) phase = "Dawn";
+          else if (hour >= 8 && hour < 12) phase = "Morning";
+          else if (hour >= 12 && hour < 14) phase = "Midday";
+          else if (hour >= 14 && hour < 17) phase = "Afternoon";
+          else if (hour >= 17 && hour < 19) phase = "Late afternoon";
+          else if (hour >= 19 && hour < 21) phase = "Evening";
+          else if (hour >= 21 && hour < 24) phase = "Night";
+          else phase = "Deep night";
+
+          const ordinal = ["first", "second", "third", "fourth", "fifth", "sixth",
+            "seventh", "eighth", "ninth", "tenth", "eleventh", "twelfth", "thirteenth",
+            "fourteenth", "fifteenth", "sixteenth", "seventeenth", "eighteenth",
+            "nineteenth", "twentieth", "twenty-first", "twenty-second", "twenty-third",
+            "twenty-fourth", "twenty-fifth", "twenty-sixth", "twenty-seventh",
+            "twenty-eighth", "twenty-ninth", "thirtieth", "thirty-first"];
+          const dayStr = ordinal[Math.min(clock.day - 1, 30)] || `${clock.day}`;
+
+          return `${phase}, ${dayStr} day of ${clock.month}`;
+        }
+      };
+
+      // ── Main Input Handler ─────────────────────────────────────────────────────
+
+      function handleInput(input) {
+        const trimmed = input.trim().toLowerCase();
+
+        if (Game.state.mode === GameModes.TITLE) {
+          if (trimmed === "new game" || trimmed === "start" || trimmed === "new") {
+            Game.characterCreation.start();
+            return "";
+          }
+          if (trimmed === "help" || trimmed === "?") {
+            Game.ui.print("Available commands: new game, help");
+            return "";
+          }
+          Game.ui.print("Type 'new game' to begin.");
+          return "";
+        }
+
+        if (Game.state.mode === GameModes.CHARACTER_CREATION) {
+          return Game.characterCreation.handleInput(input);
+        }
+
+        if (Game.state.mode === GameModes.PLAYING) {
+          return Game.engine.handleCommand(input);
+        }
+
+        return "";
+      }
+
+      // ── Event Listeners ───────────────────────────────────────────────────────
+
+      document.getElementById('input-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const input = document.getElementById('command-input');
+        const value = input.value;
+        if (value.trim()) {
+          Game.ui.print(`> ${value}`);
+          const result = handleInput(value);
+          if (result) Game.ui.print(result);
+          input.value = '';
+        }
+      });
+
+      // ── Startup ───────────────────────────────────────────────────────────────
+
+      Game.ui.clear();
+      Game.ui.print("==============================================");
+      Game.ui.print("FANTASY TEXT RPG");
+      Game.ui.print("==============================================");
+      Game.ui.print("");
+      Game.ui.print("A text adventure RPG engine.");
+      Game.ui.print("");
+      Game.ui.print("Commands: new game, help");
+      Game.ui.prompt("> ");
+</script>
   </body>
-</html>
-</body>
 </html>
