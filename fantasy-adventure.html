@@ -64,27 +64,311 @@
     </form>
   </div>
 
-  <script>
-    const Game = {
-      version: "1.0.0",
+    <script>
+      const Game = {
+        version: "1.0.0",
 
-      data: {},
-      state: {},
+        data: {},
+        state: {},
 
-      ui: {},
-      parser: {},
-      engine: {},
-      checks: {},
-      inventory: {},
-      characterCreation: {},
-      clock: {},
-      schedules: {},
-      storage: {},
-      conditions: {},
-      combat: {},
-      dialogue: {},
-      utilities: {}
-    };
-  </script>
+        ui: {},
+        parser: {},
+        engine: {},
+        checks: {},
+        inventory: {},
+        characterCreation: {},
+        clock: {},
+        schedules: {},
+        storage: {},
+        conditions: {},
+        combat: {},
+        dialogue: {},
+        utilities: {}
+      };
+
+      // ── Parser ───────────────────────────────────────────────────────────────
+
+      /**
+       * Multi-word aliases MUST come first so they are matched before
+       * the input is split on whitespace.
+       * Keys are lower-case; parser lower-cases input before lookup.
+       */
+      const VERB_ALIASES = {
+        i: "inventory",
+        inv: "inventory",
+        inventory: "inventory",
+        equipment: "inventory",
+        status: "inventory",
+        gear: "inventory",
+        showinv: "inventory",
+
+        n: "go",
+        north: "go",
+        s: "go",
+        south: "go",
+        e: "go",
+        east: "go",
+        w: "go",
+        west: "go",
+        u: "go",
+        up: "go",
+        d: "go",
+        down: "go",
+
+        get: "take",
+        grab: "take",
+        pickup: "take",
+        "pick up": "take",
+
+        examine: "look",
+        inspect: "look",
+        x: "look",
+        lookat: "look",
+
+        wield: "equip",
+        wear: "equip",
+        "put on": "equip",
+
+        remove: "unequip",
+        "take off": "unequip",
+
+        strike: "attack",
+        hit: "attack",
+        fight: "attack",
+
+        sayhi: "say hi",
+        hallo: "say hi",
+        hi: "say hi",
+        hello: "say hi",
+      };
+
+      /**
+       * Prepositions recognised between the direct and indirect object.
+       */
+      const PREPOSITIONS = [
+        "at",
+        "to",
+        "on",
+        "in",
+        "into",
+        "with",
+        "using",
+        "from",
+        "about",
+        "for",
+        "around",
+        "off",
+        "over",
+        "under",
+        "behind",
+        "inside",
+        "outside",
+        "upon",
+        "against",
+      ];
+
+      /**
+       * Ordinal mapping used below (kept local to this file; re-exported below).
+       */
+      const WORD_TO_NUMBER = {
+        one: 1, two: 2, three: 3, four: 4, five: 5,
+        six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+      };
+
+      /**
+       * Tokenise `text` into words, stripping leading/trailing commentary.
+       * Returns an array of lower-case words.
+       */
+      function tokenise(text) {
+        return text
+          .toLowerCase()
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean);
+      }
+
+      /**
+       * Match the longest alias against the head of `tokens`.
+       * Checks multi-word aliases (length 2) first, then single-word ones.
+       * Returns the canonical verb string, or null if no match found.
+       */
+      function matchVerb(tokens) {
+        // Try 2-word alias first
+        if (tokens.length >= 2) {
+          const twoWord = tokens[0] + " " + tokens[1];
+          if (VERB_ALIASES[twoWord]) return VERB_ALIASES[twoWord];
+        }
+        // Then 1-word alias
+        if (VERB_ALIASES[tokens[0]]) return VERB_ALIASES[tokens[0]];
+        // Fall back to raw first token as verb
+        return tokens[0] || null;
+      }
+
+      /**
+       * Find the preposition index in `tokens`. Returns -1 if none found.
+       */
+      function findPrepositionIndex(tokens) {
+        for (let i = 0; i < tokens.length; i++) {
+          if (PREPOSITIONS.includes(tokens[i])) return i;
+        }
+        return -1;
+      }
+
+      /**
+       * Try to parse a leading quantity from `tokens`.
+       * Looks for an ordinal word ("one", "two", …) or a bare digit.
+       * Removes the consumed tokens in-place and returns the number,
+       * or null if no quantity found.
+       */
+      function parseQuantity(tokens) {
+        if (tokens.length === 0) return null;
+        const first = tokens[0];
+        if (WORD_TO_NUMBER[first]) {
+          tokens.shift();
+          return WORD_TO_NUMBER[first];
+        }
+        const num = Number(first);
+        if (!isNaN(num) && num > 0) {
+          tokens.shift();
+          return num;
+        }
+        return null;
+      }
+
+      /**
+       * Convert a token array back to a single human-readable string.
+       */
+      function untokenise(tokens) {
+        return tokens.join(" ");
+      }
+
+      /**
+       * ── Main entry point ──────────────────────────────────────────────────
+       *
+       * Parse `rawInput` into a structured command object:
+       *
+       *   {
+       *     raw:              string,           // original input
+       *     verb:             string | null,    // canonical verb
+       *     directObjectText: string | null,
+       *     quantity:         number | null,
+       *     preposition:      string | null,
+       *     indirectObjectText: string | null
+       *   }
+       *
+       * Rules:
+       *   1. Normalise to lower-case.
+       *   2. Match multi-word aliases ("pick up", "put on", …) before splitting.
+       *   3. Strip a leading quantity ("drop 2 torches" → quantity=2).
+       *   4. Locate the first preposition to split direct / indirect objects.
+       *   5. Everything between verb and prep (or end) is the direct object.
+       *   6. Everything after the preposition is the indirect object.
+       *
+       * Examples:
+       *   "use iron key on old door" →
+       *     { verb: "use", directObjectText: "iron key",
+       *       preposition: "on", indirectObjectText: "old door", quantity: null }
+       *
+       *   "drop 2 torches" →
+       *     { verb: "drop", directObjectText: "torches",
+       *       quantity: 2, preposition: null, indirectObjectText: null }
+       *
+       *   "pick up iron key" →
+       *     { verb: "take", directObjectText: "iron key",
+       *       quantity: null, preposition: null, indirectObjectText: null }
+       *
+       *   "look" →
+       *     { verb: "look", directObjectText: null,
+       *       quantity: null, preposition: null, indirectObjectText: null }
+       */
+      Game.parser.parse = function (rawInput) {
+        // 1. Normalise
+        const trimmed = rawInput.trim().toLowerCase();
+        if (!trimmed) return null;
+
+        let tokens = tokenise(trimmed);
+
+        // 2. Verb + multi-word alias matching
+        let verb = matchVerb(tokens);
+
+        // Consume the verb tokens that were matched
+        if (tokens.length >= 2) {
+          const twoWord = tokens[0] + " " + tokens[1];
+          if (VERB_ALIASES[twoWord]) {
+            tokens.splice(0, 2); // consume both words
+          } else {
+            tokens.shift(); // consumed single word
+          }
+        } else {
+          tokens.shift(); // single token — consumed
+        }
+
+        // 3. Leading quantity
+        const quantity = parseQuantity(tokens);
+
+        // 4. Preposition
+        const prepIdx = findPrepositionIndex(tokens);
+        const preposition = prepIdx >= 0 ? tokens[prepIdx] : null;
+
+        // 5. Direct / indirect object
+        let directObjectText = null;
+        let indirectObjectText = null;
+
+        if (prepIdx >= 0) {
+          const directTokens = tokens.slice(0, prepIdx);
+          const indirectTokens = tokens.slice(prepIdx + 1);
+          directObjectText    = untokenise(directTokens)    || null;
+          indirectObjectText  = untokenise(indirectTokens)  || null;
+        } else {
+          directObjectText = untokenise(tokens) || null;
+        }
+
+        return {
+          raw: rawInput,
+          verb,
+          directObjectText,
+          quantity,
+          preposition,
+          indirectObjectText,
+        };
+      };
+
+      /**
+       * Convenience: parse and then immediately clone so callers never
+       * accidentally mutate an internal cache entry.
+       */
+      Game.parser.parseAndClone = function (rawInput) {
+        const result = Game.parser.parse(rawInput);
+        return result ? { ...result } : null;
+      };
+
+      /**
+       * Expose the verb aliases so other subsystems can inspect / extend them.
+       */
+      Game.parser.verbAliases = VERB_ALIASES;
+
+      /**
+       * Expose the preposition list.
+       */
+      Game.parser.prepositions = PREPOSITIONS;
+
+      /**
+       * Return a list of canonical verbs currently in the alias table
+       * (unique, sorted).
+       */
+      Game.parser.getCanonicalVerbs = function () {
+        return [...new Set(Object.values(VERB_ALIASES))].sort();
+      };
+
+      /**
+       * Add extra aliases at runtime (for mod content, etc.).
+       * Example: Game.parser.addAliases({ "say hello": "say hi" });
+       */
+      Game.parser.addAliases = function (extraAliases) {
+        Object.assign(VERB_ALIASES, extraAliases);
+      };
+    </script>
+  </body>
+</html>
 </body>
 </html>
