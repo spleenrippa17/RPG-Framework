@@ -1122,11 +1122,32 @@
             travelTimeMultiplier: 1.5
           }
         }
-      ]
-    };
-
-    // Assign DATA to Game.data
-    Game.data = DATA;
-  </script>
+       ]
+     };
+ 
+     // Dynamic game state
+     const STATE = {
+       mode: "title", // title, character_creation, playing, game_over
+       player: {},
+       clock: {
+         day: 1,
+         hour: 8,
+         minute: 0,
+         month: "Frostwane"
+       },
+       flags: {},
+       variables: {},
+       world: {
+         itemLocations: {},
+         npcOverrides: {},
+         monsterStates: {},
+         locationStates: {}
+       }
+     };
+ 
+     // Assign DATA and STATE to Game
+     Game.data = DATA;
+     Game.state = STATE;
+   </script>
 </body>
 </html>
