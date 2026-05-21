@@ -64,311 +64,609 @@
     </form>
   </div>
 
-    <script>
-      const Game = {
-        version: "1.0.0",
+  <script>
+    const Game = {
+      version: "1.0.0",
 
-        data: {},
-        state: {},
+      data: {},
+      state: {},
 
-        ui: {},
-        parser: {},
-        engine: {},
-        checks: {},
-        inventory: {},
-        characterCreation: {},
-        clock: {},
-        schedules: {},
-        storage: {},
-        conditions: {},
-        combat: {},
-        dialogue: {},
-        utilities: {}
-      };
+      ui: {},
+      parser: {},
+      engine: {},
+      checks: {},
+      inventory: {},
+      characterCreation: {},
+      clock: {},
+      schedules: {},
+      storage: {},
+      conditions: {},
+      combat: {},
+      dialogue: {},
+      utilities: {}
+    };
 
-      // ── Parser ───────────────────────────────────────────────────────────────
+    // Initialize clock state
+    Game.state.clock = {
+      day: 1,
+      hour: 8,
+      minute: 0,
+      month: "Frostwane"
+    };
 
-      /**
-       * Multi-word aliases MUST come first so they are matched before
-       * the input is split on whitespace.
-       * Keys are lower-case; parser lower-cases input before lookup.
-       */
-      const VERB_ALIASES = {
-        i: "inventory",
-        inv: "inventory",
-        inventory: "inventory",
-        equipment: "inventory",
-        status: "inventory",
-        gear: "inventory",
-        showinv: "inventory",
+    // Define months array for wrapping
+    const MONTHS = [
+      "Frostwane", "Snowsmail", "Hatchtide", "Seedburst",
+      "Brightsleep", "Highsun", "Sunsheight", "Leafchange",
+      "Harvesttide", "Leaffall", "Rainscome", "Firstfall"
+    ];
 
-        n: "go",
-        north: "go",
-        s: "go",
-        south: "go",
-        e: "go",
-        east: "go",
-        w: "go",
-        west: "go",
-        u: "go",
-        up: "go",
-        d: "go",
-        down: "go",
+    // ── Parser ───────────────────────────────────────────────────────────────
 
-        get: "take",
-        grab: "take",
-        pickup: "take",
-        "pick up": "take",
+    /**
+     * Multi-word aliases MUST come first so they are matched before
+     * the input is split on whitespace.
+     * Keys are lower-case; parser lower-cases input before lookup.
+     */
+    const VERB_ALIASES = {
+      i: "inventory",
+      inv: "inventory",
+      inventory: "inventory",
+      equipment: "inventory",
+      status: "inventory",
+      gear: "inventory",
+      showinv: "inventory",
 
-        examine: "look",
-        inspect: "look",
-        x: "look",
-        lookat: "look",
+      n: "go",
+      north: "go",
+      s: "go",
+      south: "go",
+      e: "go",
+      east: "go",
+      w: "go",
+      west: "go",
+      u: "go",
+      up: "go",
+      d: "go",
+      down: "go",
 
-        wield: "equip",
-        wear: "equip",
-        "put on": "equip",
+      get: "take",
+      grab: "take",
+      pickup: "take",
+      "pick up": "take",
 
-        remove: "unequip",
-        "take off": "unequip",
+      examine: "look",
+      inspect: "look",
+      x: "look",
+      lookat: "look",
 
-        strike: "attack",
-        hit: "attack",
-        fight: "attack",
+      wield: "equip",
+      wear: "equip",
+      "put on": "equip",
 
-        sayhi: "say hi",
-        hallo: "say hi",
-        hi: "say hi",
-        hello: "say hi",
-      };
+      remove: "unequip",
+      "take off": "unequip",
 
-      /**
-       * Prepositions recognised between the direct and indirect object.
-       */
-      const PREPOSITIONS = [
-        "at",
-        "to",
-        "on",
-        "in",
-        "into",
-        "with",
-        "using",
-        "from",
-        "about",
-        "for",
-        "around",
-        "off",
-        "over",
-        "under",
-        "behind",
-        "inside",
-        "outside",
-        "upon",
-        "against",
-      ];
+      strike: "attack",
+      hit: "attack",
+      fight: "attack",
 
-      /**
-       * Ordinal mapping used below (kept local to this file; re-exported below).
-       */
-      const WORD_TO_NUMBER = {
-        one: 1, two: 2, three: 3, four: 4, five: 5,
-        six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
-      };
+      sayhi: "say hi",
+      hallo: "say hi",
+      hi: "say hi",
+      hello: "say hi",
+    };
 
-      /**
-       * Tokenise `text` into words, stripping leading/trailing commentary.
-       * Returns an array of lower-case words.
-       */
-      function tokenise(text) {
-        return text
-          .toLowerCase()
-          .trim()
-          .split(/\s+/)
-          .filter(Boolean);
+    /**
+     * Prepositions recognised between the direct and indirect object.
+     */
+    const PREPOSITIONS = [
+      "at",
+      "to",
+      "on",
+      "in",
+      "into",
+      "with",
+      "using",
+      "from",
+      "about",
+      "for",
+      "around",
+      "off",
+      "over",
+      "under",
+      "behind",
+      "inside",
+      "outside",
+      "upon",
+      "against",
+    ];
+
+    /**
+     * Ordinal mapping used below (kept local to this file; re-exported below).
+     */
+    const WORD_TO_NUMBER = {
+      one: 1, two: 2, three: 3, four: 4, five: 5,
+      six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+    };
+
+    /**
+     * Tokenise `text` into words, stripping leading/trailing commentary.
+     * Returns an array of lower-case words.
+     */
+    function tokenise(text) {
+      return text
+        .toLowerCase()
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+    }
+
+    /**
+     * Match the longest alias against the head of `tokens`.
+     * Checks multi-word aliases (length 2) first, then single-word ones.
+     * Returns the canonical verb string, or null if no match found.
+     */
+    function matchVerb(tokens) {
+      // Try 2-word alias first
+      if (tokens.length >= 2) {
+        const twoWord = tokens[0] + " " + tokens[1];
+        if (VERB_ALIASES[twoWord]) return VERB_ALIASES[twoWord];
       }
+      // Then 1-word alias
+      if (VERB_ALIASES[tokens[0]]) return VERB_ALIASES[tokens[0]];
+      // Fall back to raw first token as verb
+      return tokens[0] || null;
+    }
 
-      /**
-       * Match the longest alias against the head of `tokens`.
-       * Checks multi-word aliases (length 2) first, then single-word ones.
-       * Returns the canonical verb string, or null if no match found.
-       */
-      function matchVerb(tokens) {
-        // Try 2-word alias first
-        if (tokens.length >= 2) {
-          const twoWord = tokens[0] + " " + tokens[1];
-          if (VERB_ALIASES[twoWord]) return VERB_ALIASES[twoWord];
-        }
-        // Then 1-word alias
-        if (VERB_ALIASES[tokens[0]]) return VERB_ALIASES[tokens[0]];
-        // Fall back to raw first token as verb
-        return tokens[0] || null;
+    /**
+     * Find the preposition index in `tokens`. Returns -1 if none found.
+     */
+    function findPrepositionIndex(tokens) {
+      for (let i = 0; i < tokens.length; i++) {
+        if (PREPOSITIONS.includes(tokens[i])) return i;
       }
+      return -1;
+    }
 
-      /**
-       * Find the preposition index in `tokens`. Returns -1 if none found.
-       */
-      function findPrepositionIndex(tokens) {
-        for (let i = 0; i < tokens.length; i++) {
-          if (PREPOSITIONS.includes(tokens[i])) return i;
-        }
-        return -1;
+    /**
+     * Try to parse a leading quantity from `tokens`.
+     * Looks for an ordinal word ("one", "two", …) or a bare digit.
+     * Removes the consumed tokens in-place and returns the number,
+     * or null if no quantity found.
+     */
+    function parseQuantity(tokens) {
+      if (tokens.length === 0) return null;
+      const first = tokens[0];
+      if (WORD_TO_NUMBER[first]) {
+        tokens.shift();
+        return WORD_TO_NUMBER[first];
       }
-
-      /**
-       * Try to parse a leading quantity from `tokens`.
-       * Looks for an ordinal word ("one", "two", …) or a bare digit.
-       * Removes the consumed tokens in-place and returns the number,
-       * or null if no quantity found.
-       */
-      function parseQuantity(tokens) {
-        if (tokens.length === 0) return null;
-        const first = tokens[0];
-        if (WORD_TO_NUMBER[first]) {
-          tokens.shift();
-          return WORD_TO_NUMBER[first];
-        }
-        const num = Number(first);
-        if (!isNaN(num) && num > 0) {
-          tokens.shift();
-          return num;
-        }
-        return null;
+      const num = Number(first);
+      if (!isNaN(num) && num > 0) {
+        tokens.shift();
+        return num;
       }
+      return null;
+    }
 
-      /**
-       * Convert a token array back to a single human-readable string.
-       */
-      function untokenise(tokens) {
-        return tokens.join(" ");
-      }
+    /**
+     * Convert a token array back to a single human-readable string.
+     */
+    function untokenise(tokens) {
+      return tokens.join(" ");
+    }
 
-      /**
-       * ── Main entry point ──────────────────────────────────────────────────
-       *
-       * Parse `rawInput` into a structured command object:
-       *
-       *   {
-       *     raw:              string,           // original input
-       *     verb:             string | null,    // canonical verb
-       *     directObjectText: string | null,
-       *     quantity:         number | null,
-       *     preposition:      string | null,
-       *     indirectObjectText: string | null
-       *   }
-       *
-       * Rules:
-       *   1. Normalise to lower-case.
-       *   2. Match multi-word aliases ("pick up", "put on", …) before splitting.
-       *   3. Strip a leading quantity ("drop 2 torches" → quantity=2).
-       *   4. Locate the first preposition to split direct / indirect objects.
-       *   5. Everything between verb and prep (or end) is the direct object.
-       *   6. Everything after the preposition is the indirect object.
-       *
-       * Examples:
-       *   "use iron key on old door" →
-       *     { verb: "use", directObjectText: "iron key",
-       *       preposition: "on", indirectObjectText: "old door", quantity: null }
-       *
-       *   "drop 2 torches" →
-       *     { verb: "drop", directObjectText: "torches",
-       *       quantity: 2, preposition: null, indirectObjectText: null }
-       *
-       *   "pick up iron key" →
-       *     { verb: "take", directObjectText: "iron key",
-       *       quantity: null, preposition: null, indirectObjectText: null }
-       *
-       *   "look" →
-       *     { verb: "look", directObjectText: null,
-       *       quantity: null, preposition: null, indirectObjectText: null }
-       */
-      Game.parser.parse = function (rawInput) {
-        // 1. Normalise
-        const trimmed = rawInput.trim().toLowerCase();
-        if (!trimmed) return null;
+    /**
+     * ── Main entry point ──────────────────────────────────────────────────
+     *
+     * Parse `rawInput` into a structured command object:
+     *
+     *   {
+     *     raw:              string,           // original input
+     *     verb:             string | null,    // canonical verb
+     *     directObjectText: string | null,
+     *     quantity:         number | null,
+     *     preposition:      string | null,
+     *     indirectObjectText: string | null
+     *   }
+     *
+     * Rules:
+     *   1. Normalise to lower-case.
+     *   2. Match multi-word aliases ("pick up", "put on", …) before splitting.
+     *   3. Strip a leading quantity ("drop 2 torches" → quantity=2).
+     *   4. Locate the first preposition to split direct / indirect objects.
+     *   5. Everything between verb and prep (or end) is the direct object.
+     *   6. Everything after the preposition is the indirect object.
+     *
+     * Examples:
+     *   "use iron key on old door" →
+     *     { verb: "use", directObjectText: "iron key",
+     *       preposition: "on", indirectObjectText: "old door", quantity: null }
+     *
+     *   "drop 2 torches" →
+     *     { verb: "drop", directObjectText: "torches",
+     *       quantity: 2, preposition: null, indirectObjectText: null }
+     *
+     *   "pick up iron key" →
+     *     { verb: "take", directObjectText: "iron key",
+     *       quantity: null, preposition: null, indirectObjectText: null }
+     *
+     *   "look" →
+     *     { verb: "look", directObjectText: null,
+     *       quantity: null, preposition: null, indirectObjectText: null }
+     */
+    Game.parser.parse = function (rawInput) {
+      // 1. Normalise
+      const trimmed = rawInput.trim().toLowerCase();
+      if (!trimmed) return null;
 
-        let tokens = tokenise(trimmed);
+      let tokens = tokenise(trimmed);
 
-        // 2. Verb + multi-word alias matching
-        let verb = matchVerb(tokens);
+      // 2. Verb + multi-word alias matching
+      let verb = matchVerb(tokens);
 
-        // Consume the verb tokens that were matched
-        if (tokens.length >= 2) {
-          const twoWord = tokens[0] + " " + tokens[1];
-          if (VERB_ALIASES[twoWord]) {
-            tokens.splice(0, 2); // consume both words
-          } else {
-            tokens.shift(); // consumed single word
-          }
+      // Consume the verb tokens that were matched
+      if (tokens.length >= 2) {
+        const twoWord = tokens[0] + " " + tokens[1];
+        if (VERB_ALIASES[twoWord]) {
+          tokens.splice(0, 2); // consume both words
         } else {
-          tokens.shift(); // single token — consumed
+          tokens.shift(); // consumed single word
         }
+      } else {
+        tokens.shift(); // single token — consumed
+      }
 
-        // 3. Leading quantity
-        const quantity = parseQuantity(tokens);
+      // 3. Leading quantity
+      const quantity = parseQuantity(tokens);
 
-        // 4. Preposition
-        const prepIdx = findPrepositionIndex(tokens);
-        const preposition = prepIdx >= 0 ? tokens[prepIdx] : null;
+      // 4. Preposition
+      const prepIdx = findPrepositionIndex(tokens);
+      const preposition = prepIdx >= 0 ? tokens[prepIdx] : null;
 
-        // 5. Direct / indirect object
-        let directObjectText = null;
-        let indirectObjectText = null;
+      // 5. Direct / indirect object
+      let directObjectText = null;
+      let indirectObjectText = null;
 
-        if (prepIdx >= 0) {
-          const directTokens = tokens.slice(0, prepIdx);
-          const indirectTokens = tokens.slice(prepIdx + 1);
-          directObjectText    = untokenise(directTokens)    || null;
-          indirectObjectText  = untokenise(indirectTokens)  || null;
-        } else {
-          directObjectText = untokenise(tokens) || null;
-        }
+      if (prepIdx >= 0) {
+        const directTokens = tokens.slice(0, prepIdx);
+        const indirectTokens = tokens.slice(prepIdx + 1);
+        directObjectText    = untokenise(directTokens)    || null;
+        indirectObjectText  = untokenise(indirectTokens)  || null;
+      } else {
+        directObjectText = untokenise(tokens) || null;
+      }
 
-        return {
-          raw: rawInput,
-          verb,
-          directObjectText,
-          quantity,
-          preposition,
-          indirectObjectText,
-        };
+      return {
+        raw: rawInput,
+        verb,
+        directObjectText,
+        quantity,
+        preposition,
+        indirectObjectText,
+      };
+    };
+
+    /**
+     * Convenience: parse and then immediately clone so callers never
+     * accidentally mutate an internal cache entry.
+     */
+    Game.parser.parseAndClone = function (rawInput) {
+      const result = Game.parser.parse(rawInput);
+      return result ? { ...result } : null;
+    };
+
+    /**
+     * Expose the verb aliases so other subsystems can inspect / extend them.
+     */
+    Game.parser.verbAliases = VERB_ALIASES;
+
+    /**
+     * Expose the preposition list.
+     */
+    Game.parser.prepositions = PREPOSITIONS;
+
+    /**
+     * Return a list of canonical verbs currently in the alias table
+     * (unique, sorted).
+     */
+    Game.parser.getCanonicalVerbs = function () {
+      return [...new Set(Object.values(VERB_ALIASES))].sort();
+    };
+
+    /**
+     * Add extra aliases at runtime (for mod content, etc.).
+     * Example: Game.parser.addAliases({ "say hello": "say hi" });
+     */
+    Game.parser.addAliases = function (extraAliases) {
+      Object.assign(VERB_ALIASES, extraAliases);
+    };
+
+    // ── Clock System ─────────────────────────────────────────────────────────────
+
+    /**
+     * Advance the game clock by the specified number of minutes.
+     * Updates conditions and schedules when time advances.
+     * 
+     * @param {number} minutes - Number of minutes to advance
+     */
+    Game.clock.advanceTime = function(minutes) {
+      // Add minutes to current time
+      Game.state.clock.minute += minutes;
+      
+      // Handle minute overflow
+      while (Game.state.clock.minute >= 60) {
+        Game.state.clock.minute -= 60;
+        Game.state.clock.hour += 1;
+      }
+      
+      // Handle hour overflow
+      while (Game.state.clock.hour >= 24) {
+        Game.state.clock.hour -= 24;
+        Game.state.clock.day += 1;
+      }
+      
+      // Handle day overflow (30th day is the last day of the month)
+      while (Game.state.clock.day > 30) {
+        Game.state.clock.day -= 30;
+        // Move to next month
+        const currentMonthIndex = MONTHS.indexOf(Game.state.clock.month);
+        const nextMonthIndex = (currentMonthIndex + 1) % MONTHS.length;
+        Game.state.clock.month = MONTHS[nextMonthIndex];
+      }
+      
+      // Update conditions and schedules when time advances
+      if (Game.conditions && typeof Game.conditions.update === 'function') {
+        Game.conditions.update(minutes);
+      }
+      
+      if (Game.schedules && typeof Game.schedules.update === 'function') {
+        Game.schedules.update();
+      }
+    };
+
+    /**
+     * Format the clock time into an atmospheric string.
+     * 
+     * @param {Object} clock - The clock object to format
+     * @returns {string} Formatted time string (e.g., "Late afternoon, third day of Frostwane")
+     */
+    Game.clock.formatTime = function(clock) {
+      // Determine day phase based on hour
+      let phase;
+      if (clock.hour >= 5 && clock.hour < 8) {
+        phase = "Dawn";
+      } else if (clock.hour >= 8 && clock.hour < 12) {
+        phase = "Morning";
+      } else if (clock.hour >= 12 && clock.hour < 14) {
+        phase = "Midday";
+      } else if (clock.hour >= 14 && clock.hour < 17) {
+        phase = "Afternoon";
+      } else if (clock.hour >= 17 && clock.hour < 19) {
+        phase = "Late afternoon";
+      } else if (clock.hour >= 19 && clock.hour < 21) {
+        phase = "Evening";
+      } else if (clock.hour >= 21 && clock.hour < 24) {
+        phase = "Night";
+      } else { // 0-4
+        phase = "Deep night";
+      }
+      
+      // Get ordinal day string
+      const ordinalDay = Game.clock.getOrdinalDay(clock.day);
+      
+      // Return formatted string
+      return `${phase}, ${ordinalDay} day of ${clock.month}`;
+    };
+    
+    /**
+     * Get ordinal day string (1st, 2nd, 3rd, etc.) -> (first, second, third, etc.)
+     * 
+     * @param {number} day - Day number
+     * @returns {string} Ordinal day as word
+     */
+    Game.clock.getOrdinalDay = function(day) {
+      const ordinalMap = {
+        1: "first", 2: "second", 3: "third", 4: "fourth", 5: "fifth",
+        6: "sixth", 7: "seventh", 8: "eighth", 9: "ninth", 10: "tenth",
+        11: "eleventh", 12: "twelfth", 13: "thirteenth", 14: "fourteenth", 15: "fifteenth",
+        16: "sixteenth", 17: "seventeenth", 18: "eighteenth", 19: "nineteenth", 20: "twentieth",
+        21: "twenty-first", 22: "twenty-second", 23: "twenty-third", 24: "twenty-fourth", 25: "twenty-fifth",
+        26: "twenty-sixth", 27: "twenty-seventh", 28: "twenty-eighth", 29: "twenty-ninth", 30: "thirtieth"
+      };
+      
+      return ordinalMap[day] || `${day}th`;
       };
 
-      /**
-       * Convenience: parse and then immediately clone so callers never
-       * accidentally mutate an internal cache entry.
-       */
-      Game.parser.parseAndClone = function (rawInput) {
-        const result = Game.parser.parse(rawInput);
-        return result ? { ...result } : null;
+    /**
+      * Return the day-phase name for a given hour value.
+      * Mirrors the same phase table used in formatTime.
+      *
+      * Hours  (inclusive)  Phase
+      *  5–7                Dawn
+      *  8–11               Morning
+      * 12–13               Midday
+      * 14–16               Afternoon
+      * 17–18               Late afternoon
+      * 19–20               Evening
+      * 21–23               Night
+      *  0–4                Deep night
+      *
+      * @param {number} hour - Hour of day (0-23)
+      * @returns {string} Day phase name
+      */
+    Game.clock.getDayPhase = function(hour) {
+      if (hour >= 5  && hour < 8)  return "Dawn";
+      if (hour >= 8  && hour < 12) return "Morning";
+      if (hour >= 12 && hour < 14) return "Midday";
+      if (hour >= 14 && hour < 17) return "Afternoon";
+      if (hour >= 17 && hour < 19) return "Late afternoon";
+      if (hour >= 19 && hour < 21) return "Evening";
+      if (hour >= 21 && hour < 24) return "Night";
+      return "Deep night"; // 0-4
       };
 
-      /**
-       * Expose the verb aliases so other subsystems can inspect / extend them.
-       */
-      Game.parser.verbAliases = VERB_ALIASES;
+    /**
+     * Frozen list of the eight canonical day-phase names in chronological order.
+     * Exposed so engine and game data can reference phases without calling
+     * getDayPhase repeatedly.
+     */
+    Game.clock.DAY_PHASES = Object.freeze([
+      "Deep night", "Dawn", "Morning", "Midday",
+      "Afternoon", "Late afternoon", "Evening", "Night"
+    ]);
 
-      /**
-       * Expose the preposition list.
-       */
-      Game.parser.prepositions = PREPOSITIONS;
+    // ── Commands that should NOT advance time ────────────────────────────────
 
-      /**
-       * Return a list of canonical verbs currently in the alias table
-       * (unique, sorted).
-       */
-      Game.parser.getCanonicalVerbs = function () {
-        return [...new Set(Object.values(VERB_ALIASES))].sort();
+    /**
+      * List of commands that do NOT advance the game clock.
+      * Keep in sync with design document §14.3 and §24.1.
+      */
+    Game.clock.NO_TIME_COMMANDS = new Set([
+      'look',
+      'examine',
+      'inspect',
+      'x',
+      'inventory',
+      'i',
+      'inv',
+      'showinv',
+      'status',
+      'equipment',
+      'gear',
+      'help',
+    ]);
+
+    /**
+      * Per-verb time cost in minutes for commands that DO advance time.
+      * Design reference: §14.3 / §24.1 (Table: Command → Time Advance)
+      * Use Game.clock.getTimeCost(verb) during command dispatch.
+      */
+    const TIME_COSTS = Object.freeze({
+      go:             10,    // Movement
+      talk:            5,    // Talking
+      say:             5,
+      'say hi':        5,
+      take:            1,    // Pick up item
+      grab:            1,
+      drop:            1,
+      equip:           1,    // Equip weapon/shield
+      unequip:         3,    // Remove armor
+      wear:            5,    // Wear armor
+      remove:          3,
+      drink:           1,    // Drink potion
+      eat:            10,    // Eat ration
+      light:           1,    // Light torch
+      'use':           1,
+      attack:          1,    // Combat round
+      shoot:           1,
+      cast:            1,
+      use_potion:      1,
+      wait:           null,  // handled specially (player-specified)
+    });
+
+    /**
+      * Return the time cost in minutes for a canonical verb.
+      * Defaults to 1 minute for any verb not explicitly listed,
+      * so candidate commands never slip through without advancing time.
+      *
+      * @param {string} verb - Canonical verb name
+      * @returns {number|null} Minutes to advance, or null if the verb
+      *                       should not advance time
+      */
+    Game.clock.getTimeCost = function(verb) {
+      return verb ? TIME_COSTS[verb.toLowerCase()] : null;
+    };
+
+    /**
+      * Check whether a verb should advance the clock and, optionally,
+      * return the associated time cost in minutes.
+      *
+      * @param {string} verb  - Canonical verb name
+      * @returns {boolean} true if time should advance
+      */
+    Game.clock.shouldAdvanceTime = function(verb) {
+      return !Game.clock.NO_TIME_COMMANDS.has(verb.toLowerCase());
+    };
+
+    // ── UI System ────────────────────────────────────────────────────────────
+
+    // Add a simple way to display time in the output
+    Game.ui.updateTimeDisplay = function() {
+      const timeString = Game.clock.formatTime(Game.state.clock);
+      // This would typically update a time display element in the UI
+      // For now, we'll just return the time string
+      return timeString;
+    };
+
+    // Initialize the game
+    function init() {
+      // Set initial focus
+      document.getElementById('command-input').focus();
+      
+      // Display initial time
+      const initialTime = Game.clock.formatTime(Game.state.clock);
+      Game.ui.output = function(text) {
+        const outputDiv = document.getElementById('output');
+        outputDiv.textContent += text + '\n';
+        outputDiv.scrollTop = outputDiv.scrollHeight;
       };
+      
+      Game.ui.output(`Welcome to the Fantasy Text RPG!`);
+      Game.ui.output(`Current time: ${initialTime}`);
+      Game.ui.output(`> `);
+    }
 
-      /**
-       * Add extra aliases at runtime (for mod content, etc.).
-       * Example: Game.parser.addAliases({ "say hello": "say hi" });
-       */
-      Game.parser.addAliases = function (extraAliases) {
-        Object.assign(VERB_ALIASES, extraAliases);
-      };
-    </script>
-  </body>
-</html>
+    // Start the game when the page loads
+    window.addEventListener('load', init);
+
+    // Handle form submission
+    document.getElementById('input-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const input = document.getElementById('command-input').value.trim();
+      if (!input) return;
+      
+      // Clear input
+      document.getElementById('command-input').value = '';
+      
+      // Parse command
+      const parsed = Game.parser.parseAndClone(input);
+      if (!parsed) {
+        Game.ui.output(`Please enter a command.`);
+        Game.ui.output(`> `);
+        return;
+      }
+      
+      // Check if time should advance
+      const shouldAdvance = Game.clock.shouldAdvanceTime(parsed.verb);
+      
+      // Handle command (placeholder - would route to appropriate system)
+      Game.ui.output(`> ${input}`);
+      
+      // For demo purposes, show what would happen
+      if (parsed.verb === 'wait' && parsed.quantity) {
+        Game.clock.advanceTime(parsed.quantity);
+        Game.ui.output(`You wait for ${parsed.quantity} minute${parsed.quantity !== 1 ? 's' : ''}.`);
+      } else if (parsed.verb === 'look') {
+        Game.ui.output(`You see nothing special.`);
+      } else if (parsed.verb === 'inventory') {
+        Game.ui.output(`You are carrying nothing.`);
+      } else {
+        Game.ui.output(`Command "${parsed.verb}" not implemented yet.`);
+      }
+      
+      // Advance time if appropriate
+      if (shouldAdvance && parsed.verb !== 'wait') { // Wait already handled above
+        Game.clock.advanceTime(1); // Default 1 minute for most actions
+        Game.ui.output(`Time passes...`);
+      }
+      
+      // Show updated time
+      const currentTime = Game.clock.formatTime(Game.state.clock);
+      Game.ui.output(`Current time: ${currentTime}`);
+      Game.ui.output(`> `);
+    });
+  </script>
 </body>
 </html>
