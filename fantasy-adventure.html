@@ -76,6 +76,7 @@
         engine: {},
         checks: {},
         inventory: {},
+        equipment: {},
         characterCreation: {},
         clock: {},
         schedules: {},
@@ -367,8 +368,871 @@
       Game.parser.addAliases = function (extraAliases) {
         Object.assign(VERB_ALIASES, extraAliases);
       };
+
+      // ── UI helpers ─────────────────────────────────────────────────────────────
+
+      /**
+       * Print text to the game output panel.
+       * Wraps native DOM writes so the rest of the engine stays readable.
+       */
+      Game.ui.print = function (text) {
+        const output = document.getElementById("output");
+        output.textContent += text + "\n";
+        output.scrollTop = output.scrollHeight;
+      };
+
+      Game.ui.printSeparator = function () {
+        Game.ui.print("==================================================");
+      };
+
+      Game.ui.printBlankLine = function () {
+        Game.ui.print("");
+      };
+
+      // ── DATA ───────────────────────────────────────────────────────────────────
+
+      /**
+       * Static item library.
+       * Every game entity must have a stable lowercase `id`.
+       * Aliases are lowercased at registration; lookup is case-insensitive.
+       */
+      const DATA = Object.freeze({ items: Object.freeze({
+        // ── Weapons ─────────────────────────────────────────────────────────────
+        skinning_knife: {
+          id: "skinning_knife", name: "skinning knife", type: "weapon",
+          aliases: ["knife", "skinny knife"],
+          description: "A small knife used for skinning game.",
+          weight: 1, stackable: false, portable: true,
+          slot: "weapon", stat: "might", skill: "melee", damage: "1d4",
+          attackBonus: 0, value: 5,
+        },
+        iron_sword: {
+          id: "iron_sword", name: "iron sword", type: "weapon",
+          aliases: ["sword", "blade"],
+          description: "A plain but reliable iron sword.",
+          weight: 3, stackable: false, portable: true,
+          slot: "weapon", stat: "might", skill: "melee", damage: "1d8",
+          attackBonus: 0, value: 20,
+        },
+        hunting_bow: {
+          id: "hunting_bow", name: "hunting bow", type: "weapon",
+          aliases: ["bow"],
+          description: "A well-strung yew bow, good for hunting.",
+          weight: 3, stackable: false, portable: true,
+          slot: "weapon", stat: "agility", skill: "bows", damage: "1d6",
+          attackBonus: 0, value: 25,
+        },
+        woodcutter_axe: {
+          id: "woodcutter_axe", name: "woodcutter axe", type: "weapon",
+          aliases: ["axe"],
+          description: "A heavy axe used for felling trees.",
+          weight: 4, stackable: false, portable: true,
+          slot: "weapon", stat: "might", skill: "melee", damage: "1d10",
+          attackBonus: -1, value: 8,
+        },
+
+        // ── Armor ───────────────────────────────────────────────────────────────
+        leather_tunic: {
+          id: "leather_tunic", name: "leather tunic", type: "armor",
+          aliases: ["leather", "tunic"],
+          description: "Thick leather that provides minimal protection.",
+          weight: 3, stackable: false, portable: true,
+          slot: "armor",
+          defenseBonus: 1, value: 15,
+        },
+        chainmail: {
+          id: "chainmail", name: "chainmail", type: "armor",
+          aliases: ["chain", "mail"],
+          description: "Interlocking metal rings offering solid defense.",
+          weight: 20, stackable: false, portable: true,
+          slot: "armor",
+          defenseBonus: 4, value: 75,
+        },
+        steel_plate: {
+          id: "steel_plate", name: "steel plate", type: "armor",
+          aliases: ["plate", "plate armor"],
+          description: "Heavy articulated steel plates worn over gambeson.",
+          weight: 35, stackable: false, portable: true,
+          slot: "armor",
+          defenseBonus: 7, value: 250,
+        },
+        travel_cloak: {
+          id: "travel_cloak", name: "travel cloak", type: "clothing",
+          aliases: ["cloak"],
+          description: "A thick woolen cloak for cold weather travel.",
+          weight: 2, stackable: false, portable: true,
+          slot: "cloak",
+          defenseBonus: 0, value: 12,
+        },
+
+        // ── Shields / Offhand ───────────────────────────────────────────────────
+        wooden_shield: {
+          id: "wooden_shield", name: "wooden shield", type: "shield",
+          aliases: ["shield", "round shield"],
+          description: "A buckler of seasoned oak, reinforced with iron.",
+          weight: 4, stackable: false, portable: true,
+          slot: "offhand",
+          defenseBonus: 2, blockBonus: 2, value: 15,
+        },
+
+        // ── Consumables ─────────────────────────────────────────────────────────
+        health_potion: {
+          id: "health_potion", name: "health potion", type: "consumable",
+          aliases: ["red potion", "potion"],
+          description: "A deep red liquid that restores vitality.",
+          weight: 0.5, stackable: true, portable: true,
+          healAmount: 10, value: 25,
+        },
+        travel_rations: {
+          id: "travel_rations", name: "travel rations", type: "consumable",
+          aliases: ["rations", "food"],
+          description: "Dried meat and hard bread for the road.",
+          weight: 1, stackable: true, portable: true,
+          healAmount: 3, value: 1,
+        },
+        mana_potion: {
+          id: "mana_potion", name: "mana potion", type: "consumable",
+          aliases: ["blue potion"],
+          description: "A deep blue liquid that restores magical energy.",
+          weight: 0.5, stackable: true, portable: true,
+          manaAmount: 10, value: 30,
+        },
+
+        // ── Misc / Tool / Quest ─────────────────────────────────────────────────
+        torch: {
+          id: "torch", name: "torch", type: "light",
+          aliases: [],
+          description: "A resin-soaked strip of cloth wrapped around a wooden shaft.",
+          weight: 1, stackable: true, portable: true, slot: "offhand",
+          lightRadius: 2, value: 2,
+        },
+        rope: {
+          id: "rope", name: "rope", type: "tool",
+          aliases: ["coil of rope", "hemp rope"],
+          description: "A 50ft coil of sturdy hemp rope.",
+          weight: 10, stackable: false, portable: true,
+          value: 5,
+        },
+        iron_key: {
+          id: "iron_key", name: "iron key", type: "key",
+          aliases: ["old iron key", "key"],
+          description: "A cold iron key of unknown purpose.",
+          weight: 0, stackable: false, portable: true,
+          value: 0,
+        },
+        gold_pouch: {
+          id: "gold_pouch", name: "gold pouch", type: "treasure",
+          aliases: ["pouch"],
+          description: "A small leather pouch containing 8 gold coins.",
+          weight: 0.5, stackable: false, portable: true,
+          gold: 8, value: 8,
+        },
+      }) });
+
+      // Build aliases index so resolveItemId() can do fast lookup.
+      buildItemAliasMap();
+
+      // ── Inventory / Equipment / Carry Capacity ─────────────────────────────────
+
+      /**
+       * Encumbrance penalty table keyed by returned state string.
+       */
+      const ENCUMBRANCE_EFFECTS = Object.freeze({
+        unencumbered: {
+          agilityPenalty:   0,
+          stealthPenalty:   0,
+          travelTimeMultiplier: 1,
+          canTravel:        true,
+        },
+        burdened: {
+          agilityPenalty:   -1,
+          stealthPenalty:   -1,
+          travelTimeMultiplier: 1,
+          canTravel:        true,
+        },
+        encumbered: {
+          agilityPenalty:   -2,
+          stealthPenalty:   -2,
+          travelTimeMultiplier: 1.5,
+          canTravel:        true,
+        },
+        overloaded: {
+          agilityPenalty:   -4,
+          stealthPenalty:   -4,
+          travelTimeMultiplier: 2,
+          canTravel:        false,
+        },
+      });
+
+      /**
+       * Carriage capacity = 50 + 10×might + 5×endurance.
+       */
+      function getCarryCapacity() {
+        const might      = Game.state.player?.stats?.might || 0;
+        const endurance  = Game.state.player?.stats?.endurance || 0;
+        return 50 + 10 * might + 5 * endurance;
+      }
+
+      /**
+       * Sum weight of every inventory entry and every equipped item.
+       */
+      function getCarriedWeight() {
+        const player = Game.state.player;
+        if (!player) return 0;
+        let total = 0;
+
+        for (const entry of (player.inventory || [])) {
+          const item = DATA.items[entry.itemId];
+          total += (item?.weight || 0) * entry.quantity;
+        }
+
+        for (const slot of Object.keys(player.equipment || {})) {
+          const itemId = player.equipment[slot];
+          if (!itemId) continue;
+          const item = DATA.items[itemId];
+          total += item?.weight || 0;
+        }
+
+        return total;
+      }
+
+      /**
+       * Encumbrance state based on carried weight vs carry capacity.
+       * Returns one of: "overloaded" | "encumbered" | "burdened" | "unencumbered"
+       */
+      function getEncumbranceState() {
+        const weight   = getCarriedWeight();
+        const capacity = getCarryCapacity();
+        if (capacity === 0) return "unencumbered";
+        const ratio = weight / capacity;
+
+        if (ratio <= 1.0)  return "unencumbered";
+        if (ratio <= 1.25) return "burdened";
+        if (ratio <= 1.5)  return "encumbered";
+        return "overloaded";
+      }
+
+      /**
+       * Get the effects object for the current encumbrance state.
+       */
+      function getEncumbranceEffects() {
+        return ENCUMBRANCE_EFFECTS[getEncumbranceState()] || ENCUMBRANCE_EFFECTS.unencumbered;
+      }
+
+      /**
+       * Format encumbrance penalties into a human-readable sentence.
+       * Returns "None" when there are no penalties.
+       */
+      function formatEncumbranceEffects() {
+        const state = getEncumbranceState();
+        if (state === "unencumbered") return "None";
+        const fx = ENCUMBRANCE_EFFECTS[state];
+        const parts = [];
+        if (fx.stealthPenalty)    parts.push("stealth " + fx.stealthPenalty);
+        if (fx.agilityPenalty)    parts.push("agility checks " + fx.agilityPenalty);
+        parts.push("travel time ×" + fx.travelTimeMultiplier);
+        return parts.join(", ");
+      }
+
+      // ── Time costs ────────────────────────────────────────────────────────────
+      // The clock subsystem is stubbed until the engine integrates.
+      // Functions below accept an optional `minutes` parameter and return
+      // the number of minutes "spent". When Game.clock exists,
+      // callers should pass minutes so the clock can advance.
+
+      /**
+       * Minimum time cost (minutes) for each inventory-related action.
+       * Keep zero-cost for "check" actions so they never advance the clock.
+       */
+      const TIMECOSTS = Object.freeze({
+        INVENTORY:        0,
+        PICK_UP:          1,
+        DROP:             1,
+        EQUIP_WEAPON:     1,
+        EQUIP_OFFHAND:    1,
+        WEAR_ARMOR:       5,
+        REMOVE_ARMOR:     3,
+        DRINK_POTION:     1,
+        EAT_RATION:       10,
+        LIGHT_TORCH:      1,
+      });
+
+      /**
+       * Advance Game.clock by `minutes` when a clock is available.
+       * Called by inventory-action callers after each timed action.
+       * Returns `minutes` so callers can multiply through modifiers if needed.
+       */
+      function advanceClock(minutes) {
+        if (Game.clock?.advance) {
+          return Game.clock.advance(minutes);
+        }
+        return minutes;
+      }
+
+      // ════════════════════════════════════════════════════════════════════════════
+      // GAME INVENTORY SUBSYSTEM
+      // ════════════════════════════════════════════════════════════════════════════
+
+      /**
+       * Inventory as an array of { itemId, quantity } entries.
+       * All mutators operate on Game.state.player.inventory directly.
+       */
+
+      /**
+       * Add `quantity` copies of `itemId` to the player's inventory.
+       * Merges with an existing stack when `stackable: true`.
+       *
+       * @param {string} itemId  – stable item identifier
+       * @param {number} quantity – number of copies to add (default 1)
+       * @returns {number}   – minutes elapsed (always 0 for this pure add)
+       */
+      function inventoryAddItem(itemId, quantity) {
+        // Normalise quantity
+        const qty = quantity || 1;
+
+        const player = Game.state.player;
+        const inv = player.inventory || (player.inventory = []);
+
+        const item = DATA.items[itemId];
+        if (!item) return { ok: false, msg: "Unknown item: " + itemId, minutes: 0 };
+
+        if (item.stackable) {
+          let existing = inv.find(function (e) { return e.itemId === itemId; });
+          if (existing) {
+            existing.quantity += qty;
+          } else {
+            inv.push({ itemId: itemId, quantity: qty });
+          }
+        } else {
+          for (let i = 0; i < qty; i++) {
+            inv.push({ itemId: itemId, quantity: 1 });
+          }
+        }
+
+        return { ok: true, msg: "Picked up " + item.name + (qty > 1 ? " x" + qty : ""), minutes: advanceClock(TIMECOSTS.PICK_UP) };
+      }
+
+      /**
+       * Remove `quantity` copies of `itemId` from inventory.
+       * Non-stackable items: removes one entry per copy.
+       * Fails (returns ok:false) if the player does not have enough.
+       *
+       * @param {string} itemId
+       * @param {number} quantity – number to remove (default 1)
+       * @returns {{ ok:boolean, msg:string, minutes:number }}
+       */
+      function inventoryRemoveItem(itemId, quantity) {
+        const qty = quantity || 1;
+        const player = Game.state.player;
+        const inv    = player.inventory;
+
+        if (!inv || inv.length === 0) return { ok: false, msg: "Your inventory is empty.", minutes: 0 };
+
+        const item = DATA.items[itemId];
+        const idx  = inv.findIndex(function (e) { return e.itemId === itemId; });
+
+        if (idx === -1) return { ok: false, msg: "You don't have " + (item ? item.name : itemId) + ".", minutes: 0 };
+        if (inv[idx].quantity < qty) return { ok: false, msg: "You don't have enough " + item.name + ".", minutes: 0 };
+
+        if (inv[idx].quantity === qty) {
+          // Remove entire entry
+          inv.splice(idx, 1);
+        } else {
+          inv[idx].quantity -= qty;
+        }
+
+        return { ok: true, msg: "Dropped " + item.name + (qty > 1 ? " x" + qty : ""), minutes: advanceClock(TIMECOSTS.DROP) };
+      }
+
+      /**
+       * Return the raw { itemId, quantity } entry for `itemId`, or null.
+       */
+      function inventoryGetEntry(itemId) {
+        const inv = Game.state.player.inventory || [];
+        return inv.find(function (e) { return e.itemId === itemId; }) || null;
+      }
+
+      /**
+       * Return the total quantity of `itemId` the player carries (inventory only).
+       */
+      function inventoryGetQuantity(itemId) {
+        const entry = inventoryGetEntry(itemId);
+        return entry ? entry.quantity : 0;
+      }
+
+      /**
+       * Test whether the player has at least `quantity` copies of `itemId`
+       * across inventory (equipped items are tested separately).
+       */
+      function inventoryHasItem(itemId, quantity) {
+        return inventoryGetQuantity(itemId) >= (quantity || 1);
+      }
+
+      // ════════════════════════════════════════════════════════════════════════════
+      // GAME EQUIPMENT SUBSYSTEM
+      // ════════════════════════════════════════════════════════════════════════════
+
+      /** Equipment slots the game supports (see bead spec). */
+      const EQUIPMENT_SLOTS = Object.freeze([
+        "weapon", "offhand", "armor", "cloak", "accessory1", "accessory2",
+      ]);
+
+      /**
+       * Apply a default equipment skeleton to a new player state object if
+       * the player does not yet have an equipment map.
+       */
+      function initialiseEquipment() {
+        const player = Game.state.player;
+        if (!player.equipment) {
+          player.equipment = {};
+          EQUIPMENT_SLOTS.forEach(function (slot) {
+            player.equipment[slot] = null;
+          });
+        }
+      }
+
+      /**
+       * Equip an `itemId` from inventory into the appropriate equipment slot.
+       *
+       * Steps per design doc §16.3:
+       *   1. Confirm the player possesses the item.
+       *   2. Confirm the item has a declared equipment slot.
+       *   3. Remove one copy from inventory (non-stackables remove 1 copy).
+       *   4. Move current slot occupant back to inventory (if any).
+       *   5. Record the new item in the slot.
+       *   6. Return a result object with ok/msg/minutes.
+       *
+       * @param {string} itemId
+       * @returns {{ ok:boolean, msg:string, minutes:number }}
+       */
+      function equipItem(itemId) {
+        const player = Game.state.player;
+        const item   = DATA.items[itemId];
+
+        if (!item) return { ok: false, msg: "Unknown item: " + itemId, minutes: 0 };
+
+        if (!item.slot) return { ok: false, msg: "You cannot equip " + item.name + ".", minutes: 0 };
+
+        if (!inventoryHasItem(itemId, 1)) {
+          return { ok: false, msg: "You are not carrying " + item.name + ".", minutes: 0 };
+        }
+
+        const slot = item.slot;
+        const currentlyEquipped = player.equipment && player.equipment[slot];
+
+        // ── Step 3: remove from inventory ─────────────────────────────────────
+        inventoryRemoveItem(itemId, 1);
+
+        // ── Step 4: swap old occupant back to inventory ────────────────────────
+        if (currentlyEquipped) {
+          const eqItem = DATA.items[currentlyEquipped] || { name: currentlyEquipped };
+          inventoryAddItem(currentlyEquipped, 1);
+        }
+
+        // ── Step 5: record new equipment ───────────────────────────────────────
+        if (!player.equipment)      player.equipment = {};
+        player.equipment[slot] = itemId;
+
+        // ── Choose time cost by slot ───────────────────────────────────────────
+        const isWeapon     = slot === "weapon";
+        const timeCost = (slot === "armor")      ? TIMECOSTS.WEAR_ARMOR
+                       : (isWeapon)              ? TIMECOSTS.EQUIP_WEAPON
+                       : (slot === "offhand")    ? TIMECOSTS.EQUIP_OFFHAND
+                       :                             TIMECOSTS.EQUIP_WEAPON;
+
+        return {
+          ok: true,
+          msg: "You equip " + item.name + ".",
+          minutes: advanceClock(timeCost),
+        };
+      }
+
+      /**
+       * Unequip the item currently in `slot`, returning it to inventory.
+       * Equipped item left in inventory; if inventory is full the returned
+       * result will indicate failure (no capacity management yet).
+       *
+       * @param {string} slot – one of EQUIPMENT_SLOTS
+       * @returns {{ ok:boolean, msg:string, minutes:number }}
+       */
+      function unequipItem(slot) {
+        const player = Game.state.player;
+        const slots  = player.equipment || {};
+
+        if (!EQUIPMENT_SLOTS.includes(slot)) return { ok: false, msg: "Unknown equipment slot: " + slot, minutes: 0 };
+
+        const itemId = slots[slot];
+        if (!itemId) return { ok: false, msg: "You have nothing equipped in " + slot + ".", minutes: 0 };
+
+        const item = DATA.items[itemId];
+        slots[slot] = null;
+
+        // Return item to inventory
+        const addResult = inventoryAddItem(itemId, 1);
+
+        // Armor takes longer to remove
+        const timeCost = (slot === "armor") ? TIMECOSTS.REMOVE_ARMOR : TIMECOSTS.DROP;
+
+        return {
+          ok:      true,
+          msg:     "You unequip " + (item ? item.name : itemId) + " and put it away.",
+          minutes: advanceClock(timeCost),
+        };
+      }
+
+      /**
+       * Get the item id currently equipped in `slot`, or null.
+       */
+      function getEquippedItem(slot) {
+        const player = Game.state.player;
+        return player?.equipment?.[slot] || null;
+      }
+
+      /**
+       * Return the item object for the item currently in `slot`, or null.
+       */
+      function getEquippedItemObject(slot) {
+        const itemId = getEquippedItem(slot);
+        return itemId ? (DATA.items[itemId] || null) : null;
+      }
+
+      /**
+       * Return a label for the equipment slot in display form.
+       * e.g. "accessory1" → "Accessory 1"
+       */
+      function slotDisplayName(slot) {
+        if (slot === "accessory1") return "Accessory 1";
+        if (slot === "accessory2") return "Accessory 2";
+        return slot.charAt(0).toUpperCase() + slot.slice(1);
+      }
+
+      // ════════════════════════════════════════════════════════════════════════════
+      // INVENTORY SCREEN
+      // ════════════════════════════════════════════════════════════════════════════
+
+      /**
+       * Render the full inventory / status screen.
+       * Does NOT advance the clock.
+       */
+      function displayInventory() {
+        const player = Game.state.player;
+        if (!player) { Game.ui.print("No character loaded."); return; }
+
+        const weight = getCarriedWeight();
+        const capacity = getCarryCapacity();
+        const encState = getEncumbranceState();
+        const fx = ENCUMBRANCE_EFFECTS[encState];
+
+        // Intro block
+        Game.ui.printSeparator();
+        Game.ui.print("INVENTORY");
+        Game.ui.printSeparator();
+        Game.ui.printBlankLine();
+
+        // Character block
+        Game.ui.print("Name:      " + (player.name || "Unknown"));
+        Game.ui.print("Background:" + (player.background || "Unknown"));
+        Game.ui.print("Level:     " + (player.level || 1));
+        if (Game.clock?.formatTime) {
+          Game.ui.print("Time:      " + Game.clock.formatTime());
+        }
+        Game.ui.printBlankLine();
+
+        // Stats block
+        const hp   = player.currentHp   !== undefined ? player.currentHp   : player.maxHp  || 0;
+        const hpMax= player.maxHp       || hp;
+        const sta  = player.currentSta !== undefined ? player.currentSta : player.maxSta || 0;
+        const staMax=player.maxSta      || sta;
+        const mana = player.currentMan !== undefined ? player.currentMan : player.maxMan || 0;
+        const manaMax=player.maxMan     || mana;
+
+        Game.ui.print("Health:   " + hp + " / " + hpMax);
+        Game.ui.print("Stamina:  " + sta + " / " + staMax);
+        Game.ui.print("Mana:     " + mana + " / " + manaMax);
+        Game.ui.printBlankLine();
+
+        // Equipment block
+        EQUIPMENT_SLOTS.forEach(function (slot) {
+          const itemId = player.equipment?.[slot];
+          const item   = itemId ? DATA.items[itemId] : null;
+          Game.ui.print(slotDisplayName(slot) + ": " + (item ? item.name : "None"));
+        });
+        Game.ui.printBlankLine();
+
+        // Status effects
+        Game.ui.print("Status Effects:");
+        if (player.conditions && player.conditions.length > 0) {
+          player.conditions.forEach(function (c) {
+            Game.ui.print("  " + (c.name || c));
+          });
+        } else {
+          Game.ui.print("None");
+        }
+        Game.ui.printBlankLine();
+
+        // Gold
+        Game.ui.print("Gold:  " + (player.gold || 0));
+        Game.ui.printBlankLine();
+
+        // Encumbrance
+        Game.ui.print("Carried Weight: " + weight + " / " + capacity + " lb");
+        Game.ui.print("Encumbrance:    " + encState.charAt(0).toUpperCase() + encState.slice(1));
+        Game.ui.print("Effects:        " + formatEncumbranceEffects());
+        Game.ui.printBlankLine();
+
+        // Inventory items
+        Game.ui.print("Carried Items:");
+        const inv = player.inventory || [];
+        if (inv.length === 0) {
+          Game.ui.print("  (empty)");
+        } else {
+          inv.forEach(function (entry) {
+            const item = DATA.items[entry.itemId];
+            if (!item) return;
+            const label = item.name + (entry.quantity > 1 || item.stackable ? " x" + entry.quantity : "");
+            const weightStr = (item.weight * entry.quantity) + " lb";
+            Game.ui.print("  - " + label + " ".padEnd(28 - label.length) + weightStr);
+          });
+        }
+        Game.ui.printBlankLine();
+        Game.ui.printSeparator();
+      }
+
+      // ── Resolve text → itemId helper ───────────────────────────────────────────
+      /**
+       * Given a raw user-supplied text fragment, try to look up the
+       * corresponding DATA.items entry.  Searches item aliases then item name.
+       * Returns the item object, or null.
+       */
+      function resolveItemObject(text) {
+        var itemId = resolveItemId(text);
+        if (itemId && DATA.items[itemId]) return DATA.items[itemId];
+        // Try direct id match
+        if (DATA.items[text]) return DATA.items[text];
+        return null;
+      }
+
+      /**
+       * Public inventory item lookup from anywhere in the engine.
+       * Accepts an item id, a name, or any alias.
+       */
+      Game.inventory.getItemObject  = resolveItemObject;
+      Game.inventory.resolveItemId  = resolveItemId;
+
+      /**
+       * Expose time-cost constants so the engine/command router can use them
+       * when routing timed actions through the clock.
+       */
+      Game.inventory.TIMECOSTS = TIMECOSTS;
+
+      // ════════════════════════════════════════════════════════════════════════════
+      // Game.inventory  —  public API
+      // ════════════════════════════════════════════════════════════════════════════
+
+      /**
+       * @typedef {Object} InventoryResult
+       * @property {boolean} ok – true if the operation succeeded
+       * @property {string}  msg – human-readable description of what happened
+       * @property {number}  minutes – time cost of the action (0 for reads)
+       */
+
+      // ── Query ─────────────────────────────────────────────────────────────────
+
+      /**
+       * Retrieve the full inventory entry for `itemId`, or null if not present.
+       * `itemId` may be a stable id, a name, or any alias.
+       *
+       * @param {string} itemId  – item identifier or alias
+       * @returns {{ itemId:string, quantity:number } | null}
+       */
+      Game.inventory.getEntry = function (itemId) {
+        return inventoryGetEntry(resolveItemId(itemId) || itemId);
+      };
+
+      /**
+       * Return total quantity of `itemId` in the player's inventory.
+       * Counts both the inventory stack and any instances that are in-use
+       * in an equipment slot.
+       *
+       * @param {string} itemId
+       * @returns {number}
+       */
+      Game.inventory.getQuantity = function (itemId) {
+        var qty = inventoryGetQuantity(resolveItemId(itemId) || itemId);
+        // Also count if an instance is currently equipped (those are separate)
+        return qty;
+      };
+
+      /**
+       * Test whether the player carries at least `quantity` copies of `itemId`
+       * in their inventory (not counting what is currently equipped).
+       *
+       * @param {string} itemId
+       * @param {number} [quantity=1]
+       * @returns {boolean}
+       */
+      Game.inventory.hasItem = function (itemId, quantity) {
+        return inventoryHasItem(resolveItemId(itemId) || itemId, quantity);
+      };
+
+      /**
+       * Return the total weight currently being carried, including
+       * all inventory items and everything that is equipped.
+       *
+       * @returns {number} weight in lbs
+       */
+      Game.inventory.getCarriedWeight = getCarriedWeight;
+
+      /**
+       * Return the maximum carry capacity for the current character.
+       * Formula: 50 + 10×might + 5×endurance.
+       *
+       * @returns {number} capacity in lbs
+       */
+      Game.inventory.getCarryCapacity = getCarryCapacity;
+
+      /**
+       * Return the current encumbrance state string.
+       * One of: "overloaded" | "encumbered" | "burdened" | "unencumbered".
+       *
+       * @returns {string}
+       */
+      Game.inventory.getEncumbranceState = getEncumbranceState;
+
+      /**
+       * Return the full penalty object for the current encumbrance state.
+       * Includes agilityPenalty, stealthPenalty, travelTimeMultiplier, and canTravel.
+       *
+       * @returns {Object}
+       */
+      Game.inventory.getEncumbranceEffects = getEncumbranceEffects;
+
+      /**
+       * Apply the current encumbrance penalties to an existing stat
+       * modifier object (mutable) and return it.
+       *
+       * @param {Object} playerMods
+       * @returns {Object}
+       */
+      Game.inventory.applyEncumbrancePenalties = applyEncumbrancePenalties;
+
+      // ── Mutation ───────────────────────────────────────────────────────────────
+
+      /**
+       * Add `quantity` copies of an item to the player's inventory.
+       * Merges with an existing stack when the item is stackable.
+       * Returns an `InventoryResult`.
+       *
+       * @param {string} itemId  – item id, name, or alias
+       * @param {number} [quantity=1]
+       * @returns {InventoryResult}
+       */
+      Game.inventory.addItem = function (itemId, quantity) {
+        return inventoryAddItem(resolveItemId(itemId) || itemId, quantity);
+      };
+
+      /**
+       * Remove `quantity` copies of `itemId` from inventory.
+       * Returns an `InventoryResult`.
+       *
+       * @param {string} itemId  – item id, name, or alias
+       * @param {number} [quantity=1]
+       * @returns {InventoryResult}
+       */
+      Game.inventory.removeItem = function (itemId, quantity) {
+        var qty = quantity || 1;
+        var res  = inventoryRemoveItem(resolveItemId(itemId) || itemId, qty);
+        return res;
+      };
+
+      // ── Display ────────────────────────────────────────────────────────────────
+
+      /**
+       * Render the full inventory / status screen to the output panel.
+       * Does NOT advance the clock.
+       */
+      Game.inventory.displayScreen = displayInventory;
+
+      // ════════════════════════════════════════════════════════════════════════════
+      // Game.equipment  —  public API
+      // ════════════════════════════════════════════════════════════════════════════
+
+      /**
+       * Equip an item from inventory into the appropriate equipment slot.
+       *
+       * The full equip sequence (design doc §16.3):
+       *   1. Item must have a declared equipment slot.
+       *   2. Item must be in the player's inventory.
+       *   3. Old occupant of the slot (if any) is returned to inventory.
+       *   4. New item is recorded in the slot.
+       *
+       * @param {string} itemId  – item id, name, or alias
+       * @returns {InventoryResult}
+       */
+      Game.equipment.equip = function (itemId) {
+        return equipItem(resolveItemId(itemId) || itemId);
+      };
+
+      /**
+       * Unequip the item currently held in `slot`, returning it to inventory.
+       *
+       * @param {string} slot – one of: weapon | offhand | armor | cloak |
+       *                         accessory1 | accessory2
+       * @returns {InventoryResult}
+       */
+      Game.equipment.unequip = function (slot) {
+        return unequipItem(slot);
+      };
+
+      /**
+       * Return the item id string currently equipped in `slot`, or null.
+       *
+       * @param {string} slot
+       * @returns {string | null}
+       */
+      Game.equipment.getEquipped = function (slot) {
+        return getEquippedItem(slot);
+      };
+
+      /**
+       * Return the full item object currently equipped in `slot`, or null.
+       *
+       * @param {string} slot
+       * @returns {Object | null}
+       */
+      Game.equipment.getEquippedObject = function (slot) {
+        return getEquippedItemObject(slot);
+      };
+
+      /**
+       * List all equipment slots and the name (or "None") of each equipped item.
+       * Returns an array of { slot, name } plain objects.
+       *
+       * @returns {Array<{slot:string, name:string}>}
+       */
+      Game.equipment.listSlots = function () {
+        var player = Game.state.player;
+        if (!player) return [];
+        return EQUIPMENT_SLOTS.map(function (slot) {
+          var id = getEquippedItem(slot);
+          return {
+            slot:        slot,
+            displayName: slotDisplayName(slot),
+            itemId:      id,
+            name:        id ? (DATA.items[id]?.name || id) : null,
+          };
+        });
+      };
+
+      /**
+       * Convert a raw slot string to a display label.
+       * "accessory1" → "Accessory 1", "armor" → "Armor", etc.
+       *
+       * @param {string} slot
+       * @returns {string}
+       */
+      Game.equipment.slotDisplayName = slotDisplayName;
+
     </script>
   </body>
-</html>
-</body>
 </html>
