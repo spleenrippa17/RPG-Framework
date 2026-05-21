@@ -64,1090 +64,2138 @@
     </form>
   </div>
 
-  <script>
-    // Static game data
-    const DATA = {
-      locations: [
-        {
-          id: "village_square",
-          name: "Village Square",
-          descriptions: [
-            {
-              text: "You stand in the muddy square of a small frontier village. A stone well sits in the center.",
-              conditions: []
-            }
-          ],
-          exits: {
-            north: {
-              to: "general_store",
-              travelMinutes: 10,
-              conditions: []
-            },
-            south: {
-              to: "silver_stag_tavern",
-              travelMinutes: 10,
-              conditions: []
-            },
-            east: {
-              to: "temple",
-              travelMinutes: 15,
-              conditions: []
-            },
-            west: {
-              to: "village_outskirts",
-              travelMinutes: 10,
-              conditions: []
-            }
-          },
-          items: ["village_notice"],
-          tags: ["settlement", "outdoors"]
-        },
-        {
-          id: "general_store",
-          name: "General Store",
-          descriptions: [
-            {
-              text: "Borin's General Store is filled with supplies for adventurers. Shelves line the walls with various goods.",
-              conditions: []
-            }
-          ],
-          exits: {
-            south: {
-              to: "village_square",
-              travelMinutes: 10,
-              conditions: []
-            }
-          },
-          items: [],
-          tags: ["indoors", "shop"]
-        },
-        {
-          id: "silver_stag_tavern",
-          name: "Silver Stag Tavern",
-          descriptions: [
-            {
-              text: "The warm glow of the hearth illuminates this cozy tavern. The smell of ale and stew fills the air.",
-              conditions: []
-            }
-          ],
-          exits: {
-            north: {
-              to: "village_square",
-              travelMinutes: 10,
-              conditions: []
-            }
-          },
-          items: [],
-          tags: ["indoors", "tavern"]
-        },
-        {
-          id: "temple",
-          name: "Temple of the Hearth",
-          descriptions: [
-            {
-              text: "A small stone temple dedicated to the goddess of home and healing. Peaceful chants echo softly within.",
-              conditions: []
-            }
-          ],
-          exits: {
-            west: {
-              to: "village_square",
-              travelMinutes: 15,
-              conditions: []
-            }
-          },
-          items: [],
-          tags: ["indoors", "temple"]
-        },
-        {
-          id: "village_outskirts",
-          name: "Village Outskirts",
-          descriptions: [
-            {
-              text: "The edge of civilization gives way to wild grasslands and scattered trees. A path leads north into the woods.",
-              conditions: []
-            }
-          ],
-          exits: {
-            east: {
-              to: "village_square",
-              travelMinutes: 10,
-              conditions: []
-            },
-            north: {
-              to: "north_wood",
-              travelMinutes: 20,
-              conditions: []
-            }
-          },
-          items: [],
-          tags: ["outdoors", "wilderness"]
-        },
-        {
-          id: "north_wood",
-          name: "Northern Woods",
-          descriptions: [
-            {
-              text: "Dense trees block much of the sunlight here. The air is cool and damp, with the occasional rustle of small animals.",
-              conditions: []
-            }
-          ],
-          exits: {
-            south: {
-              to: "village_outskirts",
-              travelMinutes: 20,
-              conditions: []
-            },
-            north: {
-              to: "old_barrow",
-              travelMinutes: 25,
-              conditions: []
-            }
-          },
-          items: [],
-          tags: ["outdoors", "forest"]
-        },
-        {
-          id: "old_barrow",
-          name: "Old Barrow",
-          descriptions: [
-            {
-              text: "An ancient burial mound stands before you, its stone entrance dark and foreboding. Cold air seeps from within.",
-              conditions: []
-            }
-          ],
-          exits: {
-            south: {
-              to: "north_wood",
-              travelMinutes: 25,
-              conditions: []
-            }
-          },
-          items: ["barrow_key"],
-          tags: ["outdoors", "dungeon"]
+    <script>
+      const Game = {
+        version: "1.0.0",
+
+        data: {},
+        state: {},
+
+        ui: {},
+        parser: {},
+        engine: {},
+        checks: {},
+        inventory: {},
+        equipment: {},
+        characterCreation: {},
+        clock: {},
+        schedules: {},
+        storage: {},
+        conditions: {},
+        combat: {},
+        dialogue: {},
+        utilities: {}
+      };
+
+      // ── Parser ───────────────────────────────────────────────────────────────
+
+      /**
+       * Multi-word aliases MUST come first so they are matched before
+       * the input is split on whitespace.
+       * Keys are lower-case; parser lower-cases input before lookup.
+       */
+      const VERB_ALIASES = {
+        i: "inventory",
+        inv: "inventory",
+        inventory: "inventory",
+        equipment: "inventory",
+        status: "inventory",
+        gear: "inventory",
+        showinv: "inventory",
+
+        n: "go",
+        north: "go",
+        s: "go",
+        south: "go",
+        e: "go",
+        east: "go",
+        w: "go",
+        west: "go",
+        u: "go",
+        up: "go",
+        d: "go",
+        down: "go",
+
+        get: "take",
+        grab: "take",
+        pickup: "take",
+        "pick up": "take",
+
+        examine: "look",
+        inspect: "look",
+        x: "look",
+        lookat: "look",
+
+        wield: "equip",
+        wear: "equip",
+        "put on": "equip",
+
+        remove: "unequip",
+        "take off": "unequip",
+
+        strike: "attack",
+        hit: "attack",
+        fight: "attack",
+
+        shoot: "shoot",
+        "fire at": "shoot",
+
+        cast: "cast",
+        "cast spell": "cast",
+
+        flee: "flee",
+        run: "flee",
+
+        defend: "defend",
+        "take cover": "defend",
+
+        use: "use",
+        "use potion": "use_potion",
+
+        sayhi: "say hi",
+        hallo: "say hi",
+        hi: "say hi",
+        hello: "say hi",
+      };
+
+      /**
+       * Prepositions recognised between the direct and indirect object.
+       */
+      const PREPOSITIONS = [
+        "at",
+        "to",
+        "on",
+        "in",
+        "into",
+        "with",
+        "using",
+        "from",
+        "about",
+        "for",
+        "around",
+        "off",
+        "over",
+        "under",
+        "behind",
+        "inside",
+        "outside",
+        "upon",
+        "against",
+      ];
+
+      /**
+       * Ordinal mapping used below (kept local to this file; re-exported below).
+       */
+      const WORD_TO_NUMBER = {
+        one: 1, two: 2, three: 3, four: 4, five: 5,
+        six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+      };
+
+      /**
+       * Tokenise `text` into words, stripping leading/trailing commentary.
+       * Returns an array of lower-case words.
+       */
+      function tokenise(text) {
+        return text
+          .toLowerCase()
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean);
+      }
+
+      /**
+       * Match the longest alias against the head of `tokens`.
+       * Checks multi-word aliases (length 2) first, then single-word ones.
+       * Returns the canonical verb string, or null if no match found.
+       */
+      function matchVerb(tokens) {
+        // Try 2-word alias first
+        if (tokens.length >= 2) {
+          const twoWord = tokens[0] + " " + tokens[1];
+          if (VERB_ALIASES[twoWord]) return VERB_ALIASES[twoWord];
         }
-      ],
-      items: [
-        {
-          id: "rusty_sword",
-          name: "rusty sword",
-          type: "weapon",
-          aliases: ["sword", "blade"],
-          description: "A plain but serviceable iron sword, though it shows signs of age and neglect.",
-          weight: 3,
-          stackable: false,
-          portable: true,
-          slot: "weapon",
-          stat: "might",
-          skill: "melee",
-          damage: "1d6",
-          attackBonus: 0,
-          value: 5
-        },
-        {
-          id: "iron_sword",
-          name: "iron sword",
-          type: "weapon",
-          aliases: ["sword", "blade"],
-          description: "A plain but reliable iron sword.",
-          weight: 3,
-          stackable: false,
-          portable: true,
-          slot: "weapon",
-          stat: "might",
-          skill: "melee",
-          damage: "1d8",
-          attackBonus: 0,
-          value: 20
-        },
-        {
-          id: "hunting_bow",
-          name: "hunting bow",
-          type: "weapon",
-          aliases: ["bow"],
-          description: "A well-crafted wooden bow for hunting small game.",
-          weight: 2,
-          stackable: false,
-          portable: true,
-          slot: "weapon",
-          stat: "agility",
-          skill: "ranged",
-          damage: "1d6",
-          attackBonus: 0,
-          value: 15
-        },
-        {
-          id: "leather_armor",
-          name: "leather armor",
-          type: "armor",
-          aliases: ["leather", "hide"],
-          description: "Hardened leather armor offering basic protection.",
-          weight: 10,
-          stackable: false,
-          portable: true,
-          slot: "armor",
-          defenseBonus: 1,
-          stealthPenalty: 0,
-          agilityPenalty: 0,
-          value: 15
-        },
-        {
-          id: "chainmail",
-          name: "chainmail",
-          type: "armor",
-          aliases: ["mail", "chain"],
-          description: "Interlinked metal rings form this flexible armor.",
-          weight: 35,
-          stackable: false,
-          portable: true,
-          slot: "armor",
-          defenseBonus: 3,
-          stealthPenalty: -2,
-          agilityPenalty: -1,
-          value: 75
-        },
-        {
-          id: "travel_cloak",
-          name: "travel cloak",
-          type: "clothing",
-          aliases: ["cloak"],
-          description: "A sturdy wool cloak suitable for travel in various weather conditions.",
-          weight: 2,
-          stackable: false,
-          portable: true,
-          slot: "cloak",
-          value: 5
-        },
-        {
-          id: "travel_rations",
-          name: "travel rations",
-          type: "consumable",
-          aliases: ["rations", "food"],
-          description: "Dried meat and hardbread that keeps well on long journeys.",
-          weight: 1,
-          stackable: true,
-          portable: true,
-          value: 2
-        },
-        {
-          id: "healing_potion",
-          name: "healing potion",
-          type: "consumable",
-          aliases: ["potion"],
-          description: "A glowing red liquid that restores vitality when consumed.",
-          weight: 0,
-          stackable: true,
-          portable: true,
-          value: 25
-        },
-        {
-          id: "torch",
-          name: "torch",
-          type: "light",
-          aliases: ["light"],
-          description: "A wooden torch soaked in oil, providing light in dark places.",
-          weight: 1,
-          stackable: true,
-          portable: true,
-          value: 1
-        },
-        {
-          id: "flint_and_steel",
-          name: "flint and steel",
-          type: "tool",
-          aliases: ["flint", "steel"],
-          description: "Used to create sparks for starting fires.",
-          weight: 0,
-          stackable: false,
-          portable: true,
-          value: 3
-        },
-        {
-          id: "skinning_knife",
-          name: "skinning knife",
-          type: "tool",
-          aliases: ["knife"],
-          description: "A sharp blade used for preparing animal hides.",
-          weight: 1,
-          stackable: false,
-          portable: true,
-          value: 4
-        },
-        {
-          id: "old_iron_key",
-          name: "old iron key",
-          type: "key",
-          aliases: ["key"],
-          description: "A heavy iron key that looks quite old.",
-          weight: 0,
-          stackable: false,
-          portable: true,
-          value: 10
-        },
-        {
-          id: "barrow_key",
-          name: "barrow key",
-          type: "key",
-          aliases: ["key"],
-          description: "An ornate key that seems to belong to the old barrow.",
-          weight: 0,
-          stackable: false,
-          portable: true,
-          value: 15
-        },
-        {
-          id: "copper_coin",
-          name: "copper coin",
-          type: "treasure",
-          aliases: ["coin", "copper"],
-          description: "A standard copper coin.",
-          weight: 0,
-          stackable: true,
-          portable: true,
-          value: 1
-        },
-        {
-          id: "silver_coin",
-          name: "silver coin",
-          type: "treasure",
-          aliases: ["coin", "silver"],
-          description: "A standard silver coin.",
-          weight: 0,
-          stackable: true,
-          portable: true,
-          value: 10
+        // Then 1-word alias
+        if (VERB_ALIASES[tokens[0]]) return VERB_ALIASES[tokens[0]];
+        // Fall back to raw first token as verb
+        return tokens[0] || null;
+      }
+
+      /**
+       * Find the preposition index in `tokens`. Returns -1 if none found.
+       */
+      function findPrepositionIndex(tokens) {
+        for (let i = 0; i < tokens.length; i++) {
+          if (PREPOSITIONS.includes(tokens[i])) return i;
         }
-      ],
-      npcs: [
-        {
-          id: "borin_shopkeeper",
-          name: "Borin the Shopkeeper",
-          aliases: ["borin", "shopkeeper", "merchant"],
-          type: "npc",
-          description: "Borin is a broad man with careful eyes and ink-stained fingers.",
-          stats: {
-            might: 1,
-            agility: 0,
-            endurance: 1,
-            intellect: 1,
-            will: 1,
-            presence: 2
-          },
-          skills: {
-            persuasion: 2,
-            lore: 1,
-            melee: 0,
-            defense: 0
-          },
-          resources: {
-            hp: 12,
-            maxHp: 12
-          },
-          defense: 10,
-          disposition: {
-            baseAttitude: 0,
-            faction: "village"
-          },
-          dialogueId: "borin_dialogue",
-          scheduleId: "borin_daily",
-          defaultLocation: "general_store"
-        },
-        {
-          id: "elder_maria",
-          name: "Elder Maria",
-          aliases: ["elder", "maria", "priestess"],
-          type: "npc",
-          description: "An elderly woman with kind eyes who tends to the temple and offers guidance.",
-          stats: {
-            might: 0,
-            agility: 0,
-            endurance: 1,
-            intellect: 2,
-            will: 2,
-            presence: 1
-          },
-          skills: {
-            lore: 2,
-            persuasion: 1,
-            medicine: 1,
-            defense: 0
-          },
-          resources: {
-            hp: 10,
-            maxHp: 10
-          },
-          defense: 8,
-          disposition: {
-            baseAttitude: 1,
-            faction: "temple"
-          },
-          dialogueId: "elder_maria_dialogue",
-          scheduleId: "elder_maria_daily",
-          defaultLocation: "temple"
-        },
-        {
-          id: "garde captain",
-          name: "Captain of the Guard",
-          aliases: ["captain", "guard", "watchman"],
-          type: "npc",
-          description: "A stern-looking woman in polished armor who oversees the village militia.",
-          stats: {
-            might: 2,
-            agility: 1,
-            endurance: 2,
-            intellect: 0,
-            will: 2,
-            presence: 2
-          },
-          skills: {
-            athletics: 1,
-            intimidation: 2,
-            melee: 1,
-            defense: 2
-          },
-          resources: {
-            hp: 15,
-            maxHp: 15
-          },
-          defense: 14,
-          disposition: {
-            baseAttitude: 0,
-            faction: "village"
-          },
-          dialogueId: "guard_captain_dialogue",
-          scheduleId: "guard_captain_daily",
-          defaultLocation: "village_square"
+        return -1;
+      }
+
+      /**
+       * Try to parse a leading quantity from `tokens`.
+       * Looks for an ordinal word ("one", "two", …) or a bare digit.
+       * Removes the consumed tokens in-place and returns the number,
+       * or null if no quantity found.
+       */
+      function parseQuantity(tokens) {
+        if (tokens.length === 0) return null;
+        const first = tokens[0];
+        if (WORD_TO_NUMBER[first]) {
+          tokens.shift();
+          return WORD_TO_NUMBER[first];
         }
-      ],
-      monsters: [
-        {
-          id: "goblin_scout",
-          name: "goblin scout",
-          aliases: ["goblin", "scout"],
-          type: "monster",
-          description: "A wiry goblin with yellow eyes and a jagged knife.",
-          stats: {
-            might: 0,
-            agility: 2,
-            endurance: 0,
-            intellect: -1,
-            will: 0,
-            presence: -1
-          },
-          skills: {
-            stealth: 2,
-            melee: 1,
-            ranged: 1,
-            defense: 1
-          },
-          resources: {
-            hp: 8,
-            maxHp: 8
-          },
-          defense: 13,
-          attacks: [
-            {
-              id: "jagged_knife",
-              name: "jagged knife",
-              skill: "melee",
-              stat: "agility",
-              damage: "1d4+1"
-            }
-          ],
-          behavior: {
-            hostile: true,
-            morale: 8,
-            fleesAtHpPercent: 25
-          },
-          loot: [
-            { itemId: "goblin_knife", chance: 60 },
-            { itemId: "copper_coin", quantity: "1d6", chance: 80 }
-          ],
-          scheduleId: "goblin_patrol",
-          defaultLocation: "north_wood"
-        },
-        {
-          id: "forest_wolf",
-          name: "forest wolf",
-          aliases: ["wolf"],
-          type: "monster",
-          description: "A large gray wolf with keen eyes and sharp teeth.",
-          stats: {
-            might: 2,
-            agility: 2,
-            endurance: 1,
-            intellect: -2,
-            will: 1,
-            presence: 0
-          },
-          skills: {
-            athletics: 1,
-            stealth: 1,
-            melee: 2,
-            defense: 1
-          },
-          resources: {
-            hp: 12,
-            maxHp: 12
-          },
-          defense: 14,
-          attacks: [
-            {
-              id: "bite",
-              name: "bite",
-              skill: "melee",
-              stat: "might",
-              damage: "1d8+1"
-            }
-          ],
-          behavior: {
-            hostile: true,
-            morale: 10,
-            fleesAtHpPercent: 30
-          },
-          loot: [
-            { itemId: "wolf_pelt", chance: 50 },
-            { itemId: "wolf_fang", chance: 30 }
-          ],
-           scheduleId: "wolf_patrol",
-           defaultLocation: "north_wood"
-        },
-        {
-          id: "barrow_wight",
-          name: "barrow wight",
-          aliases: ["wight", "undead"],
-          type: "monster",
-          description: "A gaunt, undead figure wrapped in rotting burial shrouds, its eyes glowing with unholy light.",
-          stats: {
-            might: 1,
-            agility: 1,
-            endurance: 3,
-            intellect: -1,
-            will: 2,
-            presence: -2
-          },
-          skills: {
-            defense: 2,
-            melee: 1
-          },
-          resources: {
-            hp: 18,
-            maxHp: 18
-          },
-          defense: 16,
-          attacks: [
-            {
-              id: "slam",
-              name: "slam",
-              skill: "melee",
-              stat: "might",
-              damage: "1d8+2"
-            }
-          ],
-          behavior: {
-            hostile: true,
-            morale: 15,
-            fleesAtHpPercent: 0
-          },
-          loot: [
-            { itemId: "ancient_coin", chance: 40, quantity: "1d4" },
-            { itemId: "burial_shroud", chance: 30 }
-          ],
-          scheduleId: "barrow_wight_static",
-          defaultLocation: "old_barrow"
+        const num = Number(first);
+        if (!isNaN(num) && num > 0) {
+          tokens.shift();
+          return num;
         }
-      ],
-      schedules: [
-        {
-          id: "borin_daily",
-          entries: [
-            {
-              start: 360, // 6:00 AM
-              end: 480,   // 8:00 AM
-              location: "borin_home",
-              activity: "eating breakfast"
-            },
-            {
-              start: 480, // 8:00 AM
-              end: 1080,  // 6:00 PM
-              location: "general_store",
-              activity: "working behind the counter"
-            },
-            {
-              start: 1080, // 6:00 PM
-              end: 1260,  // 9:00 PM
-              location: "silver_stag_tavern",
-              activity: "drinking ale"
-            },
-            {
-              start: 1260, // 9:00 PM
-              end: 360,   // 6:00 AM (next day)
-              location: "borin_home",
-              activity: "sleeping"
-            }
-          ]
-        },
-        {
-          id: "elder_maria_daily",
-          entries: [
-            {
-              start: 300, // 5:00 AM
-              end: 360,   // 6:00 AM
-              location: "elder_maria_home",
-              activity: "morning prayers"
-            },
-            {
-              start: 360, // 6:00 AM
-              end: 1020, // 5:00 PM
-              location: "temple",
-              activity: "tending to temple and helping villagers"
-            },
-            {
-              start: 1020, // 5:00 PM
-              end: 1140, // 7:00 PM
-              location: "elder_maria_home",
-              activity: "evening meal and rest"
-            },
-            {
-              start: 1140, // 7:00 PM
-              end: 300,  // 5:00 AM (next day)
-              location: "elder_maria_home",
-              activity: "sleeping"
-            }
-          ]
-        },
-        {
-          id: "guard_captain_daily",
-          entries: [
-            {
-              start: 420, // 7:00 AM
-              end: 480,   // 8:00 AM
-              location: "guard_captain_home",
-              activity: "morning routine"
-            },
-            {
-              start: 480, // 8:00 AM
-              end: 1080, // 6:00 PM
-              location: "village_square",
-              activity: "overseeing village guard"
-            },
-            {
-              start: 1080, // 6:00 PM
-              end: 1200, // 8:00 PM
-              location: "silver_stag_tavern",
-              activity: "off duty at tavern"
-            },
-            {
-              start: 1200, // 8:00 PM
-              end: 420,  // 7:00 AM (next day)
-              location: "guard_captain_home",
-              activity: "sleeping"
-            }
-          ]
-        },
-        {
-          id: "goblin_patrol",
-          entries: [
-            {
-              start: 0,    // 12:00 AM
-              end: 180,   // 3:00 AM
-              location: "north_wood",
-              activity: "patrolling northern woods"
-            },
-            {
-              start: 180, // 3:00 AM
-              end: 360,  // 6:00 AM
-              location: "village_outskirts",
-              activity: "scouting near village"
-            },
-            {
-              start: 360, // 6:00 AM
-              end: 540, // 9:00 AM
-              location: "north_wood",
-              activity: "returning to woods"
-            },
-            {
-              start: 540, // 9:00 AM
-              end: 720, // 12:00 PM
-              location: "deep_woods",
-              activity: "hunting in deep woods"
-            },
-            {
-              start: 720, // 12:00 PM
-              end: 900, // 3:00 PM
-              location: "north_wood",
-              activity: "resting and eating"
-            },
-            {
-              start: 900, // 3:00 PM
-              end: 1080, // 6:00 PM
-              location: "village_outskirts",
-              activity: "scouting near village again"
-            },
-            {
-              start: 1080, // 6:00 PM
-              end: 1260, // 9:00 PM
-              location: "north_wood",
-              activity: "evening patrol"
-            },
-            {
-              start: 1260, // 9:00 PM
-              end: 1440, // 12:00 AM (next day)
-              location: "deep_woods",
-              activity: "night watch"
-            }
-          ]
-        },
-        {
-          id: "wolf_patrol",
-          entries: [
-            {
-              start: 0,   // 12:00 AM
-              end: 240,  // 4:00 AM
-              location: "north_wood",
-              activity: "hunting"
-            },
-            {
-              start: 240, // 4:00 AM
-              end: 360, // 6:00 AM
-              location: "village_outskirts",
-              activity: "scavenging near village"
-            },
-            {
-              start: 360, // 6:00 AM
-              end: 720, // 12:00 PM
-              location: "north_wood",
-              activity: "resting"
-            },
-            {
-              start: 720, // 12:00 PM
-              end: 1080, // 6:00 PM
-              location: "deep_woods",
-              activity: "hunting"
-            },
-            {
-              start: 1080, // 6:00 PM
-              end: 1200, // 8:00 PM
-              location: "north_wood",
-              activity: "returning to den"
-            },
-            {
-              start: 1200, // 8:00 PM
-              end: 1440, // 12:00 AM (next day)
-              location: "deep_woods",
-              activity: "night rest"
-            }
-          ]
-        },
-        {
-          id: "barrow_wight_static",
-          entries: [
-            {
-              start: 0,
-              end: 1440,
-              location: "old_barrow",
-              activity: "guarding the barrow"
-            }
-          ]
+        return null;
+      }
+
+      /**
+       * Convert a token array back to a single human-readable string.
+       */
+      function untokenise(tokens) {
+        return tokens.join(" ");
+      }
+
+      /**
+       * ── Main entry point ──────────────────────────────────────────────────
+       *
+       * Parse `rawInput` into a structured command object:
+       *
+       *   {
+       *     raw:              string,           // original input
+       *     verb:             string | null,    // canonical verb
+       *     directObjectText: string | null,
+       *     quantity:         number | null,
+       *     preposition:      string | null,
+       *     indirectObjectText: string | null
+       *   }
+       *
+       * Rules:
+       *   1. Normalise to lower-case.
+       *   2. Match multi-word aliases ("pick up", "put on", …) before splitting.
+       *   3. Strip a leading quantity ("drop 2 torches" → quantity=2).
+       *   4. Locate the first preposition to split direct / indirect objects.
+       *   5. Everything between verb and prep (or end) is the direct object.
+       *   6. Everything after the preposition is the indirect object.
+       *
+       * Examples:
+       *   "use iron key on old door" →
+       *     { verb: "use", directObjectText: "iron key",
+       *       preposition: "on", indirectObjectText: "old door", quantity: null }
+       *
+       *   "drop 2 torches" →
+       *     { verb: "drop", directObjectText: "torches",
+       *       quantity: 2, preposition: null, indirectObjectText: null }
+       *
+       *   "pick up iron key" →
+       *     { verb: "take", directObjectText: "iron key",
+       *       quantity: null, preposition: null, indirectObjectText: null }
+       *
+       *   "look" →
+       *     { verb: "look", directObjectText: null,
+       *       quantity: null, preposition: null, indirectObjectText: null }
+       */
+      Game.parser.parse = function (rawInput) {
+        // 1. Normalise
+        const trimmed = rawInput.trim().toLowerCase();
+        if (!trimmed) return null;
+
+        let tokens = tokenise(trimmed);
+
+        // 2. Verb + multi-word alias matching
+        let verb = matchVerb(tokens);
+
+        // Consume the verb tokens that were matched
+        if (tokens.length >= 2) {
+          const twoWord = tokens[0] + " " + tokens[1];
+          if (VERB_ALIASES[twoWord]) {
+            tokens.splice(0, 2); // consume both words
+          } else {
+            tokens.shift(); // consumed single word
+          }
+        } else {
+          tokens.shift(); // single token — consumed
         }
-      ],
-      dialogues: [
-        {
-          id: "borin_dialogue",
-          entries: [
-            {
-              text: "Welcome to my shop! I've got supplies for any adventurer.",
-              conditions: [],
-              effects: []
-            },
-            {
-              text: "Looking for weapons? I've got swords and bows suitable for beginners.",
-              conditions: [],
-              effects: []
-            },
-            {
-              text: "Need armor? Leather for stealth, chainmail for protection.",
-              conditions: [],
-              effects: []
-            },
-            {
-              text: "Don't forget your torches and rations before heading out.",
-              conditions: [],
-              effects: []
-            }
-          ]
-        },
-        {
-          id: "elder_maria_dialogue",
-          entries: [
-            {
-              text: "The light of the hearth guides us all. How may I assist you today?",
-              conditions: [],
-              effects: []
-            },
-            {
-              text: "The temple offers healing and counsel to those in need.",
-              conditions: [],
-              effects: []
-            },
-            {
-              text: "Beware the old barrow to the north. Ancient evils stir within.",
-              conditions: [
-                {
-                  flag: "barrow_warned",
-                  equals: false
-                }
-              ],
-              effects: [
-                {
-                  setFlag: "barrow_warned",
-                  value: true
-                }
-              ]
-            }
-          ]
-        },
-        {
-          id: "guard_captain_dialogue",
-          entries: [
-            {
-              text: "The village is peaceful today, but we remain vigilant.",
-              conditions: [],
-              effects: []
-            },
-            {
-              text: "Goblin activity has increased in the northern woods. Travelers should be cautious.",
-              conditions: [],
-              effects: []
-            },
-            {
-              text: "If you're looking for work, we could use able-bodied adventurers.",
-              conditions: [],
-              effects: []
-            }
-          ]
+
+        // 3. Leading quantity
+        const quantity = parseQuantity(tokens);
+
+        // 4. Preposition
+        const prepIdx = findPrepositionIndex(tokens);
+        const preposition = prepIdx >= 0 ? tokens[prepIdx] : null;
+
+        // 5. Direct / indirect object
+        let directObjectText = null;
+        let indirectObjectText = null;
+
+        if (prepIdx >= 0) {
+          const directTokens = tokens.slice(0, prepIdx);
+          const indirectTokens = tokens.slice(prepIdx + 1);
+          directObjectText    = untokenise(directTokens)    || null;
+          indirectObjectText  = untokenise(indirectTokens)  || null;
+        } else {
+          directObjectText = untokenise(tokens) || null;
         }
-      ],
-       backgrounds: [
-         {
-           id: "mercenary",
-           name: "Mercenary",
-           theme: "Combat-focused",
-           statBonuses: {
-             might: 1,
-             agility: 0,
-             endurance: 1,
-             intellect: 0,
-             will: 0,
-             presence: 0
-           },
-           skillBonuses: {
-             athletics: 1,
-             melee: 1,
-             defense: 1
-           },
-           startingItems: ["iron_sword", "leather_armor", "travel_rations"],
-           startingGold: 15
+
+        return {
+          raw: rawInput,
+          verb,
+          directObjectText,
+          quantity,
+          preposition,
+          indirectObjectText,
+        };
+      };
+
+      /**
+       * Convenience: parse and then immediately clone so callers never
+       * accidentally mutate an internal cache entry.
+       */
+      Game.parser.parseAndClone = function (rawInput) {
+        const result = Game.parser.parse(rawInput);
+        return result ? { ...result } : null;
+      };
+
+      /**
+       * Expose the verb aliases so other subsystems can inspect / extend them.
+       */
+      Game.parser.verbAliases = VERB_ALIASES;
+
+      /**
+       * Expose the preposition list.
+       */
+      Game.parser.prepositions = PREPOSITIONS;
+
+      /**
+       * Return a list of canonical verbs currently in the alias table
+       * (unique, sorted).
+       */
+      Game.parser.getCanonicalVerbs = function () {
+        return [...new Set(Object.values(VERB_ALIASES))].sort();
+      };
+
+      /**
+       * Add extra aliases at runtime (for mod content, etc.).
+       * Example: Game.parser.addAliases({ "say hello": "say hi" });
+       */
+      Game.parser.addAliases = function (extraAliases) {
+        Object.assign(VERB_ALIASES, extraAliases);
+      };
+
+      // ── UI helpers ─────────────────────────────────────────────────────────────
+
+      /**
+       * Print text to the game output panel.
+       * Wraps native DOM writes so the rest of the engine stays readable.
+       */
+      Game.ui.print = function (text) {
+        const output = document.getElementById("output");
+        output.textContent += text + "\n";
+        output.scrollTop = output.scrollHeight;
+      };
+
+      Game.ui.printSeparator = function () {
+        Game.ui.print("==================================================");
+      };
+
+      Game.ui.printBlankLine = function () {
+        Game.ui.print("");
+      };
+
+      // ── DATA ───────────────────────────────────────────────────────────────────
+
+      /**
+       * Static item library.
+       * Every game entity must have a stable lowercase `id`.
+       * Aliases are lowercased at registration; lookup is case-insensitive.
+       */
+const DATA = Object.freeze({ items: Object.freeze({
+// ── Weapons ─────────────────────────────────────────────────────────────
+          skinning_knife: {
+            id: "skinning_knife", name: "skinning knife", type: "weapon",
+            aliases: ["knife", "skinny knife"],
+            description: "A small knife used for skinning game.",
+            weight: 1, stackable: false, portable: true,
+            slot: "weapon", stat: "might", skill: "melee", damage: "1d4",
+            attackBonus: 0, value: 5,
+          },
+          iron_sword: {
+            id: "iron_sword", name: "iron sword", type: "weapon",
+            aliases: ["sword", "blade"],
+            description: "A plain but reliable iron sword.",
+            weight: 3, stackable: false, portable: true,
+            slot: "weapon", stat: "might", skill: "melee", damage: "1d8",
+            attackBonus: 0, value: 20,
+          },
+          hunting_bow: {
+            id: "hunting_bow", name: "hunting bow", type: "weapon",
+            aliases: ["bow"],
+            description: "A well-strung yew bow, good for hunting.",
+            weight: 3, stackable: false, portable: true,
+            slot: "weapon", stat: "agility", skill: "ranged", damage: "1d6",
+            attackBonus: 0, value: 25,
+          },
+          woodcutter_axe: {
+           id: "woodcutter_axe", name: "woodcutter axe", type: "weapon",
+           aliases: ["axe"],
+           description: "A heavy axe used for felling trees.",
+           weight: 4, stackable: false, portable: true,
+           slot: "weapon", stat: "might", skill: "melee", damage: "1d10",
+           attackBonus: -1, value: 8,
          },
-         {
-           id: "village_hunter",
-           name: "Village Hunter",
-           theme: "Wilderness and ranged combat",
-           statBonuses: {
-             might: 0,
-             agility: 1,
-             endurance: 1,
-             intellect: 0,
-             will: 0,
-             presence: 0
-           },
-           skillBonuses: {
-             athletics: 1,
-             ranged: 1,
-             survival: 1
-           },
-           startingItems: ["hunting_bow", "skinning_knife", "travel_rations", "flint_and_steel"],
-           startingGold: 10
+
+         // ── Armor ───────────────────────────────────────────────────────────────
+         leather_tunic: {
+           id: "leather_tunic", name: "leather tunic", type: "armor",
+           aliases: ["leather", "tunic"],
+           description: "Thick leather that provides minimal protection.",
+           weight: 3, stackable: false, portable: true,
+           slot: "armor",
+           defenseBonus: 1, value: 15,
          },
-         {
-           id: "hedge_wizard",
-           name: "Hedge Wizard",
-           theme: "Low magic",
-           statBonuses: {
-             might: 0,
-             agility: 0,
-             endurance: 0,
-             intellect: 1,
-             will: 1,
-             presence: 0
-           },
-           skillBonuses: {
-             magic: 1,
-             lore: 1,
-             investigation: 1
-           },
-           startingItems: ["staff", "travel_rations", "healing_potion"],
-           startingGold: 5
+         chainmail: {
+           id: "chainmail", name: "chainmail", type: "armor",
+           aliases: ["chain", "mail"],
+           description: "Interlocking metal rings offering solid defense.",
+           weight: 20, stackable: false, portable: true,
+           slot: "armor",
+           defenseBonus: 4, value: 75,
          },
-         {
-           id: "temple_acolyte",
-           name: "Temple Acolyte",
-           theme: "Faith, lore, willpower",
-           statBonuses: {
-             might: 0,
-             agility: 0,
-             endurance: 0,
-             intellect: 1,
-             will: 2,
-             presence: 0
-           },
-           skillBonuses: {
-             lore: 1,
-             persuasion: 1,
-             medicine: 1
-           },
-           startingItems: ["holy_symbol", "travel_rations"],
-           startingGold: 5
+         steel_plate: {
+           id: "steel_plate", name: "steel plate", type: "armor",
+           aliases: ["plate", "plate armor"],
+           description: "Heavy articulated steel plates worn over gambeson.",
+           weight: 35, stackable: false, portable: true,
+           slot: "armor",
+           defenseBonus: 7, value: 250,
+         },
+         travel_cloak: {
+           id: "travel_cloak", name: "travel cloak", type: "clothing",
+           aliases: ["cloak"],
+           description: "A thick woolen cloak for cold weather travel.",
+           weight: 2, stackable: false, portable: true,
+           slot: "cloak",
+           defenseBonus: 0, value: 12,
+         },
+
+         // ── Shields / Offhand ───────────────────────────────────────────────────
+         wooden_shield: {
+           id: "wooden_shield", name: "wooden shield", type: "shield",
+           aliases: ["shield", "round shield"],
+           description: "A buckler of seasoned oak, reinforced with iron.",
+           weight: 4, stackable: false, portable: true,
+           slot: "offhand",
+           defenseBonus: 2, blockBonus: 2, value: 15,
+         },
+
+         // ── Consumables ─────────────────────────────────────────────────────────
+         health_potion: {
+           id: "health_potion", name: "health potion", type: "consumable",
+           aliases: ["red potion", "potion"],
+           description: "A deep red liquid that restores vitality.",
+           weight: 0.5, stackable: true, portable: true,
+           healAmount: 10, value: 25,
+         },
+         travel_rations: {
+           id: "travel_rations", name: "travel rations", type: "consumable",
+           aliases: ["rations", "food"],
+           description: "Dried meat and hard bread for the road.",
+           weight: 1, stackable: true, portable: true,
+           healAmount: 3, value: 1,
+         },
+         mana_potion: {
+           id: "mana_potion", name: "mana potion", type: "consumable",
+           aliases: ["blue potion"],
+           description: "A deep blue liquid that restores magical energy.",
+           weight: 0.5, stackable: true, portable: true,
+           manaAmount: 10, value: 30,
+         },
+
+         // ── Misc / Tool / Quest ─────────────────────────────────────────────────
+         torch: {
+           id: "torch", name: "torch", type: "light",
+           aliases: [],
+           description: "A resin-soaked strip of cloth wrapped around a wooden shaft.",
+           weight: 1, stackable: true, portable: true, slot: "offhand",
+           lightRadius: 2, value: 2,
+         },
+         rope: {
+           id: "rope", name: "rope", type: "tool",
+           aliases: ["coil of rope", "hemp rope"],
+           description: "A 50ft coil of sturdy hemp rope.",
+           weight: 10, stackable: false, portable: true,
+           value: 5,
+         },
+         iron_key: {
+           id: "iron_key", name: "iron key", type: "key",
+           aliases: ["old iron key", "key"],
+           description: "A cold iron key of unknown purpose.",
+           weight: 0, stackable: false, portable: true,
+           value: 0,
+         },
+         gold_pouch: {
+           id: "gold_pouch", name: "gold pouch", type: "treasure",
+           aliases: ["pouch"],
+           description: "A small leather pouch containing 8 gold coins.",
+           weight: 0.5, stackable: false, portable: true,
+           gold: 8, value: 8,
+         },
+       }) });
+
+       // Monster templates for combat encounters
+       const DATA_MONSTERS = Object.freeze({
+         goblin_scout: {
+           id: "goblin_scout",
+           name: "goblin scout",
+           aliases: ["goblin", "scout"],
+           description: "A wiry goblin with yellow eyes and a jagged knife.",
+           stats: { might: 0, agility: 2, endurance: 0, intellect: -1, will: 0, presence: -1 },
+           skills: { stealth: 2, melee: 1, defense: 1 },
+           maxHp: 8,
+           defense: 13,
+           attacks: [{ id: "jagged_knife", name: "jagged knife", skill: "melee", stat: "agility", damage: "1d4+1" }],
+           behavior: { hostile: true, morale: 8, fleesAtHpPercent: 25 }
+         },
+         wolf: {
+           id: "wolf",
+           name: "wolf",
+           aliases: ["dire wolf"],
+           description: "A lean predator with gleaming teeth.",
+           stats: { might: 2, agility: 2, endurance: 1, intellect: -2, will: 1, presence: -1 },
+           skills: { stealth: 1, melee: 2, defense: 1 },
+           maxHp: 12,
+           defense: 12,
+           attacks: [{ id: "bite", name: "bite", skill: "melee", stat: "might", damage: "1d6+1" }],
+           behavior: { hostile: true, morale: 10, fleesAtHpPercent: 20 }
+         },
+         skeleton: {
+           id: "skeleton",
+           name: "skeleton",
+           aliases: ["animated skeleton"],
+           description: "Bones animated by dark magic, clutching a rusted blade.",
+           stats: { might: 1, agility: 0, endurance: -1, intellect: -2, will: -2, presence: -2 },
+           skills: { melee: 1, defense: 1 },
+           maxHp: 6,
+           defense: 11,
+           attacks: [{ id: "rusty_blade", name: "rusty blade", skill: "melee", stat: "might", damage: "1d6" }],
+           behavior: { hostile: true, morale: 15, undead: true }
          }
-       ],
-      skills: [
-        {
-          id: "athletics",
-          name: "Athletics",
-          mainStat: "might",
-          purpose: "Climbing, jumping, forcing, grappling"
+       });
+
+       // Item alias lookup map for fast name/alias → id resolution
+       const ITEM_ALIASES = {};
+
+       /**
+        * Build the alias lookup map from DATA.items.
+        * Called once after DATA is defined.
+        */
+       function buildItemAliasMap() {
+         for (const id in DATA.items) {
+           const item = DATA.items[id];
+           ITEM_ALIASES[id] = id;
+           if (item.aliases) {
+             for (const alias of item.aliases) {
+               ITEM_ALIASES[alias.toLowerCase()] = id;
+             }
+           }
+           ITEM_ALIASES[item.name.toLowerCase()] = id;
+         }
+       }
+
+       /**
+        * Resolve a name or alias string to an item ID.
+        */
+       function resolveItemId(text) {
+         if (!text) return null;
+         return ITEM_ALIASES[text.toLowerCase()] || null;
+       }
+
+       // Build aliases index so resolveItemId() can do fast lookup.
+       buildItemAliasMap();
+
+      // ── Inventory / Equipment / Carry Capacity ─────────────────────────────────
+
+      /**
+       * Encumbrance penalty table keyed by returned state string.
+       */
+      const ENCUMBRANCE_EFFECTS = Object.freeze({
+        unencumbered: {
+          agilityPenalty:   0,
+          stealthPenalty:   0,
+          travelTimeMultiplier: 1,
+          canTravel:        true,
         },
-        {
-          id: "stealth",
-          name: "Stealth",
-          mainStat: "agility",
-          purpose: "Sneaking, hiding, ambushes"
+        burdened: {
+          agilityPenalty:   -1,
+          stealthPenalty:   -1,
+          travelTimeMultiplier: 1,
+          canTravel:        true,
         },
-        {
-          id: "thievery",
-          name: "Thievery",
-          mainStat: "agility",
-          purpose: "Lockpicking, traps, sleight of hand"
+        encumbered: {
+          agilityPenalty:   -2,
+          stealthPenalty:   -2,
+          travelTimeMultiplier: 1.5,
+          canTravel:        true,
         },
-        {
-          id: "survival",
-          name: "Survival",
-          mainStat: "endurance",
-          purpose: "Tracking, foraging, wilderness travel"
+        overloaded: {
+          agilityPenalty:   -4,
+          stealthPenalty:   -4,
+          travelTimeMultiplier: 2,
+          canTravel:        false,
         },
-        {
-          id: "lore",
-          name: "Lore",
-          mainStat: "intellect",
-          purpose: "History, magic, religion, monsters"
-        },
-        {
-          id: "investigation",
-          name: "Investigation",
-          mainStat: "intellect",
-          purpose: "Searching, clues, hidden details"
-        },
-        {
-          id: "persuasion",
-          name: "Persuasion",
-          mainStat: "presence",
-          purpose: "Friendly social influence"
-        },
-        {
-          id: "deception",
-          name: "Deception",
-          mainStat: "presence",
-          purpose: "Lying, disguise, misdirection"
-        },
-        {
-          id: "intimidation",
-          name: "Intimidation",
-          mainStat: "presence", // or might
-          purpose: "Threats and coercion"
-        },
-        {
-          id: "melee",
-          name: "Melee",
-          mainStat: "might",
-          purpose: "Swords, axes, clubs, brawling"
-        },
-        {
-          id: "ranged",
-          name: "Ranged",
-          mainStat: "agility",
-          purpose: "Bows, thrown weapons"
-        },
-        {
-          id: "defense",
-          name: "Defense",
-          mainStat: "agility", // or endurance
-          purpose: "Avoiding or absorbing harm"
-        },
-        {
-          id: "magic",
-          name: "Magic",
-          mainStat: "will", // or intellect
-          purpose: "Spellcasting and rituals"
+      });
+
+      /**
+       * Carriage capacity = 50 + 10×might + 5×endurance.
+       */
+      function getCarryCapacity() {
+        const might      = Game.state.player?.stats?.might || 0;
+        const endurance  = Game.state.player?.stats?.endurance || 0;
+        return 50 + 10 * might + 5 * endurance;
+      }
+
+      /**
+       * Sum weight of every inventory entry and every equipped item.
+       */
+      function getCarriedWeight() {
+        const player = Game.state.player;
+        if (!player) return 0;
+        let total = 0;
+
+        for (const entry of (player.inventory || [])) {
+          const item = DATA.items[entry.itemId];
+          total += (item?.weight || 0) * entry.quantity;
         }
-      ],
-      conditions: [
-        {
-          id: "blessed",
-          name: "Blessed",
-          description: "Divine favor protects you.",
-          durationMinutes: 60,
-          effects: {
-            defenseBonus: 1,
-            willBonus: 1
+
+        for (const slot of Object.keys(player.equipment || {})) {
+          const itemId = player.equipment[slot];
+          if (!itemId) continue;
+          const item = DATA.items[itemId];
+          total += item?.weight || 0;
+        }
+
+        return total;
+      }
+
+      /**
+       * Encumbrance state based on carried weight vs carry capacity.
+       * Returns one of: "overloaded" | "encumbered" | "burdened" | "unencumbered"
+       */
+      function getEncumbranceState() {
+        const weight   = getCarriedWeight();
+        const capacity = getCarryCapacity();
+        if (capacity === 0) return "unencumbered";
+        const ratio = weight / capacity;
+
+        if (ratio <= 1.0)  return "unencumbered";
+        if (ratio <= 1.25) return "burdened";
+        if (ratio <= 1.5)  return "encumbered";
+        return "overloaded";
+      }
+
+      /**
+       * Get the effects object for the current encumbrance state.
+       */
+      function getEncumbranceEffects() {
+        return ENCUMBRANCE_EFFECTS[getEncumbranceState()] || ENCUMBRANCE_EFFECTS.unencumbered;
+      }
+
+      /**
+       * Format encumbrance penalties into a human-readable sentence.
+       * Returns "None" when there are no penalties.
+       */
+      function formatEncumbranceEffects() {
+        const state = getEncumbranceState();
+        if (state === "unencumbered") return "None";
+        const fx = ENCUMBRANCE_EFFECTS[state];
+        const parts = [];
+        if (fx.stealthPenalty)    parts.push("stealth " + fx.stealthPenalty);
+        if (fx.agilityPenalty)    parts.push("agility checks " + fx.agilityPenalty);
+        parts.push("travel time ×" + fx.travelTimeMultiplier);
+        return parts.join(", ");
+      }
+
+      // ── Time costs ────────────────────────────────────────────────────────────
+      // The clock subsystem is stubbed until the engine integrates.
+      // Functions below accept an optional `minutes` parameter and return
+      // the number of minutes "spent". When Game.clock exists,
+      // callers should pass minutes so the clock can advance.
+
+      /**
+       * Minimum time cost (minutes) for each inventory-related action.
+       * Keep zero-cost for "check" actions so they never advance the clock.
+       */
+      const TIMECOSTS = Object.freeze({
+        INVENTORY:        0,
+        PICK_UP:          1,
+        DROP:             1,
+        EQUIP_WEAPON:     1,
+        EQUIP_OFFHAND:    1,
+        WEAR_ARMOR:       5,
+        REMOVE_ARMOR:     3,
+        DRINK_POTION:     1,
+        EAT_RATION:       10,
+        LIGHT_TORCH:      1,
+      });
+
+      /**
+       * Advance Game.clock by `minutes` when a clock is available.
+       * Called by inventory-action callers after each timed action.
+       * Returns `minutes` so callers can multiply through modifiers if needed.
+       */
+      function advanceClock(minutes) {
+        if (Game.clock?.advance) {
+          return Game.clock.advance(minutes);
+        }
+        return minutes;
+      }
+
+      // ════════════════════════════════════════════════════════════════════════════
+      // GAME INVENTORY SUBSYSTEM
+      // ════════════════════════════════════════════════════════════════════════════
+
+      /**
+       * Inventory as an array of { itemId, quantity } entries.
+       * All mutators operate on Game.state.player.inventory directly.
+       */
+
+      /**
+       * Add `quantity` copies of `itemId` to the player's inventory.
+       * Merges with an existing stack when `stackable: true`.
+       *
+       * @param {string} itemId  – stable item identifier
+       * @param {number} quantity – number of copies to add (default 1)
+       * @returns {number}   – minutes elapsed (always 0 for this pure add)
+       */
+      function inventoryAddItem(itemId, quantity) {
+        // Normalise quantity
+        const qty = quantity || 1;
+
+        const player = Game.state.player;
+        const inv = player.inventory || (player.inventory = []);
+
+        const item = DATA.items[itemId];
+        if (!item) return { ok: false, msg: "Unknown item: " + itemId, minutes: 0 };
+
+        if (item.stackable) {
+          let existing = inv.find(function (e) { return e.itemId === itemId; });
+          if (existing) {
+            existing.quantity += qty;
+          } else {
+            inv.push({ itemId: itemId, quantity: qty });
           }
-        },
-        {
-          id: "poisoned",
-          name: "Poisoned",
-          description: "Toxin courses through your veins.",
-          durationMinutes: 30,
-          effects: {
-            endurancePenalty: 1,
-            damagePerMinute: 1
-          }
-        },
-        {
-          id: "encumbered",
-          name: "Encumbered",
-          description: "You carry too much weight.",
-          durationMinutes: 0, // Persistent until weight is reduced
-          effects: {
-            agilityPenalty: -2,
-            stealthPenalty: -2,
-            travelTimeMultiplier: 1.5
+        } else {
+          for (let i = 0; i < qty; i++) {
+            inv.push({ itemId: itemId, quantity: 1 });
           }
         }
-       ]
-     };
- 
-     // Dynamic game state
-     const STATE = {
-       mode: "title", // title, character_creation, playing, game_over
-       player: {},
-       clock: {
+
+        return { ok: true, msg: "Picked up " + item.name + (qty > 1 ? " x" + qty : ""), minutes: advanceClock(TIMECOSTS.PICK_UP) };
+      }
+
+      /**
+       * Remove `quantity` copies of `itemId` from inventory.
+       * Non-stackable items: removes one entry per copy.
+       * Fails (returns ok:false) if the player does not have enough.
+       *
+       * @param {string} itemId
+       * @param {number} quantity – number to remove (default 1)
+       * @returns {{ ok:boolean, msg:string, minutes:number }}
+       */
+      function inventoryRemoveItem(itemId, quantity) {
+        const qty = quantity || 1;
+        const player = Game.state.player;
+        const inv    = player.inventory;
+
+        if (!inv || inv.length === 0) return { ok: false, msg: "Your inventory is empty.", minutes: 0 };
+
+        const item = DATA.items[itemId];
+        const idx  = inv.findIndex(function (e) { return e.itemId === itemId; });
+
+        if (idx === -1) return { ok: false, msg: "You don't have " + (item ? item.name : itemId) + ".", minutes: 0 };
+        if (inv[idx].quantity < qty) return { ok: false, msg: "You don't have enough " + item.name + ".", minutes: 0 };
+
+        if (inv[idx].quantity === qty) {
+          // Remove entire entry
+          inv.splice(idx, 1);
+        } else {
+          inv[idx].quantity -= qty;
+        }
+
+        return { ok: true, msg: "Dropped " + item.name + (qty > 1 ? " x" + qty : ""), minutes: advanceClock(TIMECOSTS.DROP) };
+      }
+
+      /**
+       * Return the raw { itemId, quantity } entry for `itemId`, or null.
+       */
+      function inventoryGetEntry(itemId) {
+        const inv = Game.state.player.inventory || [];
+        return inv.find(function (e) { return e.itemId === itemId; }) || null;
+      }
+
+      /**
+       * Return the total quantity of `itemId` the player carries (inventory only).
+       */
+      function inventoryGetQuantity(itemId) {
+        const entry = inventoryGetEntry(itemId);
+        return entry ? entry.quantity : 0;
+      }
+
+      /**
+       * Test whether the player has at least `quantity` copies of `itemId`
+       * across inventory (equipped items are tested separately).
+       */
+      function inventoryHasItem(itemId, quantity) {
+        return inventoryGetQuantity(itemId) >= (quantity || 1);
+      }
+
+      // ════════════════════════════════════════════════════════════════════════════
+      // GAME EQUIPMENT SUBSYSTEM
+      // ════════════════════════════════════════════════════════════════════════════
+
+      /** Equipment slots the game supports (see bead spec). */
+      const EQUIPMENT_SLOTS = Object.freeze([
+        "weapon", "offhand", "armor", "cloak", "accessory1", "accessory2",
+      ]);
+
+      /**
+       * Apply a default equipment skeleton to a new player state object if
+       * the player does not yet have an equipment map.
+       */
+      function initialiseEquipment() {
+        const player = Game.state.player;
+        if (!player.equipment) {
+          player.equipment = {};
+          EQUIPMENT_SLOTS.forEach(function (slot) {
+            player.equipment[slot] = null;
+          });
+        }
+      }
+
+      /**
+       * Equip an `itemId` from inventory into the appropriate equipment slot.
+       *
+       * Steps per design doc §16.3:
+       *   1. Confirm the player possesses the item.
+       *   2. Confirm the item has a declared equipment slot.
+       *   3. Remove one copy from inventory (non-stackables remove 1 copy).
+       *   4. Move current slot occupant back to inventory (if any).
+       *   5. Record the new item in the slot.
+       *   6. Return a result object with ok/msg/minutes.
+       *
+       * @param {string} itemId
+       * @returns {{ ok:boolean, msg:string, minutes:number }}
+       */
+      function equipItem(itemId) {
+        const player = Game.state.player;
+        const item   = DATA.items[itemId];
+
+        if (!item) return { ok: false, msg: "Unknown item: " + itemId, minutes: 0 };
+
+        if (!item.slot) return { ok: false, msg: "You cannot equip " + item.name + ".", minutes: 0 };
+
+        if (!inventoryHasItem(itemId, 1)) {
+          return { ok: false, msg: "You are not carrying " + item.name + ".", minutes: 0 };
+        }
+
+        const slot = item.slot;
+        const currentlyEquipped = player.equipment && player.equipment[slot];
+
+        // ── Step 3: remove from inventory ─────────────────────────────────────
+        inventoryRemoveItem(itemId, 1);
+
+        // ── Step 4: swap old occupant back to inventory ────────────────────────
+        if (currentlyEquipped) {
+          const eqItem = DATA.items[currentlyEquipped] || { name: currentlyEquipped };
+          inventoryAddItem(currentlyEquipped, 1);
+        }
+
+        // ── Step 5: record new equipment ───────────────────────────────────────
+        if (!player.equipment)      player.equipment = {};
+        player.equipment[slot] = itemId;
+
+        // ── Choose time cost by slot ───────────────────────────────────────────
+        const isWeapon     = slot === "weapon";
+        const timeCost = (slot === "armor")      ? TIMECOSTS.WEAR_ARMOR
+                       : (isWeapon)              ? TIMECOSTS.EQUIP_WEAPON
+                       : (slot === "offhand")    ? TIMECOSTS.EQUIP_OFFHAND
+                       :                             TIMECOSTS.EQUIP_WEAPON;
+
+        return {
+          ok: true,
+          msg: "You equip " + item.name + ".",
+          minutes: advanceClock(timeCost),
+        };
+      }
+
+      /**
+       * Unequip the item currently in `slot`, returning it to inventory.
+       * Equipped item left in inventory; if inventory is full the returned
+       * result will indicate failure (no capacity management yet).
+       *
+       * @param {string} slot – one of EQUIPMENT_SLOTS
+       * @returns {{ ok:boolean, msg:string, minutes:number }}
+       */
+      function unequipItem(slot) {
+        const player = Game.state.player;
+        const slots  = player.equipment || {};
+
+        if (!EQUIPMENT_SLOTS.includes(slot)) return { ok: false, msg: "Unknown equipment slot: " + slot, minutes: 0 };
+
+        const itemId = slots[slot];
+        if (!itemId) return { ok: false, msg: "You have nothing equipped in " + slot + ".", minutes: 0 };
+
+        const item = DATA.items[itemId];
+        slots[slot] = null;
+
+        // Return item to inventory
+        const addResult = inventoryAddItem(itemId, 1);
+
+        // Armor takes longer to remove
+        const timeCost = (slot === "armor") ? TIMECOSTS.REMOVE_ARMOR : TIMECOSTS.DROP;
+
+        return {
+          ok:      true,
+          msg:     "You unequip " + (item ? item.name : itemId) + " and put it away.",
+          minutes: advanceClock(timeCost),
+        };
+      }
+
+      /**
+       * Get the item id currently equipped in `slot`, or null.
+       */
+      function getEquippedItem(slot) {
+        const player = Game.state.player;
+        return player?.equipment?.[slot] || null;
+      }
+
+      /**
+       * Return the item object for the item currently in `slot`, or null.
+       */
+      function getEquippedItemObject(slot) {
+        const itemId = getEquippedItem(slot);
+        return itemId ? (DATA.items[itemId] || null) : null;
+      }
+
+      /**
+       * Return a label for the equipment slot in display form.
+       * e.g. "accessory1" → "Accessory 1"
+       */
+      function slotDisplayName(slot) {
+        if (slot === "accessory1") return "Accessory 1";
+        if (slot === "accessory2") return "Accessory 2";
+        return slot.charAt(0).toUpperCase() + slot.slice(1);
+      }
+
+      // ════════════════════════════════════════════════════════════════════════════
+      // INVENTORY SCREEN
+      // ════════════════════════════════════════════════════════════════════════════
+
+      /**
+       * Render the full inventory / status screen.
+       * Does NOT advance the clock.
+       */
+      function displayInventory() {
+        const player = Game.state.player;
+        if (!player) { Game.ui.print("No character loaded."); return; }
+
+        const weight = getCarriedWeight();
+        const capacity = getCarryCapacity();
+        const encState = getEncumbranceState();
+        const fx = ENCUMBRANCE_EFFECTS[encState];
+
+        // Intro block
+        Game.ui.printSeparator();
+        Game.ui.print("INVENTORY");
+        Game.ui.printSeparator();
+        Game.ui.printBlankLine();
+
+        // Character block
+        Game.ui.print("Name:      " + (player.name || "Unknown"));
+        Game.ui.print("Background:" + (player.background || "Unknown"));
+        Game.ui.print("Level:     " + (player.level || 1));
+        if (Game.clock?.formatTime) {
+          Game.ui.print("Time:      " + Game.clock.formatTime());
+        }
+        Game.ui.printBlankLine();
+
+        // Stats block
+        const hp   = player.currentHp   !== undefined ? player.currentHp   : player.maxHp  || 0;
+        const hpMax= player.maxHp       || hp;
+        const sta  = player.currentSta !== undefined ? player.currentSta : player.maxSta || 0;
+        const staMax=player.maxSta      || sta;
+        const mana = player.currentMan !== undefined ? player.currentMan : player.maxMan || 0;
+        const manaMax=player.maxMan     || mana;
+
+        Game.ui.print("Health:   " + hp + " / " + hpMax);
+        Game.ui.print("Stamina:  " + sta + " / " + staMax);
+        Game.ui.print("Mana:     " + mana + " / " + manaMax);
+        Game.ui.printBlankLine();
+
+        // Equipment block
+        EQUIPMENT_SLOTS.forEach(function (slot) {
+          const itemId = player.equipment?.[slot];
+          const item   = itemId ? DATA.items[itemId] : null;
+          Game.ui.print(slotDisplayName(slot) + ": " + (item ? item.name : "None"));
+        });
+        Game.ui.printBlankLine();
+
+        // Status effects
+        Game.ui.print("Status Effects:");
+        if (player.conditions && player.conditions.length > 0) {
+          player.conditions.forEach(function (c) {
+            Game.ui.print("  " + (c.name || c));
+          });
+        } else {
+          Game.ui.print("None");
+        }
+        Game.ui.printBlankLine();
+
+        // Gold
+        Game.ui.print("Gold:  " + (player.gold || 0));
+        Game.ui.printBlankLine();
+
+        // Encumbrance
+        Game.ui.print("Carried Weight: " + weight + " / " + capacity + " lb");
+        Game.ui.print("Encumbrance:    " + encState.charAt(0).toUpperCase() + encState.slice(1));
+        Game.ui.print("Effects:        " + formatEncumbranceEffects());
+        Game.ui.printBlankLine();
+
+        // Inventory items
+        Game.ui.print("Carried Items:");
+        const inv = player.inventory || [];
+        if (inv.length === 0) {
+          Game.ui.print("  (empty)");
+        } else {
+          inv.forEach(function (entry) {
+            const item = DATA.items[entry.itemId];
+            if (!item) return;
+            const label = item.name + (entry.quantity > 1 || item.stackable ? " x" + entry.quantity : "");
+            const weightStr = (item.weight * entry.quantity) + " lb";
+            Game.ui.print("  - " + label + " ".padEnd(28 - label.length) + weightStr);
+          });
+        }
+        Game.ui.printBlankLine();
+        Game.ui.printSeparator();
+      }
+
+      // ── Resolve text → itemId helper ───────────────────────────────────────────
+      /**
+       * Given a raw user-supplied text fragment, try to look up the
+       * corresponding DATA.items entry.  Searches item aliases then item name.
+       * Returns the item object, or null.
+       */
+      function resolveItemObject(text) {
+        var itemId = resolveItemId(text);
+        if (itemId && DATA.items[itemId]) return DATA.items[itemId];
+        // Try direct id match
+        if (DATA.items[text]) return DATA.items[text];
+        return null;
+      }
+
+      /**
+       * Public inventory item lookup from anywhere in the engine.
+       * Accepts an item id, a name, or any alias.
+       */
+      Game.inventory.getItemObject  = resolveItemObject;
+      Game.inventory.resolveItemId  = resolveItemId;
+
+      /**
+       * Expose time-cost constants so the engine/command router can use them
+       * when routing timed actions through the clock.
+       */
+      Game.inventory.TIMECOSTS = TIMECOSTS;
+
+      // ════════════════════════════════════════════════════════════════════════════
+      // Game.inventory  —  public API
+      // ════════════════════════════════════════════════════════════════════════════
+
+      /**
+       * @typedef {Object} InventoryResult
+       * @property {boolean} ok – true if the operation succeeded
+       * @property {string}  msg – human-readable description of what happened
+       * @property {number}  minutes – time cost of the action (0 for reads)
+       */
+
+      // ── Query ─────────────────────────────────────────────────────────────────
+
+      /**
+       * Retrieve the full inventory entry for `itemId`, or null if not present.
+       * `itemId` may be a stable id, a name, or any alias.
+       *
+       * @param {string} itemId  – item identifier or alias
+       * @returns {{ itemId:string, quantity:number } | null}
+       */
+      Game.inventory.getEntry = function (itemId) {
+        return inventoryGetEntry(resolveItemId(itemId) || itemId);
+      };
+
+      /**
+       * Return total quantity of `itemId` in the player's inventory.
+       * Counts both the inventory stack and any instances that are in-use
+       * in an equipment slot.
+       *
+       * @param {string} itemId
+       * @returns {number}
+       */
+      Game.inventory.getQuantity = function (itemId) {
+        var qty = inventoryGetQuantity(resolveItemId(itemId) || itemId);
+        // Also count if an instance is currently equipped (those are separate)
+        return qty;
+      };
+
+      /**
+       * Test whether the player carries at least `quantity` copies of `itemId`
+       * in their inventory (not counting what is currently equipped).
+       *
+       * @param {string} itemId
+       * @param {number} [quantity=1]
+       * @returns {boolean}
+       */
+      Game.inventory.hasItem = function (itemId, quantity) {
+        return inventoryHasItem(resolveItemId(itemId) || itemId, quantity);
+      };
+
+      /**
+       * Return the total weight currently being carried, including
+       * all inventory items and everything that is equipped.
+       *
+       * @returns {number} weight in lbs
+       */
+      Game.inventory.getCarriedWeight = getCarriedWeight;
+
+      /**
+       * Return the maximum carry capacity for the current character.
+       * Formula: 50 + 10×might + 5×endurance.
+       *
+       * @returns {number} capacity in lbs
+       */
+      Game.inventory.getCarryCapacity = getCarryCapacity;
+
+      /**
+       * Return the current encumbrance state string.
+       * One of: "overloaded" | "encumbered" | "burdened" | "unencumbered".
+       *
+       * @returns {string}
+       */
+      Game.inventory.getEncumbranceState = getEncumbranceState;
+
+      /**
+       * Return the full penalty object for the current encumbrance state.
+       * Includes agilityPenalty, stealthPenalty, travelTimeMultiplier, and canTravel.
+       *
+       * @returns {Object}
+*/
+       Game.inventory.getEncumbranceEffects = getEncumbranceEffects;
+
+       /**
+        * Apply the current encumbrance penalties to an existing stat
+        * modifier object (mutable) and return it.
+        *
+        * @param {Object} playerMods
+        * @returns {Object}
+        */
+      function applyEncumbrancePenalties(playerMods) {
+        const fx = getEncumbranceEffects();
+        if (fx.agilityPenalty) {
+          playerMods.agility = (playerMods.agility || 0) + fx.agilityPenalty;
+        }
+        if (fx.stealthPenalty) {
+          playerMods.stealth = (playerMods.stealth || 0) + fx.stealthPenalty;
+        }
+        return playerMods;
+      }
+
+       Game.inventory.applyEncumbrancePenalties = applyEncumbrancePenalties;
+
+      // ── Mutation ───────────────────────────────────────────────────────────────
+
+      /**
+       * Add `quantity` copies of an item to the player's inventory.
+       * Merges with an existing stack when the item is stackable.
+       * Returns an `InventoryResult`.
+       *
+       * @param {string} itemId  – item id, name, or alias
+       * @param {number} [quantity=1]
+       * @returns {InventoryResult}
+       */
+      Game.inventory.addItem = function (itemId, quantity) {
+        return inventoryAddItem(resolveItemId(itemId) || itemId, quantity);
+      };
+
+      /**
+       * Remove `quantity` copies of `itemId` from inventory.
+       * Returns an `InventoryResult`.
+       *
+       * @param {string} itemId  – item id, name, or alias
+       * @param {number} [quantity=1]
+       * @returns {InventoryResult}
+       */
+      Game.inventory.removeItem = function (itemId, quantity) {
+        var qty = quantity || 1;
+        var res  = inventoryRemoveItem(resolveItemId(itemId) || itemId, qty);
+        return res;
+      };
+
+      // ── Display ────────────────────────────────────────────────────────────────
+
+      /**
+       * Render the full inventory / status screen to the output panel.
+       * Does NOT advance the clock.
+       */
+      Game.inventory.displayScreen = displayInventory;
+
+      // ════════════════════════════════════════════════════════════════════════════
+      // Game.equipment  —  public API
+      // ════════════════════════════════════════════════════════════════════════════
+
+      /**
+       * Equip an item from inventory into the appropriate equipment slot.
+       *
+       * The full equip sequence (design doc §16.3):
+       *   1. Item must have a declared equipment slot.
+       *   2. Item must be in the player's inventory.
+       *   3. Old occupant of the slot (if any) is returned to inventory.
+       *   4. New item is recorded in the slot.
+       *
+       * @param {string} itemId  – item id, name, or alias
+       * @returns {InventoryResult}
+       */
+      Game.equipment.equip = function (itemId) {
+        return equipItem(resolveItemId(itemId) || itemId);
+      };
+
+      /**
+       * Unequip the item currently held in `slot`, returning it to inventory.
+       *
+       * @param {string} slot – one of: weapon | offhand | armor | cloak |
+       *                         accessory1 | accessory2
+       * @returns {InventoryResult}
+       */
+      Game.equipment.unequip = function (slot) {
+        return unequipItem(slot);
+      };
+
+      /**
+       * Return the item id string currently equipped in `slot`, or null.
+       *
+       * @param {string} slot
+       * @returns {string | null}
+       */
+      Game.equipment.getEquipped = function (slot) {
+        return getEquippedItem(slot);
+      };
+
+      /**
+       * Return the full item object currently equipped in `slot`, or null.
+       *
+       * @param {string} slot
+       * @returns {Object | null}
+       */
+      Game.equipment.getEquippedObject = function (slot) {
+        return getEquippedItemObject(slot);
+      };
+
+      /**
+       * List all equipment slots and the name (or "None") of each equipped item.
+       * Returns an array of { slot, name } plain objects.
+       *
+       * @returns {Array<{slot:string, name:string}>}
+       */
+      Game.equipment.listSlots = function () {
+        var player = Game.state.player;
+        if (!player) return [];
+        return EQUIPMENT_SLOTS.map(function (slot) {
+          var id = getEquippedItem(slot);
+          return {
+            slot:        slot,
+            displayName: slotDisplayName(slot),
+            itemId:      id,
+            name:        id ? (DATA.items[id]?.name || id) : null,
+          };
+        });
+      };
+
+/**
+        * Convert a raw slot string to a display label.
+        * "accessory1" → "Accessory 1", "armor" → "Armor", etc.
+        *
+        * @param {string} slot
+        * @returns {string}
+        */
+       Game.equipment.slotDisplayName = slotDisplayName;
+
+       // ── UTILITIES: Dice and Random Number Helpers ───────────────────────────
+
+       /**
+        * Return a random integer between min and max (inclusive).
+        */
+       function randomInt(min, max) {
+         return Math.floor(Math.random() * (max - min + 1)) + min;
+       }
+
+       /**
+        * Roll dice from a dice string like "1d6", "2d4+1", "1d8-1".
+        * Returns the total including any modifier.
+        */
+       function rollDice(dice) {
+         const match = dice.match(/^(\d+)d(\d+)([+-]\d+)?$/);
+         if (!match) throw new Error("Invalid dice expression: " + dice);
+         const count = Number(match[1]);
+         const sides = Number(match[2]);
+         const bonus = Number(match[3] || 0);
+         let total = bonus;
+         for (let i = 0; i < count; i++) {
+           total += randomInt(1, sides);
+         }
+         return total;
+       }
+
+       // ════════════════════════════════════════════════════════════════════════════
+       // GAME COMBAT SUBSYSTEM
+       // ════════════════════════════════════════════════════════════════════════════
+
+       /**
+        * Combat state tracking.
+        */
+       Game.combat.state = {
+         inCombat: false,
+         enemies: [],
+         combatLog: []
+       };
+
+       /**
+        * Get the player's defense value.
+        * Formula: 10 + agility + defenseSkill + armorBonus + shieldBonus
+        */
+       function getPlayerDefense() {
+         const player = Game.state.player;
+         const agility = player?.stats?.agility || 0;
+         const defenseSkill = player?.skills?.defense || 0;
+
+         const armor = getEquippedItemObject("armor");
+         const offhand = getEquippedItemObject("offhand");
+
+         const armorBonus = armor?.defenseBonus || 0;
+         const shieldBonus = offhand?.defenseBonus || offhand?.blockBonus || 0;
+
+         return 10 + agility + defenseSkill + armorBonus + shieldBonus;
+       }
+
+       /**
+        * Perform an attack action.
+        * Formula: d20 + attackStat + weaponSkill + weaponBonus >= target defense
+        *
+        * @param {Object} attacker - The attacking entity (player or enemy)
+        * @param {Object} target - The target entity
+        * @param {Object} weapon - The weapon being used (optional)
+        * @returns {Object} - Result with hit, damage, and message
+        */
+       function performAttack(attacker, target, weapon) {
+         const attackStat = weapon?.stat || "might";
+         const attackSkill = weapon?.skill || "melee";
+         const weaponBonus = weapon?.attackBonus || 0;
+
+         const statValue = attacker.stats?.[attackStat] || 0;
+         const skillValue = attacker.skills?.[attackSkill] || 0;
+
+         const roll = randomInt(1, 20);
+         const total = roll + statValue + skillValue + weaponBonus;
+
+         let isHit = total >= target.defense;
+         let isCrit = roll === 20;
+         let isFumble = roll === 1;
+
+         let damage = 0;
+         if (isHit && !isFumble) {
+           const dice = weapon?.damage || "1d4";
+           damage = rollDice(dice);
+         }
+
+         return {
+           roll: roll,
+           total: total,
+           targetDefense: target.defense,
+           isHit: isHit,
+           isCrit: isCrit,
+           isFumble: isFumble,
+           damage: damage,
+           attackerName: attacker.name || "You",
+           targetName: target.name || "it"
+         };
+       }
+
+       /**
+        * Calculate damage for an attack.
+        */
+       function calculateDamage(weapon) {
+         if (!weapon?.damage) return 1;
+         return rollDice(weapon.damage);
+       }
+
+       /**
+        * Check morale for an enemy.
+        * Morale checks happen when enemy drops below HP thresholds.
+        * Formula: d20 + will >= moraleDifficulty
+        */
+       function checkMorale(enemy) {
+         const will = enemy.stats?.will || 0;
+         const roll = randomInt(1, 20);
+         const total = roll + will;
+
+         const hpPercent = enemy.currentHp / enemy.maxHp;
+         let moraleDifficulty = 15;
+
+         if (hpPercent <= 0.25) moraleDifficulty = 8;
+         else if (hpPercent <= 0.5) moraleDifficulty = 12;
+
+         const passes = total >= moraleDifficulty;
+         return { passes: passes, roll: roll, total: total, difficulty: moraleDifficulty };
+       }
+
+       /**
+        * Apply damage to a target.
+        */
+       function applyDamage(target, damage) {
+         if (!target.currentHp) target.currentHp = target.maxHp || 10;
+         target.currentHp = Math.max(0, target.currentHp - damage);
+         return target.currentHp <= 0;
+       }
+
+       /**
+        * Log a combat message.
+        */
+       function logCombat(message) {
+         Game.combat.state.combatLog.push(message);
+         Game.ui.print(message);
+       }
+
+       /**
+        * Start combat with a list of enemies.
+        */
+       Game.combat.startCombat = function(enemies) {
+         Game.combat.state.inCombat = true;
+         Game.combat.state.enemies = enemies.map(e => ({ ...e }));
+         Game.combat.state.combatLog = [];
+         Game.ui.print("Combat begins!");
+       };
+
+       /**
+        * End combat.
+        */
+       Game.combat.endCombat = function() {
+         Game.combat.state.inCombat = false;
+         Game.combat.state.enemies = [];
+         Game.combat.state.combatLog = [];
+       };
+
+       /**
+        * Process player's attack command.
+        */
+       Game.combat.playerAttack = function(targetName) {
+         const player = Game.state.player;
+         const enemy = Game.combat.state.enemies.find(e =>
+           e.name?.toLowerCase().includes(targetName?.toLowerCase())
+         );
+
+         if (!enemy) {
+           return { ok: false, msg: "You don't see " + targetName + " here." };
+         }
+
+         const weapon = getEquippedItemObject("weapon");
+         if (!weapon) {
+           return { ok: false, msg: "You have nothing equipped to attack with." };
+         }
+
+         const result = performAttack(player, enemy, weapon);
+
+if (result.isCrit) {
+            logCombat("Critical hit! You strike " + enemy.name + " for " + result.damage + " damage!");
+          } else if (result.isFumble) {
+            logCombat("You fumble your attack against " + enemy.name + ".");
+          } else if (result.isHit) {
+            logCombat("You hit " + enemy.name + " for " + result.damage + " damage.");
+          } else {
+            logCombat("You miss " + enemy.name + ".");
+          }
+
+          if (result.isHit && !result.isFumble) {
+            const defeated = applyDamage(enemy, result.damage);
+            if (defeated) {
+              logCombat(enemy.name + " is defeated!");
+              Game.combat.state.enemies = Game.combat.state.enemies.filter(e => e.name !== enemy.name);
+            } else {
+              const morale = checkMorale(enemy);
+              if (!morale.passes) {
+                logCombat(enemy.name + " looks afraid and may flee!");
+              }
+            }
+          }
+
+          if (Game.combat.state.enemies.length > 0) {
+           processEnemyTurn();
+         } else {
+           Game.combat.endCombat();
+           Game.ui.print("You have defeated all enemies.");
+         }
+
+         return { ok: true, msg: "" };
+       };
+
+       /**
+        * Process enemy turn in combat.
+        */
+       function processEnemyTurn() {
+         const enemies = Game.combat.state.enemies;
+         const player = Game.state.player;
+
+         for (const enemy of enemies) {
+           if (enemy.currentHp <= 0) continue;
+
+           const weapon = enemy.attacks?.[0];
+           if (weapon) {
+             const attackResult = performAttack(enemy, { defense: getPlayerDefense(), name: "You" }, weapon);
+
+             if (attackResult.isCrit) {
+               logCombat(enemy.name + " lands a critical hit for " + attackResult.damage + " damage!");
+             } else if (attackResult.isHit) {
+               logCombat(enemy.name + " hits you for " + attackResult.damage + " damage.");
+             } else {
+               logCombat(enemy.name + " misses you.");
+             }
+
+             if (attackResult.isHit) {
+               applyDamage(player, attackResult.damage);
+             }
+           }
+         }
+       }
+
+       /**
+        * Player uses a potion.
+        */
+       Game.combat.usePotion = function(potionType) {
+         const player = Game.state.player;
+         let potionId;
+
+         if (potionType === "health" || potionType === "healing") {
+           potionId = "health_potion";
+         } else if (potionType === "mana") {
+           potionId = "mana_potion";
+         } else {
+           return { ok: false, msg: "You don't have that type of potion." };
+         }
+
+         if (!inventoryHasItem(potionId, 1)) {
+           return { ok: false, msg: "You don't have any " + potionType + " potions." };
+         }
+
+         inventoryRemoveItem(potionId, 1);
+         const potion = DATA.items[potionId];
+
+         if (potion.healAmount) {
+           player.currentHp = Math.min(player.maxHp || 14, (player.currentHp || player.maxHp || 14) + potion.healAmount);
+           logCombat("You drink the health potion and recover " + potion.healAmount + " HP.");
+         }
+         if (potion.manaAmount) {
+           player.currentMan = Math.min(player.maxMan || 10, (player.currentMan || player.maxMan || 10) + potion.manaAmount);
+           logCombat("You drink the mana potion and recover " + potion.manaAmount + " mana.");
+         }
+
+         return { ok: true, msg: "" };
+       };
+
+       /**
+        * Player flees from combat.
+        */
+       Game.combat.flee = function() {
+         const roll = randomInt(1, 20);
+         const agility = Game.state.player?.stats?.agility || 0;
+         const total = roll + agility;
+
+         if (total >= 12) {
+           Game.combat.endCombat();
+           return { ok: true, msg: "You successfully flee from combat!" };
+         } else {
+           logCombat("You fail to flee! The enemies press the attack.");
+           processEnemyTurn();
+           return { ok: true, msg: "" };
+         }
+       };
+
+/**
+         * Player defends (increases defense for next round).
+         */
+        Game.combat.defend = function() {
+          const player = Game.state.player;
+          player.isDefending = true;
+          logCombat("You take a defensive stance.");
+          processEnemyTurn();
+          player.isDefending = false;
+          return { ok: true, msg: "" };
+        };
+
+        /**
+         * Player shoots with a ranged weapon (ranged attack).
+         */
+        Game.combat.shoot = function(targetName) {
+          return Game.combat.playerAttack(targetName);
+        };
+
+        /**
+         * Player casts a spell (placeholder for magic system).
+         */
+        Game.combat.cast = function(spellName, targetName) {
+          if (!Game.state.player) {
+            return { ok: false, msg: "You have no character loaded." };
+          }
+          const player = Game.state.player;
+          const manaCost = 3;
+          if ((player.currentMan || player.maxMan || 0) < manaCost) {
+            return { ok: false, msg: "You don't have enough mana." };
+          }
+          player.currentMan = (player.currentMan || player.maxMan || 10) - manaCost;
+
+          const enemy = Game.combat.state.enemies.find(e =>
+            e.name?.toLowerCase().includes(targetName?.toLowerCase())
+          );
+
+          if (!enemy) {
+            return { ok: false, msg: "You don't see " + targetName + " here." };
+          }
+
+          const damage = rollDice("1d6") + 2;
+          logCombat("You cast " + spellName + " at " + enemy.name + " for " + damage + " damage.");
+          const defeated = applyDamage(enemy, damage);
+          if (defeated) {
+            logCombat(enemy.name + " is defeated!");
+            Game.combat.state.enemies = Game.combat.state.enemies.filter(e => e.name !== enemy.name);
+          }
+
+          if (Game.combat.state.enemies.length > 0) {
+            processEnemyTurn();
+          } else {
+            Game.combat.endCombat();
+            Game.ui.print("You have defeated all enemies.");
+          }
+
+          return { ok: true, msg: "" };
+        };
+          }
+          return { ok: true, msg: "" };
+        };
+
+        /**
+         * Start combat with monsters by ID.
+         */
+        Game.combat.startCombatWith = function(monsterIds) {
+          const enemies = monsterIds.map(id => {
+            const template = DATA_MONSTERS[id];
+            if (!template) return null;
+            return {
+              id: template.id,
+              name: template.name,
+              aliases: template.aliases || [],
+              stats: { ...template.stats },
+              skills: { ...template.skills },
+              maxHp: template.maxHp,
+              currentHp: template.maxHp,
+              defense: template.defense,
+              attacks: template.attacks || []
+            };
+          }).filter(e => e);
+
+          Game.combat.startCombat(enemies);
+        };
+
+// ════════════════════════════════════════════════════════════════════════════
+       // Game.engine  —  main game loop and mode routing
+       // ════════════════════════════════════════════════════════════════════════════
+
+       const GameModes = {
+         TITLE: "title",
+         CHARACTER_CREATION: "character_creation",
+         PLAYING: "playing",
+         GAME_OVER: "game_over"
+       };
+
+       Game.state.mode = GameModes.TITLE;
+       Game.state.player = null;
+
+       // ── Clock System ───────────────────────────────────────────────────────────
+       const MONTHS = ["Frostwane", "Emberfall", "Dawnreach", "Suncrest"];
+       const DAY_PHASES = [
+         { name: "Deep night", min: 0, max: 459 },
+         { name: "Dawn", min: 500, max: 759 },
+         { name: "Morning", min: 800, max: 1159 },
+         { name: "Midday", min: 1200, max: 1359 },
+         { name: "Afternoon", min: 1400, max: 1659 },
+         { name: "Late afternoon", min: 1700, max: 1859 },
+         { name: "Evening", min: 1900, max: 2059 },
+         { name: "Night", min: 2100, max: 2359 }
+       ];
+
+       const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth",
+         "seventh", "eighth", "ninth", "tenth", "eleventh", "twelfth", "thirteenth",
+         "fourteenth", "fifteenth", "sixteenth", "seventeenth", "eighteenth",
+         "nineteenth", "twentieth"];
+
+       Game.clock = {
          day: 1,
          hour: 8,
          minute: 0,
-         month: "Frostwane"
-       },
-       flags: {},
-       variables: {},
-       world: {
-         itemLocations: {},
-         npcOverrides: {},
-         monsterStates: {},
-         locationStates: {}
+         month: MONTHS[0],
+
+         advance: function(minutes) {
+           this.minute += minutes;
+           while (this.minute >= 60) {
+             this.minute -= 60;
+             this.hour += 1;
+           }
+           while (this.hour >= 24) {
+             this.hour -= 24;
+             this.day += 1;
+           }
+           Game.conditions?.update(minutes);
+           Game.schedules?.update();
+           return minutes;
+         },
+
+         formatTime: function() {
+           const totalMinutes = this.hour * 60 + this.minute;
+           let phase = "Night";
+           for (const p of DAY_PHASES) {
+             if (totalMinutes >= p.min && totalMinutes <= p.max) {
+               phase = p.name;
+               break;
+             }
+           }
+           const dayOrd = ORDINALS[this.day - 1] || this.day + "th";
+           return phase + ", " + dayOrd + " day of " + this.month;
+         },
+
+         reset: function() {
+           this.day = 1;
+           this.hour = 8;
+           this.minute = 0;
+           this.month = MONTHS[0];
+         }
+       };
+
+       // ── Conditions System ─────────────────────────────────────────────────────
+       Game.conditions = {
+         CONDITIONS: Object.freeze({
+           poisoned: { id: "poisoned", name: "Poisoned", description: "Your body aches and your hands tremble.", modifiers: { endurance: -1, agility: -1 } },
+           bleeding: { id: "bleeding", name: "Bleeding", description: "Blood flows from a wound.", modifiers: { stamina: -1 } },
+           wounded: { id: "wounded", name: "Wounded", description: "The pain of your injury slows you.", modifiers: { agility: -2 } }
+         }),
+
+         update: function(minutes) {
+           const player = Game.state.player;
+           if (!player || !player.conditions) return;
+           for (const c of player.conditions) {
+             if (c.remainingMinutes != null) {
+               c.remainingMinutes -= minutes;
+             }
+           }
+           player.conditions = player.conditions.filter(c =>
+             c.remainingMinutes == null || c.remainingMinutes > 0
+           );
+         },
+
+         add: function(conditionId, durationMinutes) {
+           const player = Game.state.player;
+           if (!player) return;
+           if (!player.conditions) player.conditions = [];
+           const existing = player.conditions.find(c => c.id === conditionId);
+           if (existing && existing.remainingMinutes != null) {
+             existing.remainingMinutes += durationMinutes;
+           } else {
+             player.conditions.push({ id: conditionId, remainingMinutes: durationMinutes });
+           }
+         },
+
+         has: function(conditionId) {
+           const player = Game.state.player;
+           return player?.conditions?.some(c => c.id === conditionId) || false;
+         }
+       };
+
+       // ── Schedules System ───────────────────────────────────────────────────────
+       Game.schedules = {
+         update: function() {},
+         getLocation: function(entity) {
+           return entity.defaultLocation || "village_square";
+         }
+       };
+
+       // ── Title Screen ──────────────────────────────────────────────────────────
+       function showTitleScreen() {
+         Game.ui.printSeparator();
+         Game.ui.print("       FANTASY TEXT RPG");
+         Game.ui.printSeparator();
+         Game.ui.print("");
+         Game.ui.print("          1. Start New Game");
+         Game.ui.print("          2. Continue");
+         Game.ui.print("          3. About");
+         Game.ui.print("");
+         Game.ui.print("Type '1', '2', or '3' to select.");
+         Game.ui.printSeparator();
        }
-     };
- 
-     // Assign DATA and STATE to Game
-     Game.data = DATA;
-     Game.state = STATE;
-   </script>
-</body>
+
+       // ── Game Over ───────────────────────────────────────────────────────────────
+       function checkGameOver() {
+         const player = Game.state.player;
+         if (!player) return false;
+         const hp = player.currentHp || player.maxHp || 0;
+         if (hp <= 0) {
+           Game.state.mode = GameModes.GAME_OVER;
+           Game.ui.print("");
+           Game.ui.printSeparator();
+           Game.ui.print("                GAME OVER");
+           Game.ui.printSeparator();
+           Game.ui.print("");
+           Game.ui.print("Your vision fades to black...");
+           Game.ui.print("");
+           Game.ui.print("Type 'restart' to begin again.");
+           return true;
+         }
+         return false;
+       }
+
+       // ── Main Input Handler ──────────────────────────────────────────────────────
+       function handleInput(input) {
+         const cmd = Game.parser.parse(input);
+         if (!cmd) return;
+
+         if (Game.state.mode === GameModes.TITLE) {
+           return handleTitleInput(cmd);
+         }
+         if (Game.state.mode === GameModes.CHARACTER_CREATION) {
+           return Game.characterCreation?.handleInput(cmd) || true;
+         }
+         if (Game.state.mode === GameModes.PLAYING) {
+           if (checkGameOver()) return;
+           return handlePlayingInput(cmd);
+         }
+         if (Game.state.mode === GameModes.GAME_OVER) {
+           return handleGameOverInput(cmd);
+         }
+       }
+
+       function handleTitleInput(cmd) {
+         const verb = cmd.verb;
+         if (verb === "1" || verb === "start" || verb === "new") {
+           startNewGame();
+         } else if (verb === "2" || verb === "continue") {
+           Game.ui.print("Continue - not yet implemented.");
+         } else if (verb === "3" || verb === "about") {
+           showAbout();
+         } else if (verb === "restart") {
+           restartGame();
+         } else {
+           Game.ui.print("Invalid choice. Type 1, 2, or 3.");
+         }
+       }
+
+       function handleGameOverInput(cmd) {
+         const verb = cmd.verb;
+         if (verb === "restart") {
+           restartGame();
+         } else {
+           Game.ui.print("Type 'restart' to begin again.");
+         }
+       }
+
+       function handlePlayingInput(cmd) {
+         const verb = cmd.verb;
+         const dobj = cmd.directObjectText;
+
+         switch (verb) {
+           case "look":
+             Game.ui.print("You see the area around you.");
+             break;
+           case "inventory":
+             displayInventory();
+             break;
+           case "take":
+             if (dobj) {
+               const itemId = resolveItemId(dobj);
+               if (itemId) {
+                 const result = Game.inventory.addItem(itemId, 1);
+                 Game.ui.print(result.msg);
+               } else {
+                 Game.ui.print("You don't see that here.");
+               }
+             } else {
+               Game.ui.print("Take what?");
+             }
+             break;
+           case "drop":
+             if (dobj) {
+               const itemId = resolveItemId(dobj);
+               if (itemId) {
+                 const result = Game.inventory.removeItem(itemId, 1);
+                 Game.ui.print(result.msg);
+               } else {
+                 Game.ui.print("Drop what?");
+               }
+             } else {
+               Game.ui.print("Drop what?");
+             }
+             break;
+           case "equip":
+             if (dobj) {
+               const itemId = resolveItemId(dobj);
+               if (itemId) {
+                 const result = Game.equipment.equip(itemId);
+                 Game.ui.print(result.msg);
+               } else {
+                 Game.ui.print("Equip what?");
+               }
+             } else {
+               Game.ui.print("Equip what?");
+             }
+             break;
+           case "unequip":
+             if (dobj) {
+               const slot = dobj.toLowerCase();
+               const result = Game.equipment.unequip(slot);
+               Game.ui.print(result.msg);
+             } else {
+               Game.ui.print("Unequip what?");
+             }
+             break;
+           case "attack":
+             if (dobj) {
+               Game.combat.startCombatWith(["goblin_scout"]);
+               Game.combat.playerAttack(dobj);
+             } else {
+               Game.ui.print("Attack what?");
+             }
+             break;
+           case "wait":
+             const minutes = parseWaitTime(dobj);
+             Game.clock.advance(minutes);
+             Game.ui.print("You wait for " + minutes + " minutes.");
+             break;
+           case "help":
+             Game.ui.print("Commands: look, inventory, take/drop/equip/unequip <item>, attack <target>, wait, help");
+             break;
+           default:
+             Game.ui.print("I don't understand '" + cmd.raw + "'.");
+         }
+       }
+
+       function parseWaitTime(text) {
+         if (!text) return 10;
+         const num = parseInt(text);
+         if (!isNaN(num) && num > 0) return num;
+         if (text.includes("hour")) return 60;
+         if (text.includes("minute")) return 10;
+         return 10;
+       }
+
+       // ── Game Initialization ─────────────────────────────────────────────────────
+       function startNewGame() {
+         Game.state.mode = GameModes.CHARACTER_CREATION;
+         Game.ui.print("");
+         Game.ui.print("Starting a new game...");
+         Game.ui.print("");
+         Game.characterCreation?.start() || startCharacterCreation();
+       }
+
+       function startCharacterCreation() {
+         Game.ui.printSeparator();
+         Game.ui.print("CHARACTER CREATION");
+         Game.ui.printSeparator();
+         Game.ui.print("");
+         Game.ui.print("Commands: name <name>, background <id>, increase <stat>, decrease <stat>, continue, back");
+         Game.ui.print("");
+       }
+
+       function showAbout() {
+         Game.ui.printSeparator();
+         Game.ui.print("FANTASY TEXT RPG v" + Game.version);
+         Game.ui.printSeparator();
+         Game.ui.print("");
+         Game.ui.print("A medieval fantasy text adventure engine.");
+         Game.ui.print("Commands: look, inventory, take/drop/equip/unequip, attack, wait, help");
+         Game.ui.print("");
+       }
+
+       function restartGame() {
+         Game.state.mode = GameModes.TITLE;
+         Game.state.player = null;
+         Game.clock.reset();
+         Game.combat.endCombat();
+         Game.ui.print("");
+         showTitleScreen();
+       }
+
+       // ── Character Creation System ─────────────────────────────────────────────
+       Game.characterCreation = {
+         draft: null,
+         step: 0,
+         backgrounds: Object.freeze({
+           mercenary: { id: "mercenary", name: "Mercenary", statBonuses: { might: 1 }, skillBonuses: { melee: 1 }, startingItems: ["iron_sword"], startingGold: 15 },
+           village_hunter: { id: "village_hunter", name: "Village Hunter", statBonuses: { agility: 1 }, skillBonuses: { survival: 1, ranged: 1 }, startingItems: ["hunting_bow", "travel_rations"], startingGold: 10 },
+           hedge_wizard: { id: "hedge_wizard", name: "Hedge Wizard", statBonuses: { intellect: 1 }, skillBonuses: { magic: 1 }, startingItems: ["health_potion"], startingGold: 5 }
+         }),
+
+         start: function() {
+           this.draft = {
+             name: "",
+             backgroundId: null,
+             baseStats: { might: 0, agility: 0, endurance: 0, intellect: 0, will: 0, presence: 0 },
+             allocatedStatPoints: 0,
+             maxStatPoints: 6,
+             chosenSkills: []
+           };
+           this.step = 1;
+           Game.ui.print("Step 1: Enter your character's name.");
+         },
+
+         handleInput: function(cmd) {
+           const verb = cmd.verb;
+           const dobj = cmd.directObjectText;
+
+           if (this.step === 1) {
+             if (verb === "name" || verb === "call") {
+               if (dobj) {
+                 this.draft.name = dobj;
+                 this.step = 2;
+                 Game.ui.print("Name: " + this.draft.name);
+                 Game.ui.print("Step 2: Choose background. Options: mercenary, village_hunter, hedge_wizard.");
+               }
+             } else {
+               Game.ui.print("What is your character's name?");
+             }
+           } else if (this.step === 2) {
+             if (verb === "background" || verb === "choose") {
+               if (dobj && this.backgrounds[dobj]) {
+                 this.draft.backgroundId = dobj;
+                 this.step = 3;
+                 Game.ui.print("Background: " + this.backgrounds[dobj].name);
+                 Game.ui.print("Step 3: Allocate stat points. You have 6 points.");
+                 Game.ui.print("Commands: increase <stat>, decrease <stat>, stats");
+               } else {
+                 Game.ui.print("Choose: mercenary, village_hunter, or hedge_wizard.");
+               }
+             }
+           } else if (this.step === 3) {
+             if (verb === "increase" && dobj && this.draft.baseStats[dobj] !== undefined) {
+               if (this.draft.allocatedStatPoints < this.draft.maxStatPoints && this.draft.baseStats[dobj] < 3) {
+                 this.draft.baseStats[dobj]++;
+                 this.draft.allocatedStatPoints++;
+                 Game.ui.print(dobj + ": " + this.draft.baseStats[dobj] + " (points left: " + (this.draft.maxStatPoints - this.draft.allocatedStatPoints) + ")");
+               } else {
+                 Game.ui.print("You cannot increase that stat further.");
+               }
+             } else if (verb === "decrease" && dobj && this.draft.baseStats[dobj] !== undefined) {
+               if (this.draft.baseStats[dobj] > 0) {
+                 this.draft.baseStats[dobj]--;
+                 this.draft.allocatedStatPoints--;
+                 Game.ui.print(dobj + ": " + this.draft.baseStats[dobj]);
+               }
+             } else if (verb === "stats") {
+               Game.ui.print("Stats: might " + this.draft.baseStats.might + ", agility " + this.draft.baseStats.agility + ", endurance " + this.draft.baseStats.endurance + ", intellect " + this.draft.baseStats.intellect + ", will " + this.draft.baseStats.will + ", presence " + this.draft.baseStats.presence);
+             } else if (verb === "continue") {
+               if (this.draft.allocatedStatPoints === this.draft.maxStatPoints) {
+                 this.finalizeCharacter();
+               } else {
+                 Game.ui.print("Allocate all 6 stat points first.");
+               }
+             }
+           }
+         },
+
+         finalizeCharacter: function() {
+           const bg = this.backgrounds[this.draft.backgroundId];
+           const stats = { ...this.draft.baseStats };
+           const skills = { athletics: 0, stealth: 0, thievery: 0, survival: 0, lore: 0, investigation: 0, persuasion: 0, deception: 0, intimidation: 0, melee: 0, ranged: 0, defense: 0, magic: 0 };
+           for (const [stat, val] of Object.entries(bg.statBonuses || {})) {
+             stats[stat] = (stats[stat] || 0) + val;
+           }
+           for (const [skill, val] of Object.entries(bg.skillBonuses || {})) {
+             skills[skill] = (skills[skill] || 0) + val;
+           }
+           skills[bg.id === "village_hunter" ? "ranged" : bg.id === "mercenary" ? "melee" : "magic"] += 1;
+
+           const maxHp = 10 + 2 * stats.endurance;
+           const maxSta = 8 + stats.endurance + stats.might;
+           const maxMan = bg.id === "hedge_wizard" ? 4 + stats.will + stats.intellect : 0;
+
+           Game.state.player = {
+             id: "player",
+             name: this.draft.name,
+             background: this.draft.backgroundId,
+             level: 1,
+             xp: 0,
+             stats: stats,
+             skills: skills,
+             maxHp: maxHp,
+             currentHp: maxHp,
+             maxSta: maxSta,
+             currentSta: maxSta,
+             maxMan: maxMan,
+             currentMan: maxMan,
+             inventory: [],
+             equipment: {},
+             gold: bg.startingGold || 10,
+             conditions: [],
+             flags: {},
+             reputation: { village: 0 }
+           };
+
+           initialiseEquipment();
+           for (const itemId of bg.startingItems || []) {
+             Game.inventory.addItem(itemId, 1);
+           }
+           if (bg.startingItems?.includes("hunting_bow")) {
+             Game.equipment.equip("hunting_bow");
+           }
+           if (bg.startingItems?.includes("leather_tunic")) {
+             Game.equipment.equip("leather_tunic");
+           }
+
+           Game.state.mode = GameModes.PLAYING;
+           Game.ui.print("");
+           Game.ui.print("Your adventure begins...");
+           Game.ui.print("");
+           Game.ui.print("You stand in the village square. The morning air is crisp.");
+         }
+       };
+
+       // ── Main Init Function ──────────────────────────────────────────────────────
+       function initGame() {
+         showTitleScreen();
+         const form = document.getElementById("input-form");
+         const input = document.getElementById("command-input");
+         form.addEventListener("submit", function(e) {
+           e.preventDefault();
+           const text = input.value.trim();
+           if (text) {
+             input.value = "";
+             handleInput(text);
+           }
+         });
+       }
+
+       initGame();
+
+       // Expose engine API
+       Game.engine.handleInput = handleInput;
+       Game.engine.checkGameOver = checkGameOver;
+       Game.engine.advanceClock = Game.clock.advance.bind(Game.clock);
+
+       // Expose utility functions
+       Game.utilities.rollDice = rollDice;
+       Game.utilities.randomInt = randomInt;
+       Game.utilities.resolveItemId = resolveItemId;
+
+      </script>
+    </body>
 </html>
