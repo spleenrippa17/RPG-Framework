@@ -73,7 +73,329 @@
 
         ui: {},
         parser: {},
-        engine: {},
+        engine: {
+          /**
+           * Handle a parsed command and execute the appropriate game logic.
+           * @param {Object} command - The parsed command object.
+           * @param {Object} player - The player object.
+           * @param {Object} state - The game state object.
+           * @returns {string} The result message to display to the user.
+           */
+          handleCommand: function (command, player, state) {
+            if (!command) return "";
+            
+            switch (command.verb) {
+              case "inventory":
+              case "inv":
+              case "i":
+              case "show inventory":
+              case "showinv":
+              case "equipment":
+              case "status":
+              case "gear":
+                return Game.inventory.display(player, state);
+                
+              case "look":
+              case "examine":
+              case "inspect":
+              case "x":
+              case "lookat":
+                // Look command - examine surroundings or object
+                if (!command.directObjectText) {
+                  // Look around - describe current location
+                  return Game.engine.lookAround(player, state);
+                } else {
+                  // Look at specific object
+                  return Game.engine.lookAt(command.directObjectText, player, state);
+                }
+                
+              case "help":
+                return Game.engine.showHelp();
+                
+              case "take":
+              case "get":
+              case "grab":
+              case "pickup":
+              case "pick up":
+                if (!command.directObjectText) {
+                  return "Take what?";
+                }
+                
+                // Parse quantity from direct object text if it's embedded (like "2 torches")
+                const tokens = command.directObjectText.trim().split(/\s+/);
+                let quantity = command.quantity;
+                let itemText = command.directObjectText;
+                
+                // If quantity wasn't parsed separately, check if first token is a number
+                if (quantity === null && tokens.length >= 2) {
+                  const firstToken = tokens[0];
+                  const num = Number(firstToken);
+                  if (!isNaN(num) && num > 0) {
+                    quantity = num;
+                    itemText = tokens.slice(1).join(" ");
+                  }
+                }
+                
+                // Find the item by trying to match the itemText against known items
+                const itemMatch = Game.data.items?.find(item => 
+                  item.name.toLowerCase() === itemText.toLowerCase() || 
+                  (item.aliases && item.aliases.some(alias => 
+                    alias.toLowerCase() === itemText.toLowerCase()))
+                );
+                
+                if (!itemMatch) {
+                  return `I don't see ${itemText} here.`;
+                }
+                
+                return Game.inventory.addItem(player, itemMatch.id, quantity);
+                
+              case "drop":
+                if (!command.directObjectText) {
+                  return "Drop what?";
+                }
+                
+                // Parse quantity from direct object text if it's embedded
+                const dropTokens = command.directObjectText.trim().split(/\s+/);
+                let dropQuantity = command.quantity;
+                let dropItemText = command.directObjectText;
+                
+                if (dropQuantity === null && dropTokens.length >= 2) {
+                  const firstToken = dropTokens[0];
+                  const num = Number(firstToken);
+                  if (!isNaN(num) && num > 0) {
+                    dropQuantity = num;
+                    dropItemText = dropTokens.slice(1).join(" ");
+                  }
+                }
+                
+                // Find the item in inventory
+                const dropItemMatch = Game.data.items?.find(item => 
+                  item.name.toLowerCase() === dropItemText.toLowerCase() || 
+                  (item.aliases && item.aliases.some(alias => 
+                    alias.toLowerCase() === dropItemText.toLowerCase()))
+                );
+                
+                if (!dropItemMatch) {
+                  return `You are not carrying ${dropItemText}.`;
+                }
+                
+                return Game.inventory.removeItem(player, dropItemMatch.id, dropQuantity);
+                
+              case "equip":
+              case "wield":
+              case "wear":
+              case "put on":
+                if (!command.directObjectText) {
+                  return "Equip what?";
+                }
+                
+                // Parse quantity (shouldn't matter for equipping, but check anyway)
+                const equipTokens = command.directObjectText.trim().split(/\s+/);
+                let equipQuantity = command.quantity;
+                let equipItemText = command.directObjectText;
+                
+                if (equipQuantity === null && equipTokens.length >= 2) {
+                  const firstToken = equipTokens[0];
+                  const num = Number(firstToken);
+                  if (!isNaN(num) && num > 0) {
+                    equipQuantity = num;
+                    equipItemText = equipTokens.slice(1).join(" ");
+                  }
+                }
+                
+                // Find the item in inventory
+                const equipItemMatch = Game.data.items?.find(item => 
+                  item.name.toLowerCase() === equipItemText.toLowerCase() || 
+                  (item.aliases && item.aliases.some(alias => 
+                    alias.toLowerCase() === equipItemText.toLowerCase()))
+                );
+                
+                if (!equipItemMatch) {
+                  return `You are not carrying ${equipItemText}.`;
+                }
+                
+                return Game.equipment.equip(player, equipItemMatch.id);
+                
+              case "unequip":
+              case "remove":
+              case "take off":
+                if (!command.directObjectText) {
+                  return "Unequip what?";
+                }
+                
+                // Map item names to slots
+                const slotMap = {
+                  "weapon": "weapon",
+                  "offhand": "offhand",
+                  "shield": "offhand",
+                  "armor": "armor",
+                  "cloak": "cloak",
+                  "accessory1": "accessory1",
+                  "accessory2": "accessory2"
+                };
+                
+                const slotText = command.directObjectText.toLowerCase();
+                const slot = slotMap[slotText] || 
+                            (Game.data.items?.find(item => 
+                              item.name.toLowerCase() === slotText || 
+                              (item.aliases && item.aliases.some(alias => 
+                                alias.toLowerCase() === slotText))
+                            )?.slot || null);
+                
+                if (!slot) {
+                  return `You can't unequip ${command.directObjectText}.`;
+                }
+                
+                return Game.equipment.unequip(player, slot);
+                
+              default:
+                // Let other systems handle the command
+                return "";
+            }
+          },
+          
+          /**
+           * Look around at the current location.
+           * @param {Object} player - The player object.
+           * @param {Object} state - The game state object.
+           * @returns {string} Description of the current location.
+           */
+          lookAround: function (player, state) {
+            if (!state.locationId) return "You are nowhere.";
+            
+            const location = Game.data.locations?.find(loc => loc.id === state.locationId);
+            if (!location) return `Location ${state.locationId} not found.`;
+            
+            // Get the first applicable description based on conditions
+            let description = "You see nothing special.";
+            if (location.descriptions && location.descriptions.length > 0) {
+              for (const desc of location.descriptions) {
+                if (!desc.conditions || desc.conditions.length === 0) {
+                  description = desc.text;
+                  break;
+                }
+                
+                // Check conditions (simplified - in a real implementation this would be more complex)
+                let conditionsMet = true;
+                for (const condition of desc.conditions) {
+                  // This is a simplified condition check - would need to be expanded
+                  if (condition.flag && !state.flags[condition.flag]) {
+                    conditionsMet = false;
+                    break;
+                  }
+                }
+                
+                if (conditionsMet) {
+                  description = desc.text;
+                  break;
+                }
+              }
+            }
+            
+            // List visible items at location
+            let itemsText = "";
+            if (location.items && location.items.length > 0) {
+              const visibleItems = [];
+              for (const itemId of location.items) {
+                const item = Game.utilities.getItem(itemId);
+                if (item) {
+                  visibleItems.push(`- ${item.name}`);
+                }
+              }
+              if (visibleItems.length > 0) {
+                itemsText = "\n\nYou see:\n" + visibleItems.join("\n");
+              }
+            }
+            
+            // List visible NPCs (simplified)
+            let npcsText = "";
+            // In a full implementation, we'd check schedules and conditions for NPCs
+            
+            // List exits
+            let exitsText = "";
+            if (location.exits) {
+              const exitDirections = Object.keys(location.exits);
+              if (exitDirections.length > 0) {
+                exitsText = "\n\nExits: " + exitDirections.join(", ");
+              }
+            }
+            
+            return description + itemsText + npcsText + exitsText;
+          },
+          
+          /**
+           * Look at a specific object.
+           * @param {string} objectText - The text describing what to look at.
+           * @param {Object} player - The player object.
+           * @param {Object} state - The game state object.
+           * @returns {string} Description of the object.
+           */
+          lookAt: function (objectText, player, state) {
+            // First check if it's in inventory
+            if (player.inventory) {
+              for (const entry of player.inventory) {
+                const item = Game.utilities.getItem(entry.itemId);
+                if (item && 
+                    (item.name.toLowerCase() === objectText.toLowerCase() ||
+                     (item.aliases && item.aliases.some(alias => 
+                       alias.toLowerCase() === objectText.toLowerCase())))) {
+                  return item.description || `You see nothing special about the ${item.name}.`;
+                }
+              }
+            }
+            
+            // Then check equipped items
+            if (player.equipment) {
+              for (const slot in player.equipment) {
+                const itemId = player.equipment[slot];
+                if (itemId) {
+                  const item = Game.utilities.getItem(itemId);
+                  if (item && 
+                      (item.name.toLowerCase() === objectText.toLowerCase() ||
+                       (item.aliases && item.aliases.some(alias => 
+                         alias.toLowerCase() === objectText.toLowerCase())))) {
+                    return item.description || `You see nothing special about the ${item.name}.`;
+                  }
+                }
+              }
+            }
+            
+            // Then check location items
+            if (state.locationId) {
+              const location = Game.data.locations?.find(loc => loc.id === state.locationId);
+              if (location && location.items) {
+                for (const itemId of location.items) {
+                  const item = Game.utilities.getItem(itemId);
+                  if (item && 
+                      (item.name.toLowerCase() === objectText.toLowerCase() ||
+                       (item.aliases && item.aliases.some(alias => 
+                         alias.toLowerCase() === objectText.toLowerCase())))) {
+                    return item.description || `You see nothing special about the ${item.name}.`;
+                  }
+                }
+              }
+            }
+            
+            return `I don't see ${objectText} here.`;
+          },
+          
+          /**
+           * Show help information.
+           * @returns {string} Help text.
+           */
+          showHelp: function () {
+            return `Available commands:
+look [at] [object] - Examine surroundings or specific object
+inventory/inv/i/show inventory/status/gear/equipment - Show inventory and equipment
+take/get/grab/pick up [quantity] [object] - Pick up an object
+drop [quantity] [object] - Drop an object from inventory
+equip/wield/wear [object] - Equip an object from inventory
+unequip/remove/take off [object/slot] - Unequip an object
+go [direction] - Move in a direction (north, south, east, west, up, down)
+help - Show this help information`;
+          }
+        },
+        },
         checks: {},
         inventory: {},
         characterCreation: {},
@@ -93,54 +415,55 @@
        * the input is split on whitespace.
        * Keys are lower-case; parser lower-cases input before lookup.
        */
-      const VERB_ALIASES = {
-        i: "inventory",
-        inv: "inventory",
-        inventory: "inventory",
-        equipment: "inventory",
-        status: "inventory",
-        gear: "inventory",
-        showinv: "inventory",
+       const VERB_ALIASES = {
+         i: "inventory",
+         inv: "inventory",
+         inventory: "inventory",
+         equipment: "inventory",
+         status: "inventory",
+         gear: "inventory",
+         showinv: "inventory",
+         "show inventory": "inventory",
 
-        n: "go",
-        north: "go",
-        s: "go",
-        south: "go",
-        e: "go",
-        east: "go",
-        w: "go",
-        west: "go",
-        u: "go",
-        up: "go",
-        d: "go",
-        down: "go",
+         n: "go",
+         north: "go",
+         s: "go",
+         south: "go",
+         e: "go",
+         east: "go",
+         w: "go",
+         west: "go",
+         u: "go",
+         up: "go",
+         d: "go",
+         down: "go",
 
-        get: "take",
-        grab: "take",
-        pickup: "take",
-        "pick up": "take",
+         get: "take",
+         grab: "take",
+         pickup: "take",
+         "pick up": "take",
 
-        examine: "look",
-        inspect: "look",
-        x: "look",
-        lookat: "look",
+         examine: "look",
+         inspect: "look",
+         x: "look",
+         lookat: "look",
 
-        wield: "equip",
-        wear: "equip",
-        "put on": "equip",
+         wield: "equip",
+         wear: "equip",
+         "put on": "equip",
 
-        remove: "unequip",
-        "take off": "unequip",
+         remove: "unequip",
+         "take off": "unequip",
 
-        strike: "attack",
-        hit: "attack",
-        fight: "attack",
+         strike: "attack",
+         hit: "attack",
+         fight: "attack",
 
-        sayhi: "say hi",
-        hallo: "say hi",
-        hi: "say hi",
-        hello: "say hi",
-      };
+         sayhi: "say hi",
+         hallo: "say hi",
+         hi: "say hi",
+         hello: "say hi",
+       };
 
       /**
        * Prepositions recognised between the direct and indirect object.
@@ -367,8 +690,521 @@
       Game.parser.addAliases = function (extraAliases) {
         Object.assign(VERB_ALIASES, extraAliases);
       };
-    </script>
+    // ── Inventory System ───────────────────────────────────────────────────────────────
+Game.inventory = {
+  /**
+   * Add an item to the player's inventory.
+   * @param {Object} player - The player object.
+   * @param {string} itemId - The ID of the item to add.
+   * @param {number} quantity - The quantity to add (default 1).
+   * @returns {string} Message describing the result.
+   */
+  addItem: function (player, itemId, quantity = 1) {
+    if (!player.inventory) player.inventory = [];
+    const item = Game.utilities.getItem(itemId);
+    if (!item) return `Item ${itemId} not found.`;
+    if (!item.portable) return `You cannot pick up ${item.name}.`;
+
+    const existing = player.inventory.find(entry => entry.itemId === itemId);
+    if (existing) {
+      existing.quantity += quantity;
+    } else {
+      player.inventory.push({ itemId, quantity });
+    }
+
+    // Advance time for picking up item (1 minute)
+    if (Game.clock && typeof Game.clock.advanceTime === 'function') {
+      Game.clock.advanceTime(1);
+    }
+
+    return `You pick up ${item.name}.`;
+  },
+
+  /**
+   * Remove an item from the player's inventory.
+   * @param {Object} player - The player object.
+   * @param {string} itemId - The ID of the item to remove.
+   * @param {number} quantity - The quantity to remove (default 1).
+   * @returns {string} Message describing the result.
+   */
+  removeItem: function (player, itemId, quantity = 1) {
+    if (!player.inventory) return `You are not carrying any items.`;
+    const index = player.inventory.findIndex(entry => entry.itemId === itemId);
+    if (index === -1) return `You are not carrying ${Game.utilities.getItem(itemId)?.name || itemId}.`;
+
+    const entry = player.inventory[index];
+    if (entry.quantity < quantity) return `You don't have enough ${Game.utilities.getItem(itemId)?.name || itemId}.`;
+
+    entry.quantity -= quantity;
+    if (entry.quantity === 0) {
+      player.inventory.splice(index, 1);
+    }
+
+    // Advance time for dropping item (1 minute)
+    if (Game.clock && typeof Game.clock.advanceTime === 'function') {
+      Game.clock.advanceTime(1);
+    }
+
+    return `You drop ${Game.utilities.getItem(itemId)?.name || itemId}.`;
+  },
+
+  /**
+   * Check if the player has a certain quantity of an item.
+   * @param {Object} player - The player object.
+   * @param {string} itemId - The ID of the item to check.
+   * @param {number} quantity - The quantity to check for (default 1).
+   * @returns {boolean}
+   */
+  hasItem: function (player, itemId, quantity = 1) {
+    if (!player.inventory) return false;
+    const entry = player.inventory.find(e => e.itemId === itemId);
+    return entry ? entry.quantity >= quantity : false;
+  },
+
+  /**
+   * Get the quantity of an item in the player's inventory.
+   * @param {Object} player - The player object.
+   * @param {string} itemId - The ID of the item to check.
+   * @returns {number} The quantity, or 0 if not present.
+   */
+  getItemCount: function (player, itemId) {
+    if (!player.inventory) return 0;
+    const entry = player.inventory.find(e => e.itemId === itemId);
+    return entry ? entry.quantity : 0;
+  },
+
+  /**
+   * Calculate the total weight of the player's inventory and equipped items.
+   * @param {Object} player - The player object.
+   * @returns {number} The total weight in pounds.
+   */
+  getCarriedWeight: function (player) {
+    let total = 0;
+
+    // Inventory weight
+    if (player.inventory) {
+      for (const entry of player.inventory) {
+        const item = Game.utilities.getItem(entry.itemId);
+        if (item) {
+          total += (item.weight || 0) * entry.quantity;
+        }
+      }
+    }
+
+    // Equipped weight
+    if (player.equipment) {
+      for (const slot in player.equipment) {
+        const itemId = player.equipment[slot];
+        if (itemId) {
+          const item = Game.utilities.getItem(itemId);
+          if (item) {
+            total += item.weight || 0;
+          }
+        }
+      }
+    }
+
+    return total;
+  },
+
+  /**
+   * Calculate the player's carry capacity based on might and endurance.
+   * @param {Object} player - The player object.
+   * @returns {number} The maximum weight the player can carry.
+   */
+  getCarryCapacity: function (player) {
+    const might = player.stats?.might || 0;
+    const endurance = player.stats?.endurance || 0;
+    return 50 + 10 * might + 5 * endurance;
+  },
+
+  /**
+   * Get the encumbrance state based on carried weight vs capacity.
+   * @param {Object} player - The player object.
+   * @returns {string} One of: "unencumbered", "burdened", "encumbered", "overloaded".
+   */
+  getEncumbranceState: function (player) {
+    const weight = this.getCarriedWeight(player);
+    const capacity = this.getCarryCapacity(player);
+    const ratio = capacity === 0 ? Infinity : weight / capacity;
+
+    if (ratio <= 1.0) return "unencumbered";
+    if (ratio <= 1.25) return "burdened";
+    if (ratio <= 1.5) return "encumbered";
+    return "overloaded";
+  },
+
+  /**
+   * Display the inventory screen with all required information.
+   * @param {Object} player - The player object.
+   * @param {Object} state - The game state object.
+   * @returns {string} Formatted inventory screen.
+   */
+  display: function (player, state) {
+    if (!player) return "No player data available.";
+    
+    // Get player basics
+    const name = player.name || "Unknown";
+    const backgroundId = player.background || "none";
+    const backgroundName = backgroundId.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    const level = player.level || 1;
+    const xp = player.xp || 0;
+    
+    // Get time
+    let timeString = "Unknown time";
+    if (Game.clock && typeof Game.clock.formatTime === 'function') {
+      timeString = Game.clock.formatTime(Game.state.clock || {});
+    } else if (state.clock) {
+      timeString = Game.clock.formatTime(state.clock);
+    }
+    
+    // Get resources
+    const hp = player.resources?.hp || 0;
+    const maxHp = player.resources?.maxHp || 0;
+    const stamina = player.resources?.stamina || 0;
+    const maxStamina = player.resources?.maxStamina || 0;
+    const mana = player.resources?.mana || 0;
+    const maxMana = player.resources?.maxMana || 0;
+    
+    // Get equipment
+    const weaponId = Game.equipment.getEquippedItem(player, "weapon") || null;
+    const offhandId = Game.equipment.getEquippedItem(player, "offhand") || null;
+    const armorId = Game.equipment.getEquippedItem(player, "armor") || null;
+    const cloakId = Game.equipment.getEquippedItem(player, "cloak") || null;
+    const accessory1Id = Game.equipment.getEquippedItem(player, "accessory1") || null;
+    const accessory2Id = Game.equipment.getEquippedItem(player, "accessory2") || null;
+    
+    const weaponName = weaponId ? Game.utilities.getItem(weaponId)?.name || "Unknown" : "None";
+    const offhandName = offhandId ? Game.utilities.getItem(offhandId)?.name || "Unknown" : "None";
+    const armorName = armorId ? Game.utilities.getItem(armorId)?.name || "Unknown" : "None";
+    const cloakName = cloakId ? Game.utilities.getItem(cloakId)?.name || "Unknown" : "None";
+    const accessory1Name = accessory1Id ? Game.utilities.getItem(accessory1Id)?.name || "Unknown" : "None";
+    const accessory2Name = accessory2Id ? Game.utilities.getItem(accessory2Id)?.name || "Unknown" : "None";
+    
+    // Get conditions/status effects
+    const conditions = player.conditions || [];
+    const conditionNames = conditions.length > 0 
+      ? conditions.map(c => typeof c === 'string' ? c : c.id || 'Unknown').join(", ") 
+      : "None";
+    
+    // Get gold
+    const gold = player.gold || 0;
+    
+    // Get weight and capacity
+    const carriedWeight = this.getCarriedWeight(player);
+    const carryCapacity = this.getCarryCapacity(player);
+    const encumbranceState = this.getEncumbranceState(player);
+    
+    // Format weight display
+    const weightDisplay = `${Math.round(carriedWeight)} / ${carryCapacity} lb`;
+    
+    // Get carried items
+    let itemsDisplay = "";
+    if (player.inventory && player.inventory.length > 0) {
+      itemsDisplay = player.inventory.map(entry => {
+        const item = Game.utilities.getItem(entry.itemId);
+        const name = item ? item.name : entry.itemId;
+        const weight = item ? item.weight || 0 : 0;
+        const totalWeight = weight * entry.quantity;
+        const qtyDisplay = entry.quantity > 1 ? ` x${entry.quantity}` : "";
+        return `- ${name}${qtyDisplay}          ${totalWeight} lb`;
+      }).join("\n");
+    } else {
+      itemsDisplay = "(empty)";
+    }
+    
+    // Create the inventory screen
+    return `
+==================================================
+INVENTORY
+==================================================
+
+Name: ${name}
+Background: ${backgroundName}
+Level: ${level}
+Time: ${timeString}
+
+Health:   ${hp} / ${maxHp}
+Stamina:  ${stamina} / ${maxStamina}
+Mana:     ${mana} / ${maxMana}
+
+Weapon:   ${weaponName}
+Offhand:  ${offhandName}
+Armor:    ${armorName}
+Cloak:    ${cloakName}
+
+Status Effects:
+${conditionNames}
+
+Gold: ${gold}
+
+Carried Weight: ${weightDisplay}
+Encumbrance: ${encumbranceState}
+
+Carried Items:
+${itemsDisplay}
+==================================================`;
+  }
+};
+
+// ── Equipment System ───────────────────────────────────────────────────────────────
+Game.equipment = {
+  /**
+   * Equip an item from the inventory into the appropriate slot.
+   * @param {Object} player - The player object.
+   * @param {string} itemId - The ID of the item to equip.
+   * @returns {string} Message describing the result.
+   */
+  equip: function (player, itemId) {
+    if (!player.inventory) return `You are not carrying any items.`;
+    if (!this.hasItem(player, itemId, 1)) {
+      return `You are not carrying ${Game.utilities.getItem(itemId)?.name || itemId}.`;
+    }
+
+    const item = Game.utilities.getItem(itemId);
+    if (!item) return `Item ${itemId} not found.`;
+    if (!item.slot) return `You cannot equip ${item.name}.`;
+
+    const slot = item.slot;
+    const currentlyEquipped = player.equipment ? player.equipment[slot] : null;
+
+    // Remove from inventory
+    this.removeItem(player, itemId, 1);
+
+    // If there was an item in the slot, put it back in inventory
+    if (currentlyEquipped) {
+      this.addItem(player, currentlyEquipped, 1);
+    }
+
+    // Equip the new item
+    if (!player.equipment) player.equipment = {};
+    player.equipment[slot] = itemId;
+
+    // Advance time based on item type
+    let minutes = 0;
+    if (item.type === "armor") {
+      minutes = 5; // wear armor
+    } else if (item.type === "shield" || item.type === "weapon") {
+      minutes = 1; // equip weapon or shield
+    } else {
+      minutes = 1; // default for other equipable items
+    }
+
+    if (Game.clock && typeof Game.clock.advanceTime === 'function') {
+      Game.clock.advanceTime(minutes);
+    }
+
+    return `You equip ${item.name}.`;
+  },
+
+  /**
+   * Unequip an item from a slot and place it in the inventory.
+   * @param {Object} player - The player object.
+   * @param {string} slot - The slot to unequip (weapon, offhand, armor, cloak, accessory1, accessory2).
+   * @returns {string} Message describing the result.
+   */
+  unequip: function (player, slot) {
+    if (!player.equipment || !player.equipment[slot]) {
+      return `You are not equipped with anything in the ${slot} slot.`;
+    }
+
+    const itemId = player.equipment[slot];
+    const item = Game.utilities.getItem(itemId);
+    if (!item) return `Item ${itemId} not found.`;
+
+    // Remove from equipment
+    delete player.equipment[slot];
+
+    // Add to inventory
+    this.addItem(player, itemId, 1);
+
+    // Advance time based on item type
+    let minutes = 0;
+    if (item.type === "armor") {
+      minutes = 3; // remove armor
+    } else if (item.type === "shield" || item.type === "weapon") {
+      minutes = 1; // unequip weapon or shield
+    } else {
+      minutes = 1; // default
+    }
+
+    if (Game.clock && typeof Game.clock.advanceTime === 'function') {
+      Game.clock.advanceTime(minutes);
+    }
+
+    return `You unequip ${item.name}.`;
+  },
+
+  /**
+   * Get the item ID currently equipped in a slot.
+   * @param {Object} player - The player object.
+   * @param {string} slot - The slot to check.
+   * @returns {string|null} The item ID, or null if nothing equipped.
+   */
+  getEquippedItem: function (player, slot) {
+    return player.equipment ? player.equipment[slot] || null : null;
+  }
+};
+
+// ── Utilities ───────────────────────────────────────────────────────────────────────
+Game.utilities = Game.utilities || {};
+Game.utilities.getItem = function (itemId) {
+  return Game.data.items?.find(item => item.id === itemId) || null;
+};
+
+// ── Input Handling ───────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.getElementById('input-form');
+  const input = document.getElementById('command-input');
+  const output = document.getElementById('output');
+  
+  // Initialize a basic player and state for testing
+  Game.state = {
+    locationId: 'start',
+    flags: {},
+    clock: {
+      day: 1,
+      hour: 14,
+      minute: 0,
+      month: 'Frostwane'
+    }
+  };
+  
+  Game.player = {
+    id: 'player',
+    name: 'Test Adventurer',
+    background: 'village_hunter',
+    level: 1,
+    xp: 0,
+    stats: {
+      might: 2,
+      agility: 1,
+      endurance: 1,
+      intellect: 0,
+      will: 1,
+      presence: 1
+    },
+    skills: {
+      athletics: 0,
+      stealth: 1,
+      thievery: 0,
+      survival: 2,
+      lore: 0,
+      investigation: 1,
+      persuasion: 0,
+      deception: 0,
+      intimidation: 0,
+      melee: 0,
+      ranged: 1,
+      defense: 1,
+      magic: 0
+    },
+    resources: {
+      hp: 14,
+      maxHp: 14,
+      stamina: 10,
+      maxStamina: 10,
+      mana: 0,
+      maxMana: 0
+    },
+    inventory: [
+      { itemId: 'skinning_knife', quantity: 1 },
+      { itemId: 'travel_rations', quantity: 3 },
+      { itemId: 'flint_and_steel', quantity: 1 }
+    ],
+    equipment: {
+      weapon: 'hunting_bow',
+      offhand: null,
+      armor: 'travel_cloak',
+      cloak: null,
+      accessory1: null,
+      accessory2: null
+    },
+    gold: 8,
+    conditions: [],
+    reputation: {
+      village: 1,
+      church: 0,
+      thieves_guild: 0,
+      goblins: -1
+    },
+    flags: {}
+  };
+  
+  // Mock data for testing
+  Game.data = {
+    items: [
+      { id: 'skinning_knife', name: 'Skinning Knife', weight: 1, portable: true, slot: null, type: 'tool' },
+      { id: 'travel_rations', name: 'Travel Rations', weight: 1, portable: true, stackable: true, type: 'consumable' },
+      { id: 'flint_and_steel', name: 'Flint and Steel', weight: 1, portable: true, slot: null, type: 'tool' },
+      { id: 'hunting_bow', name: 'Hunting Bow', weight: 2, portable: true, slot: 'weapon', type: 'weapon', skill: 'ranged', stat: 'agility', damage: '1d6', attackBonus: 0, value: 15 },
+      { id: 'travel_cloak', name: 'Travel Cloak', weight: 2, portable: true, slot: 'armor', type: 'armor', defenseBonus: 1, value: 10 },
+      { id: 'old_iron_key', name: 'Old Iron Key', weight: 0, portable: true, slot: null, type: 'key', value: 5 }
+    ],
+    locations: [
+      { 
+        id: 'start', 
+        name: 'Starting Area', 
+        descriptions: [
+          { text: 'You are in a small clearing in the forest. Birds chirp overhead.', conditions: [] }
+        ],
+        items: ['old_iron_key'],
+        exits: {
+          north: { to: 'forest_path', travelMinutes: 10 },
+          south: { to: 'village_square', travelMinutes: 15 }
+        }
+      }
+    ]
+  };
+  
+  // Mock clock formatTime function
+  Game.clock = Game.clock || {};
+  Game.clock.formatTime = function(clock) {
+    const months = ['Frostwane', 'Snowmelt', 'Springdawn', 'Seedtime', 'Growgreen', 'Sunhigh', 'Harvest', 'Leafall', 'Firstfall', 'Longnight', 'Deepwinter', 'Nightmare'];
+    const hours = clock.hour || 0;
+    let phase = 'Dawn';
+    if (hours >= 8 && hours < 12) phase = 'Morning';
+    else if (hours >= 12 && hours < 14) phase = 'Midday';
+    else if (hours >= 14 && hours < 17) phase = 'Afternoon';
+    else if (hours >= 17 && hours < 19) phase = 'Late afternoon';
+    else if (hours >= 19 && hours < 21) phase = 'Evening';
+    else if (hours >= 21 && hours < 24) phase = 'Night';
+    else phase = 'Deep night';
+    
+    const day = clock.day || 1;
+    const ordinal = ['first', 'second', 'third', 'fourth', 'fifth'][day - 1] || `${day}th`;
+    return `${phase}, ${ordinal} day of ${months[clock.month] || months[0]}`;
+  };
+  
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const commandText = input.value.trim();
+    if (!commandText) return;
+    
+    // Add to output
+    output.textContent += `> ${commandText}\n`;
+    
+    // Parse and handle command
+    const parsed = Game.parser.parseAndClone(commandText);
+    if (parsed) {
+      const result = Game.engine.handleCommand(parsed, Game.player, Game.state);
+      if (result) {
+        output.textContent += `${result}\n`;
+      }
+    }
+    
+    // Clear input
+    input.value = '';
+    
+    // Scroll to bottom
+    output.scrollTop = output.scrollHeight;
+  });
+  
+  // Initial message
+  output.textContent = 'Welcome to Fantasy Text RPG! Type "help" for available commands.\n\n';
+  output.scrollTop = output.scrollHeight;
+});
+
+</script>
   </body>
-</html>
-</body>
 </html>
