@@ -1882,8 +1882,8 @@
       }
       const exit = loc.exits[direction];
       const travelMinutes = exit.travelMinutes || 1;
-      const msgs = Game.clock.advanceTime(travelMinutes);
       player.location = exit.to;
+      const msgs = Game.clock.advanceTime(travelMinutes);
       const newLoc = Game.data.locations[exit.to];
       if (newLoc) {
         Game.ui.print('', '');
