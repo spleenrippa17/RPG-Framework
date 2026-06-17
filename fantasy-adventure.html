@@ -1151,27 +1151,30 @@
     ];
 
     Game.data.items = {
-      iron_sword: { id: 'iron_sword', name: 'iron sword', aliases: ['sword', 'blade'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 20 },
-      hunting_bow: { id: 'hunting_bow', name: 'hunting bow', aliases: ['bow', 'yew bow'], weight: 2, slot: 'weapon', type: 'weapon', portable: true, value: 15 },
-      skinning_knife: { id: 'skinning_knife', name: 'skinning knife', aliases: ['knife'], weight: 1, type: 'tool', portable: true, value: 3 },
-      travel_cloak: { id: 'travel_cloak', name: 'travel cloak', aliases: ['cloak'], weight: 2, slot: 'cloak', type: 'clothing', portable: true, value: 5 },
+      iron_sword: { id: 'iron_sword', name: 'iron sword', aliases: ['sword', 'blade'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 20, damage: '1d8', stat: 'might', skill: 'melee', attackBonus: 0 },
+      hunting_bow: { id: 'hunting_bow', name: 'hunting bow', aliases: ['bow', 'yew bow'], weight: 2, slot: 'weapon', type: 'weapon', portable: true, value: 15, damage: '1d6', stat: 'agility', skill: 'ranged', attackBonus: 0 },
+      skinning_knife: { id: 'skinning_knife', name: 'skinning knife', aliases: ['knife'], weight: 1, type: 'tool', portable: true, value: 3, damage: '1d4', stat: 'agility', skill: 'melee', attackBonus: 0 },
+      travel_cloak: { id: 'travel_cloak', name: 'travel cloak', aliases: ['cloak'], weight: 2, slot: 'cloak', type: 'clothing', portable: true, value: 5, defenseBonus: 1 },
       travel_rations: { id: 'travel_rations', name: 'travel rations', aliases: ['rations', 'food', 'ration'], weight: 1, type: 'consumable', stackable: true, portable: true, value: 1 },
       flint_and_steel: { id: 'flint_and_steel', name: 'flint and steel', aliases: ['flint', 'steel'], weight: 1, type: 'tool', portable: true, value: 2 },
       leather_armor: { id: 'leather_armor', name: 'leather armor', aliases: ['armor', 'leather'], weight: 15, slot: 'armor', type: 'armor', portable: true, defenseBonus: 2, value: 30 },
-      gnarled_staff: { id: 'gnarled_staff', name: 'gnarled staff', aliases: ['staff'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 5 },
+      gnarled_staff: { id: 'gnarled_staff', name: 'gnarled staff', aliases: ['staff'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 5, damage: '1d6', stat: 'might', skill: 'melee', attackBonus: 0 },
       traveling_robes: { id: 'traveling_robes', name: 'traveling robes', aliases: ['robes'], weight: 3, slot: 'armor', type: 'clothing', portable: true, value: 5 },
       spell_pouch: { id: 'spell_pouch', name: 'spell pouch', aliases: ['spell pouch'], weight: 1, type: 'tool', portable: true, value: 10 },
       wooden_shield: { id: 'wooden_shield', name: 'wooden shield', aliases: ['shield'], weight: 6, slot: 'offhand', type: 'shield', portable: true, shieldBonus: 1, value: 8 },
       holy_symbol: { id: 'holy_symbol', name: 'holy symbol', aliases: ['symbol', 'holy symbol'], weight: 0, type: 'misc', portable: true, value: 0 },
-      rusty_dagger: { id: 'rusty_dagger', name: 'rusty dagger', aliases: ['dagger', 'rusty dagger'], weight: 1, slot: 'weapon', type: 'weapon', portable: true, value: 2 },
+      rusty_dagger: { id: 'rusty_dagger', name: 'rusty dagger', aliases: ['dagger', 'rusty dagger'], weight: 1, slot: 'weapon', type: 'weapon', portable: true, value: 2, damage: '1d4', stat: 'agility', skill: 'melee', attackBonus: 0 },
       ragged_cloak: { id: 'ragged_cloak', name: 'ragged cloak', aliases: ['cloak', 'ragged cloak'], weight: 1, slot: 'cloak', type: 'clothing', portable: true, value: 1 },
       lockpicks: { id: 'lockpicks', name: 'lockpicks', aliases: ['lockpicks', 'picks'], weight: 0, type: 'tool', portable: true, value: 5 },
-      fine_sword: { id: 'fine_sword', name: 'fine sword', aliases: ['sword', 'blade', 'fine blade'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 40 },
+      fine_sword: { id: 'fine_sword', name: 'fine sword', aliases: ['sword', 'blade', 'fine blade'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 40, damage: '1d8', stat: 'might', skill: 'melee', attackBonus: 1 },
       noble_clothes: { id: 'noble_clothes', name: 'noble clothes', aliases: ['clothes', 'noble clothes'], weight: 3, slot: 'armor', type: 'clothing', portable: true, value: 25 },
       signet_ring: { id: 'signet_ring', name: 'signet ring', aliases: ['ring', 'signet'], weight: 0, slot: 'accessory1', type: 'misc', portable: true, value: 15 },
       dark_cloak: { id: 'dark_cloak', name: 'dark cloak', aliases: ['cloak', 'dark cloak'], weight: 2, slot: 'cloak', type: 'clothing', portable: true, value: 5 },
       torch: { id: 'torch', name: 'torch', aliases: ['torches'], weight: 1, type: 'light', stackable: true, portable: true, value: 1 },
-      village_notice: { id: 'village_notice', name: 'notice board posting', aliases: ['notice', 'posting', 'notice board', 'sign'], weight: 0, type: 'misc', portable: false, value: 0 }
+      village_notice: { id: 'village_notice', name: 'notice board posting', aliases: ['notice', 'posting', 'notice board', 'sign'], weight: 0, type: 'misc', portable: false, value: 0 },
+      goblin_knife: { id: 'goblin_knife', name: 'goblin knife', aliases: ['knife', 'jagged knife'], weight: 1, slot: 'weapon', type: 'weapon', portable: true, value: 2, damage: '1d4+1', stat: 'agility', skill: 'melee', attackBonus: 0 },
+      copper_coin: { id: 'copper_coin', name: 'copper coin', aliases: ['coin', 'copper', 'coins'], weight: 0, type: 'treasure', stackable: true, portable: true, value: 1 },
+      arrows: { id: 'arrows', name: 'arrows', aliases: ['arrow'], weight: 1, type: 'ammunition', stackable: true, portable: true, value: 1 }
     };
 
     Game.data.locations = {
@@ -1202,7 +1205,8 @@
           }
         ],
         exits: {
-          south: { to: 'village_square', travelMinutes: 1 }
+          south: { to: 'village_square', travelMinutes: 1 },
+          north: { to: 'north_wood', travelMinutes: 3 }
         },
         items: [],
         tags: ['settlement', 'indoors', 'shop']
@@ -1402,6 +1406,7 @@
         { name: 'equip [item]', description: 'Equip an item' },
         { name: 'unequip [item]', description: 'Unequip an item' },
         { name: 'inventory', description: 'View your inventory' },
+        { name: 'attack [target]', description: 'Attack a monster' },
         { name: 'wait', description: 'Pass some time (wait, wait 1 hour)' },
         { name: 'sleep', description: 'Rest for several hours' },
         { name: 'save', description: 'Save your progress' },
@@ -1736,6 +1741,11 @@
       } else if (normalized.startsWith('look at ') || normalized.startsWith('examine ') || normalized.startsWith('inspect ') || normalized.startsWith('x ')) {
         const target = normalized.replace(/^(look at|examine|inspect|x)\s+/, '');
         this.lookAt(target);
+      } else if (normalized === 'attack' || normalized === 'strike' || normalized === 'hit' || normalized === 'fight') {
+        Game.combat.attack(null);
+      } else if (normalized.startsWith('attack ') || normalized.startsWith('strike ') || normalized.startsWith('hit ') || normalized.startsWith('fight ') || normalized.startsWith('shoot ')) {
+        const target = normalized.replace(/^(attack|strike|hit|fight|shoot)\s+/, '');
+        Game.combat.attack(target);
       } else {
         Game.ui.print(`I don't understand that command. Try "help" for options.`, 'output-error');
       }
@@ -1780,8 +1790,15 @@
         for (const cond of player.conditions) {
           const condData = Game.data.conditions.find(c => c.id === cond.id);
           const condName = condData ? condData.name : cond.id;
-          const remaining = cond.remainingMinutes ? ` (${cond.remainingMinutes} min)` : '';
+          const remaining = cond.remainingMinutes > 0 ? ` (${cond.remainingMinutes} min remaining)` : '';
           Game.ui.print(`    - ${condName}${remaining}`, 'output-highlight');
+          if (condData && condData.description) {
+            Game.ui.print(`      ${condData.description}`, 'output-system');
+          }
+          if (condData && condData.modifiers) {
+            const mods = Object.entries(condData.modifiers).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ');
+            if (mods) Game.ui.print(`      Modifiers: ${mods}`, 'output-system');
+          }
         }
         Game.ui.print('', '');
       }
@@ -2689,6 +2706,17 @@
       return `${phase}, ${ordinal} day of ${month}`;
     };
 
+    Game.clock.tickConditions = function(minutes) {
+      const player = Game.state.player;
+      if (!player) return;
+      const expired = Game.conditions.updateConditions(player, minutes);
+      for (const cond of expired) {
+        const condData = Game.data.conditions.find(c => c.id === cond.id);
+        const name = condData ? condData.name : cond.id;
+        Game.ui.print(`[ ${name} has worn off ]`, 'output-system');
+      }
+    };
+
     Game.inventory.init = function() {
       Game.state.inventory = [];
       Game.state.equipment = {
@@ -2782,8 +2810,372 @@
       Game.state.currentEnemy = null;
     };
 
+    Game.combat.startCombat = function(monster) {
+      Game.state.inCombat = true;
+      Game.state.currentEnemy = monster.id;
+      this.getMonsterState(monster);
+      Game.ui.print('', '');
+      Game.ui.print('━━━━━━━━━━ COMBAT ━━━━━━━━━━', 'output-error');
+      Game.ui.print('A ' + monster.name + ' attacks!', 'output-error');
+      Game.ui.print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'output-error');
+      Game.ui.print('', '');
+    };
+
+    Game.combat.getMonsterState = function(monster) {
+      if (!Game.state.world.monsterStates[monster.id]) {
+        Game.state.world.monsterStates[monster.id] = {
+          hp: monster.resources.hp,
+          maxHp: monster.resources.maxHp,
+          defeated: false,
+          behaviorState: 'hostile',
+          locationOverride: monster.defaultLocation
+        };
+      }
+      return Game.state.world.monsterStates[monster.id];
+    };
+
+    Game.combat.calculatePlayerDefense = function() {
+      const player = Game.state.player;
+      let defense = 10 + (player.stats.agility || 0) + (player.skills.defense || 0);
+      defense += Game.conditions.getModifierForStat(player, 'agility');
+      if (player.equipment.armor) {
+        const armor = Game.data.items[player.equipment.armor];
+        if (armor && armor.defenseBonus) defense += armor.defenseBonus;
+      }
+      if (player.equipment.offhand) {
+        const offhand = Game.data.items[player.equipment.offhand];
+        if (offhand && offhand.shieldBonus) defense += offhand.shieldBonus;
+      }
+      if (player.equipment.cloak) {
+        const cloak = Game.data.items[player.equipment.cloak];
+        if (cloak && cloak.defenseBonus) defense += cloak.defenseBonus;
+      }
+      return defense;
+    };
+
+    Game.combat.getPlayerAttackStat = function() {
+      const player = Game.state.player;
+      const weapon = player.equipment.weapon ? Game.data.items[player.equipment.weapon] : null;
+      if (weapon && weapon.stat) return weapon.stat;
+      return 'might';
+    };
+
+    Game.combat.getPlayerAttackSkill = function() {
+      const player = Game.state.player;
+      const weapon = player.equipment.weapon ? Game.data.items[player.equipment.weapon] : null;
+      if (weapon && weapon.skill) return weapon.skill;
+      return 'melee';
+    };
+
+    Game.combat.getPlayerWeaponDamage = function() {
+      const player = Game.state.player;
+      const weapon = player.equipment.weapon ? Game.data.items[player.equipment.weapon] : null;
+      if (weapon && weapon.damage) return weapon.damage;
+      return '1d4';
+    };
+
+    Game.combat.getPlayerWeaponBonus = function() {
+      const player = Game.state.player;
+      const weapon = player.equipment.weapon ? Game.data.items[player.equipment.weapon] : null;
+      if (weapon && weapon.attackBonus) return weapon.attackBonus;
+      return 0;
+    };
+
+    Game.combat.attack = function(targetName) {
+      const player = Game.state.player;
+      if (!targetName) {
+        const present = Game.schedules.getPresentMonsters(player.location);
+        if (present.length === 0) {
+          Game.ui.print('There is nothing to attack here.', 'output-error');
+          return;
+        }
+        if (present.length === 1) {
+          this.performAttack(present[0].monster);
+          return;
+        }
+        Game.ui.print('Attack whom? You see: ' + present.map(e => e.monster.name).join(', '), 'output-error');
+        return;
+      }
+      const monster = Game.schedules.findMonsterByName(targetName);
+      if (!monster) {
+        Game.ui.print('You don\'t see "' + targetName + '" to attack.', 'output-error');
+        return;
+      }
+      const present = Game.schedules.isMonsterPresent(monster, player.location);
+      if (!present) {
+        Game.ui.print(monster.name + ' is not here.', 'output-error');
+        return;
+      }
+      this.performAttack(monster);
+    };
+
+    Game.combat.performAttack = function(monster) {
+      const player = Game.state.player;
+      const mState = this.getMonsterState(monster);
+      if (!Game.state.inCombat) {
+        this.startCombat(monster);
+      }
+      const attackStat = this.getPlayerAttackStat();
+      const attackSkill = this.getPlayerAttackSkill();
+      const weaponBonus = this.getPlayerWeaponBonus();
+      const targetDefense = monster.defense || (10 + (monster.stats.agility || 0) + (monster.skills.defense || 0));
+      const die = Math.floor(Math.random() * 20) + 1;
+      const statVal = (player.stats[attackStat] || 0) + Game.conditions.getModifierForStat(player, attackStat);
+      const skillVal = (player.skills[attackSkill] || 0) + Game.conditions.getModifierForStat(player, attackSkill);
+      const attackTotal = die + statVal + skillVal + weaponBonus;
+      const weapon = player.equipment.weapon ? Game.data.items[player.equipment.weapon] : null;
+      const weaponName = weapon ? weapon.name : 'bare fists';
+      Game.ui.print('', '');
+      if (die === 20) {
+        const damage = this.rollDamage(this.getPlayerWeaponDamage(), statVal);
+        mState.hp -= damage.total;
+        Game.ui.print('Critical hit! Your ' + weaponName + ' strikes true, dealing ' + damage.total + ' damage!', 'output-highlight');
+        if (mState.hp <= 0) {
+          this.monsterDefeated(monster);
+          return;
+        }
+      } else if (die === 1) {
+        Game.ui.print('Critical miss! Your ' + weaponName + ' swings wide and you stumble.', 'output-error');
+      } else if (attackTotal >= targetDefense) {
+        const margin = attackTotal - targetDefense;
+        const damage = this.rollDamage(this.getPlayerWeaponDamage(), statVal);
+        mState.hp -= damage.total;
+        let prose;
+        if (margin >= 10) {
+          prose = 'You devastatingly strike the ' + monster.name + ' with your ' + weaponName + ' for ' + damage.total + ' damage!';
+        } else if (margin >= 5) {
+          prose = 'You land a solid hit on the ' + monster.name + ' with your ' + weaponName + ' for ' + damage.total + ' damage.';
+        } else {
+          prose = 'Your ' + weaponName + ' grazes the ' + monster.name + ' for ' + damage.total + ' damage.';
+        }
+        Game.ui.print(prose, 'output-narrative');
+        if (mState.hp <= 0) {
+          this.monsterDefeated(monster);
+          return;
+        }
+      } else {
+        const missMargin = targetDefense - attackTotal;
+        let prose;
+        if (missMargin >= 10) {
+          prose = 'The ' + monster.name + ' completely evades your ' + weaponName + '.';
+        } else if (missMargin >= 5) {
+          prose = 'The ' + monster.name + ' dodges your ' + weaponName + '.';
+        } else {
+          prose = 'Your ' + weaponName + ' barely misses the ' + monster.name + '.';
+        }
+        Game.ui.print(prose, 'output-narrative');
+      }
+      Game.ui.print('  [' + monster.name + ' HP: ' + mState.hp + '/' + mState.maxHp + ']', 'output-system');
+      this.checkMorale(monster);
+      if (mState.behaviorState === 'fleeing' || mState.behaviorState === 'surrendering') {
+        return;
+      }
+      this.monsterTurn(monster);
+      Game.clock.advanceTime(1);
+    };
+
+    Game.combat.rollDamage = function(diceExpr, statMod) {
+      const result = Game.checks.rollDice(diceExpr);
+      const total = Math.max(0, result.total + (statMod || 0));
+      return { total: total, rolls: result.rolls };
+    };
+
+    Game.combat.monsterTurn = function(monster) {
+      const player = Game.state.player;
+      const mState = this.getMonsterState(monster);
+      if (mState.hp <= 0) return;
+      const attack = monster.attacks && monster.attacks.length > 0 ? monster.attacks[0] : null;
+      const monsterStat = attack ? (attack.stat || 'might') : 'might';
+      const monsterSkill = attack ? (attack.skill || 'melee') : 'melee';
+      const damageExpr = attack ? attack.damage : '1d4';
+      const statVal = monster.stats[monsterStat] || 0;
+      const skillVal = monster.skills[monsterSkill] || 0;
+      const playerDefense = this.calculatePlayerDefense();
+      const die = Math.floor(Math.random() * 20) + 1;
+      const attackTotal = die + statVal + skillVal;
+      if (die === 20) {
+        const damage = this.rollDamage(damageExpr, statVal);
+        player.resources.hp -= damage.total;
+        Game.ui.print('The ' + monster.name + ' lands a devastating blow for ' + damage.total + ' damage!', 'output-error');
+      } else if (die === 1) {
+        Game.ui.print('The ' + monster.name + ' fumbles its attack!', 'output-narrative');
+      } else if (attackTotal >= playerDefense) {
+        const damage = this.rollDamage(damageExpr, statVal);
+        player.resources.hp -= damage.total;
+        const margin = attackTotal - playerDefense;
+        let prose;
+        if (margin >= 10) {
+          prose = 'The ' + monster.name + ' strikes you hard for ' + damage.total + ' damage!';
+        } else if (margin >= 5) {
+          prose = 'The ' + monster.name + ' hits you for ' + damage.total + ' damage.';
+        } else {
+          prose = 'The ' + monster.name + ' barely nicks you for ' + damage.total + ' damage.';
+        }
+        Game.ui.print(prose, 'output-error');
+      } else {
+        const missMargin = playerDefense - attackTotal;
+        let prose;
+        if (missMargin >= 10) {
+          prose = 'You easily dodge the ' + monster.name + '\'s attack.';
+        } else if (missMargin >= 5) {
+          prose = 'You dodge the ' + monster.name + '\'s attack.';
+        } else {
+          prose = 'The ' + monster.name + '\'s attack barely misses you.';
+        }
+        Game.ui.print(prose, 'output-narrative');
+      }
+      Game.ui.print('  [Your HP: ' + player.resources.hp + '/' + player.resources.maxHp + ']', 'output-system');
+      if (player.resources.hp <= 0) {
+        this.playerDefeated();
+      }
+    };
+
+    Game.combat.checkMorale = function(monster) {
+      const mState = this.getMonsterState(monster);
+      const behavior = monster.behavior || {};
+      const morale = behavior.morale || 10;
+      const fleesAtHpPercent = behavior.fleesAtHpPercent || 25;
+      const hpPercent = (mState.hp / mState.maxHp) * 100;
+      let shouldCheck = false;
+      let difficulty = 0;
+      if (hpPercent <= fleesAtHpPercent) {
+        shouldCheck = true;
+        difficulty = 15;
+      } else if (hpPercent <= 50) {
+        shouldCheck = true;
+        difficulty = 10;
+      }
+      if (!shouldCheck) return;
+      const willStat = monster.stats.will || 0;
+      const die = Math.floor(Math.random() * 20) + 1;
+      const total = die + willStat;
+      if (total + morale < difficulty) {
+        if (hpPercent <= 10) {
+          mState.behaviorState = 'surrendering';
+          Game.ui.print('', '');
+          Game.ui.print('The ' + monster.name + ' drops to its knees and surrenders!', 'output-highlight');
+        } else {
+          mState.behaviorState = 'fleeing';
+          Game.ui.print('', '');
+          Game.ui.print('The ' + monster.name + ' turns and flees!', 'output-highlight');
+          mState.defeated = true;
+          this.generateLoot(monster);
+          Game.state.inCombat = false;
+          Game.state.currentEnemy = null;
+        }
+      }
+    };
+
+    Game.combat.monsterDefeated = function(monster) {
+      const mState = this.getMonsterState(monster);
+      mState.hp = 0;
+      mState.defeated = true;
+      mState.behaviorState = 'defeated';
+      Game.ui.print('', '');
+      Game.ui.print('The ' + monster.name + ' is defeated!', 'output-highlight');
+      this.generateLoot(monster);
+      const xpGain = Math.max(1, Math.floor(monster.resources.maxHp / 2));
+      Game.state.player.xp = (Game.state.player.xp || 0) + xpGain;
+      Game.ui.print('You gain ' + xpGain + ' XP.', 'output-system');
+      Game.state.inCombat = false;
+      Game.state.currentEnemy = null;
+      Game.ui.print('', '');
+      Game.ui.print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'output-highlight');
+      Game.ui.print('', '');
+    };
+
+    Game.combat.generateLoot = function(monster) {
+      if (!monster.loot || monster.loot.length === 0) return;
+      const droppedItems = [];
+      for (const entry of monster.loot) {
+        const roll = Math.floor(Math.random() * 100) + 1;
+        if (roll <= entry.chance) {
+          const qty = entry.quantity ? Game.checks.rollDice(entry.quantity.toString()).total : 1;
+          Game.inventory.addItem(entry.itemId, qty);
+          const itemData = Game.data.items[entry.itemId];
+          const name = itemData ? itemData.name : entry.itemId;
+          const qtyText = qty > 1 ? ' x' + qty : '';
+          droppedItems.push(name + qtyText);
+        }
+      }
+      if (droppedItems.length > 0) {
+        Game.ui.print('Loot: ' + droppedItems.join(', '), 'output-highlight');
+      }
+    };
+
+    Game.combat.playerDefeated = function() {
+      Game.state.player.resources.hp = 0;
+      Game.state.inCombat = false;
+      Game.state.currentEnemy = null;
+      Game.ui.print('', '');
+      Game.ui.print('══════════════════════════════════════', 'separator');
+      Game.ui.print('', '');
+      Game.ui.print('  You have fallen...', 'output-error');
+      Game.ui.print('', '');
+      Game.ui.print('  Darkness claims you. Your adventure ends here.', 'output-narrative');
+      Game.ui.print('', '');
+      Game.ui.print('══════════════════════════════════════', 'separator');
+      Game.ui.print('', '');
+      Game.ui.print('Type "restart" for a new game or "quit" to exit.', 'output-system');
+      Game.state.mode = GameModes.GAME_OVER;
+    };
+
+    Game.combat.endCombat = function() {
+      Game.state.inCombat = false;
+      Game.state.currentEnemy = null;
+    };
+
     Game.conditions.init = function() {
       Game.state.conditions = [];
+    };
+
+    Game.conditions.addCondition = function(actor, conditionId, severity, remainingMinutes) {
+      if (!actor.conditions) actor.conditions = [];
+      const existing = actor.conditions.find(c => c.id === conditionId);
+      if (existing) {
+        if ((severity || 1) > existing.severity) existing.severity = severity || 1;
+        if ((remainingMinutes || 60) > existing.remainingMinutes) existing.remainingMinutes = remainingMinutes || 60;
+        return;
+      }
+      actor.conditions.push({ id: conditionId, severity: severity || 1, remainingMinutes: remainingMinutes || 60 });
+    };
+
+    Game.conditions.removeCondition = function(actor, conditionId) {
+      if (!actor.conditions) return;
+      const idx = actor.conditions.findIndex(c => c.id === conditionId);
+      if (idx !== -1) actor.conditions.splice(idx, 1);
+    };
+
+    Game.conditions.hasCondition = function(actor, conditionId) {
+      if (!actor.conditions) return false;
+      return actor.conditions.some(c => c.id === conditionId);
+    };
+
+    Game.conditions.updateConditions = function(actor, minutes) {
+      if (!actor.conditions || actor.conditions.length === 0) return [];
+      const expired = [];
+      for (let i = actor.conditions.length - 1; i >= 0; i--) {
+        const cond = actor.conditions[i];
+        if (cond.remainingMinutes > 0) {
+          cond.remainingMinutes -= minutes;
+          if (cond.remainingMinutes <= 0) {
+            expired.push(actor.conditions.splice(i, 1)[0]);
+          }
+        }
+      }
+      return expired;
+    };
+
+    Game.conditions.getModifierForStat = function(actor, stat) {
+      if (!actor || !actor.conditions || actor.conditions.length === 0) return 0;
+      let total = 0;
+      for (const cond of actor.conditions) {
+        const condData = Game.data.conditions.find(c => c.id === cond.id);
+        if (condData && condData.modifiers && condData.modifiers[stat] !== undefined) {
+          total += condData.modifiers[stat];
+        }
+      }
+      return total;
     };
 
     Game.checks.rollDice = function(expression) {
