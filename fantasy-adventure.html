@@ -1394,7 +1394,25 @@
         { name: 'start', description: 'Begin a new adventure' },
         { name: 'help', description: 'Show available commands' },
         { name: 'clear', description: 'Clear the screen' },
+        { name: 'about', description: 'Display game information' }
+      ],
+      playing: [
+        { name: 'look', description: 'Examine your surroundings' },
+        { name: 'look at [target]', description: 'Examine an NPC, monster, or item' },
+        { name: 'go [direction]', description: 'Travel to a new area' },
+        { name: 'talk to [npc]', description: 'Speak with an NPC' },
+        { name: 'take [item]', description: 'Pick up an item' },
+        { name: 'drop [item]', description: 'Drop an item from inventory' },
+        { name: 'equip [item]', description: 'Equip an item' },
+        { name: 'unequip [item]', description: 'Unequip an item' },
+        { name: 'inventory', description: 'View your inventory' },
         { name: 'attack [target]', description: 'Attack a monster' },
+        { name: 'wait', description: 'Pass some time (wait, wait 1 hour)' },
+        { name: 'sleep', description: 'Rest for several hours' },
+        { name: 'save', description: 'Save your progress' },
+        { name: 'load', description: 'Load a saved game' },
+        { name: 'help', description: 'Show available commands' },
+        { name: 'clear', description: 'Clear the screen' },
         { name: 'about', description: 'Display game information' }
       ]
     };
@@ -3031,7 +3049,7 @@
       const willStat = monster.stats.will || 0;
       const die = Math.floor(Math.random() * 20) + 1;
       const total = die + willStat;
-      if (total < difficulty + morale) {
+      if (total + morale < difficulty) {
         if (hpPercent <= 10) {
           mState.behaviorState = 'surrendering';
           Game.ui.print('', '');
@@ -3108,6 +3126,7 @@
     };
 
     Game.conditions.init = function() {
+      Game.state.conditions = [];
     };
 
     Game.conditions.addCondition = function(actor, conditionId, severity, remainingMinutes) {
