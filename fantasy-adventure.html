@@ -679,108 +679,7 @@
           const name = item ? item.name : entry.itemId;
           const weight = item ? (item.weight || 0) * entry.quantity : 0;
           const qty = entry.quantity > 1 ? ` x${entry.quantity}` : '';
-          Game.ui.print(`    - ${item ? item.name : entry.itemId}${qty}   ${weight} lb`, 'output-narrative');
-        }
-      }
-      Game.ui.print('', '');
-      Game.ui.print('══════════════════════════════════════', 'separator');
-    };
-
-    Game.engine.look = function() {
-      if (!Game.state.player || !Game.state.player.location) {
-        Game.ui.print('You are nowhere in particular.', 'output-narrative');
-        return;
-      }
-      const locId = Game.state.player.location;
-      const loc = Game.data.locations[locId];
-      if (!loc) {
-        Game.ui.print('This location does not exist.', 'output-error');
-        return;
-      }
-      Game.ui.print(`  --- ${loc.name} ---`, 'output-highlight');
-      Game.ui.print('', '');
-      for (const desc of loc.descriptions) {
-        Game.ui.print(`${desc.text}`, 'output-narrative');
-      }
-      Game.ui.print('', '');
-      Game.ui.print('Exits:', 'output-system');
-      for (const [dir, exit] of Object.entries(loc.exits)) {
-        const exitLoc = Game.data.locations[exit.to];
-        const exitName = exitLoc ? exitLoc.name : dir;
-        Game.ui.print(`  ${dir.padEnd(8)} - ${exitName}`, 'output-narrative');
-      }
-      Game.ui.print('', '');
-      if (loc.items && loc.items.length > 0) {
-        Game.ui.print('You notice: ' + loc.items.map(id => {
-          const item = Game.data.items[id];
-          return item ? item.name : id;
-        }).join(', '), 'output-system');
-        Game.ui.print('', '');
-      }
-    };
-
-    Game.engine.go = function(direction) {
-      const player = Game.state.player;
-      const loc = Game.data.locations[player.location];
-      if (!loc || !loc.exits[direction]) {
-        Game.ui.print(`You cannot go ${direction}.`, 'output-error');
-        return;
-      }
-      const exit = loc.exits[direction];
-      player.location = exit.to;
-      const newLoc = Game.data.locations[exit.to];
-      if (newLoc) {
-        Game.ui.print('', '');
-        Game.ui.print(`You head ${direction}...`, 'output-narrative');
-        Game.ui.print('', '');
-        this.look();
-      }
-    };
-
-    Game.engine.showInventory = function() {
-      const player = Game.state.player;
-      if (!player) {
-        Game.ui.print('No active character.', 'output-error');
-        return;
-      }
-      const bg = Game.data.backgrounds.find(b => b.id === player.background);
-      const bgName = bg ? bg.name : 'Unknown';
-      Game.ui.print('', '');
-      Game.ui.print('══════════════════════════════════════', 'separator');
-      Game.ui.print('  INVENTORY', 'output-highlight');
-      Game.ui.print('══════════════════════════════════════', 'separator');
-      Game.ui.print('', '');
-      Game.ui.print(`  Name:       ${player.name}`, 'output-narrative');
-      Game.ui.print(`  Background: ${bgName}`, 'output-narrative');
-      Game.ui.print(`  Level:      ${player.level}`, 'output-narrative');
-      Game.ui.print('', '');
-      Game.ui.print(`  Health:   ${player.resources.hp} / ${player.resources.maxHp}`, 'output-narrative');
-      Game.ui.print(`  Stamina:  ${player.resources.stamina} / ${player.resources.maxStamina}`, 'output-narrative');
-      Game.ui.print(`  Mana:     ${player.resources.mana} / ${player.resources.maxMana}`, 'output-narrative');
-      Game.ui.print('', '');
-      Game.ui.print('  Equipment:', 'output-narrative');
-      for (const [slot, itemId] of Object.entries(player.equipment)) {
-        const label = slot.padEnd(12);
-        if (itemId) {
-          const item = Game.data.items[itemId];
-          Game.ui.print(`    ${label}${item ? item.name : itemId}`, 'output-narrative');
-        } else {
-          Game.ui.print(`    ${label}None`, 'output-system');
-        }
-      }
-      Game.ui.print('', '');
-      Game.ui.print(`  Gold: ${player.gold}`, 'output-narrative');
-      Game.ui.print('', '');
-      if (player.inventory.length === 0) {
-        Game.ui.print('  Carried Items: None', 'output-system');
-      } else {
-        Game.ui.print('  Carried Items:', 'output-narrative');
-        for (const entry of player.inventory) {
-          const item = Game.data.items[entry.itemId];
-          const name = item ? item.name : entry.itemId;
-          const weight = item ? (item.weight || 0) * entry.quantity : 0;
-          const qty = entry.quantity > 1 ? ` x${entry.quantity}` : '';
-          Game.ui.print(`    - ${item ? item.name : entry.itemId}${qty}   ${weight} lb`, 'output-narrative');
+          Game.ui.print(`    - ${name}${qty}   ${weight} lb`, 'output-narrative');
         }
       }
       Game.ui.print('', '');
@@ -1223,6 +1122,10 @@
           Game.ui.print('No points remaining. Lower a stat or continue.', 'output-error');
           return;
         }
+        if (draft.baseStats[statName] === -1) {
+          draft.sacrificedStat = null;
+          draft.maxStatPoints--;
+        }
         draft.baseStats[statName]++;
         draft.allocatedStatPoints++;
         Game.ui.print(`${statName} increased to ${draft.baseStats[statName]}. (${draft.maxStatPoints - draft.allocatedStatPoints} points remaining)`, 'output-system');
@@ -1249,6 +1152,7 @@
         const newTarget = draft.baseStats[statName] - 1;
         if (draft.baseStats[statName] === 0 && newTarget === -1) {
           draft.sacrificedStat = statName;
+          draft.maxStatPoints++;
         }
         draft.baseStats[statName]--;
         draft.allocatedStatPoints = Math.max(0, draft.allocatedStatPoints - 1);
@@ -1289,10 +1193,12 @@
           return;
         }
 
-        if (value === -1) {
+        if (value === -1 && oldValue >= 0) {
           draft.sacrificedStat = statName;
+          draft.maxStatPoints++;
         } else if (oldValue === -1 && value >= 0) {
           draft.sacrificedStat = null;
+          draft.maxStatPoints--;
         }
 
         draft.baseStats[statName] = value;
