@@ -1960,7 +1960,7 @@
         Game.ui.print(monster.description, 'output-narrative');
         return;
       }
-      const item = Game.data.items[target];
+      const item = Object.values(Game.data.items).find(i => i.name.toLowerCase() === target || i.name.toLowerCase().includes(target));
       if (item) {
         Game.ui.print(item.description || `You see nothing special about the ${item.name}.`, 'output-narrative');
         return;
