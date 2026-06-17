@@ -182,7 +182,803 @@
     const Game = {
       version: "1.0.0",
       
-      data: {},
+      data: {
+        locations: [
+          {
+            id: "village_square",
+            name: "Village Square",
+            descriptions: [
+              {
+                text: "You stand in the muddy square of a small frontier village. A stone well sits in the center, its rope frayed from years of use. Timber-framed buildings line the edges, their upper stories leaning over the square like eavesdroppers. The scent of woodsmoke hangs in the damp air.",
+                conditions: []
+              },
+              {
+                text: "The village square is quiet. The old well has collapsed into a dark pit, its stones scattered across the mud.",
+                conditions: [
+                  { flag: "well_collapsed", equals: true }
+                ]
+              },
+              {
+                text: "The village square is bathed in pale moonlight. The well stands silent, and the buildings loom as dark shapes against the starless sky.",
+                conditions: [
+                  { timeBetween: [0, 300] }
+                ]
+              }
+            ],
+            exits: {
+              north: {
+                to: "general_store",
+                travelMinutes: 2,
+                conditions: []
+              },
+              south: {
+                to: "silver_stag_tavern",
+                travelMinutes: 2,
+                conditions: []
+              },
+              east: {
+                to: "temple_yard",
+                travelMinutes: 3,
+                conditions: []
+              }
+            },
+            items: ["village_notice"],
+            tags: ["settlement", "outdoors"]
+          },
+          {
+            id: "general_store",
+            name: "Borin's General Store",
+            descriptions: [
+              {
+                text: "Crates and barrels crowd the narrow shop. Dried herbs hang from the low ceiling, and a battered ledger lies open on the counter. Shelves groan under the weight of rope, nails, lamps, and sundry goods. The smell of ink and sawdust fills the air.",
+                conditions: []
+              },
+              {
+                text: "The shop is closed. Wooden shutters cover the windows, and a sign reading 'BACK AT DAWN' hangs on the door.",
+                conditions: [
+                  { timeBetween: [1260, 480] }
+                ]
+              }
+            ],
+            exits: {
+              south: {
+                to: "village_square",
+                travelMinutes: 2,
+                conditions: []
+              }
+            },
+            items: [],
+            tags: ["settlement", "indoors", "shop"]
+          },
+          {
+            id: "silver_stag_tavern",
+            name: "The Silver Stag Tavern",
+            descriptions: [
+              {
+                text: "A warm fire crackles in the stone hearth. Rough-hewn tables surround a bar of dark oak, behind which rows of bottles catch the firelight. A mounted stag's head watches from above the mantle, its antlers draped with dried hops. The hum of quiet conversation fills the room.",
+                conditions: []
+              },
+              {
+                text: "The tavern is deserted. Chairs are stacked on tables, and the fire has burned low to embers. A single candle gutters on the bar.",
+                conditions: [
+                  { timeBetween: [0, 360] }
+                ]
+              },
+              {
+                text: "The tavern is lively. A bard strums a lute in the corner, and the smell of roasting meat drifts from the kitchen.",
+                conditions: [
+                  { timeBetween: [1020, 1320] }
+                ]
+              }
+            ],
+            exits: {
+              north: {
+                to: "village_square",
+                travelMinutes: 2,
+                conditions: []
+              }
+            },
+            items: [],
+            tags: ["settlement", "indoors", "tavern"]
+          },
+          {
+            id: "temple_yard",
+            name: "Temple Yard",
+            descriptions: [
+              {
+                text: "A small stone temple stands at the edge of a weed-choked yard. Weathered statues of forgotten saints line a cracked flagstone path. A simple altar is visible through the open doorway, candles flickering within. The air here feels still and watchful.",
+                conditions: []
+              }
+            ],
+            exits: {
+              west: {
+                to: "village_square",
+                travelMinutes: 3,
+                conditions: []
+              }
+            },
+            items: [],
+            tags: ["settlement", "outdoors", "sacred"]
+          },
+          {
+            id: "north_wood",
+            name: "North Wood",
+            descriptions: [
+              {
+                text: "The village gives way to a curtain of ancient oaks. The canopy is thick overhead, filtering the light into a dim green haze. A narrow trail winds between gnarled roots and fallen logs. Birdsong seems distant here, replaced by the creak of branches and the occasional snap of a twig.",
+                conditions: []
+              },
+              {
+                text: "The forest is eerily silent. Even the wind has died. Something watches from the shadows between the trunks.",
+                conditions: [
+                  { flag: "goblins_in_woods", equals: true }
+                ]
+              },
+              {
+                text: "Moonlight filters through the bare branches, casting long silver shadows on the forest floor. The trail is hard to follow in the dark.",
+                conditions: [
+                  { timeBetween: [1200, 360] }
+                ]
+              }
+            ],
+            exits: {
+              south: {
+                to: "village_square",
+                travelMinutes: 3,
+                conditions: []
+              }
+            },
+            items: [],
+            tags: ["wilderness", "outdoors", "forest"]
+          }
+        ],
+
+        items: [
+          {
+            id: "hunting_bow",
+            name: "hunting bow",
+            type: "weapon",
+            aliases: ["bow", "yew bow"],
+            description: "A simple but well-kept bow of yew wood. The string is taut and oiled.",
+            weight: 2,
+            stackable: false,
+            portable: true,
+            slot: "weapon",
+            stat: "agility",
+            skill: "ranged",
+            damage: "1d6",
+            attackBonus: 0,
+            value: 15
+          },
+          {
+            id: "rusty_sword",
+            name: "rusty sword",
+            type: "weapon",
+            aliases: ["sword", "blade", "rusty blade"],
+            description: "A pitted iron sword. It has seen better days, but the edge still bites.",
+            weight: 3,
+            stackable: false,
+            portable: true,
+            slot: "weapon",
+            stat: "might",
+            skill: "melee",
+            damage: "1d6",
+            attackBonus: 0,
+            value: 5
+          },
+          {
+            id: "iron_sword",
+            name: "iron sword",
+            type: "weapon",
+            aliases: ["sword", "blade"],
+            description: "A plain but reliable iron sword. The grip is wrapped in worn leather.",
+            weight: 3,
+            stackable: false,
+            portable: true,
+            slot: "weapon",
+            stat: "might",
+            skill: "melee",
+            damage: "1d8",
+            attackBonus: 0,
+            value: 20
+          },
+          {
+            id: "travel_rations",
+            name: "travel rations",
+            type: "consumable",
+            aliases: ["rations", "food", "ration"],
+            description: "Dried meat, hard bread, and a little cheese wrapped in cloth.",
+            weight: 1,
+            stackable: true,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 1
+          },
+          {
+            id: "old_iron_key",
+            name: "old iron key",
+            type: "key",
+            aliases: ["key", "iron key"],
+            description: "An old key with a dark red stain near the teeth. It feels heavier than it should.",
+            weight: 0,
+            stackable: false,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 0
+          },
+          {
+            id: "chainmail",
+            name: "chainmail",
+            type: "armor",
+            aliases: ["mail", "chain", "chain mail"],
+            description: "A shirt of interlocking iron rings. It offers solid protection at the cost of noise and weight.",
+            weight: 35,
+            stackable: false,
+            portable: true,
+            slot: "armor",
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 75,
+            defenseBonus: 3,
+            stealthPenalty: -2,
+            agilityPenalty: -1
+          },
+          {
+            id: "travel_cloak",
+            name: "travel cloak",
+            type: "armor",
+            aliases: ["cloak"],
+            description: "A rough wool cloak, dark green and travel-stained. It keeps the rain off well enough.",
+            weight: 2,
+            stackable: false,
+            portable: true,
+            slot: "armor",
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 5,
+            defenseBonus: 1,
+            stealthPenalty: 0,
+            agilityPenalty: 0
+          },
+          {
+            id: "torch",
+            name: "torch",
+            type: "light",
+            aliases: ["torches"],
+            description: "A length of pitch-soaked wood wrapped in oily rags. It will burn for a few hours.",
+            weight: 1,
+            stackable: true,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 1
+          },
+          {
+            id: "skinning_knife",
+            name: "skinning knife",
+            type: "tool",
+            aliases: ["knife"],
+            description: "A short, curved blade with a bone handle. Useful for dressing game, and sharp enough in a pinch.",
+            weight: 1,
+            stackable: false,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 3
+          },
+          {
+            id: "flint_and_steel",
+            name: "flint and steel",
+            type: "tool",
+            aliases: ["flint", "steel", "flint and steel"],
+            description: "A piece of flint and a small steel striker. Enough to start a fire in dry conditions.",
+            weight: 1,
+            stackable: false,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 2
+          },
+          {
+            id: "coil_of_rope",
+            name: "coil of rope",
+            type: "tool",
+            aliases: ["rope"],
+            description: "About fifty feet of sturdy hemp rope, coiled and tied.",
+            weight: 10,
+            stackable: false,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 5
+          },
+          {
+            id: "arrows",
+            name: "arrows",
+            type: "ammunition",
+            aliases: ["arrow", "arrows"],
+            description: "Iron-tipped arrows with goose-feather fletching.",
+            weight: 1,
+            stackable: true,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 1
+          },
+          {
+            id: "copper_coin",
+            name: "copper coin",
+            type: "treasure",
+            aliases: ["coin", "copper", "coins"],
+            description: "A worn copper coin stamped with the profile of a forgotten king.",
+            weight: 0,
+            stackable: true,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 1
+          },
+          {
+            id: "goblin_knife",
+            name: "goblin knife",
+            type: "weapon",
+            aliases: ["knife", "jagged knife"],
+            description: "A crude, jagged blade crusted with old blood. It smells of rust and rot.",
+            weight: 1,
+            stackable: false,
+            portable: true,
+            slot: "weapon",
+            stat: "agility",
+            skill: "melee",
+            damage: "1d4+1",
+            attackBonus: 0,
+            value: 2
+          },
+          {
+            id: "village_notice",
+            name: "village notice",
+            type: "quest",
+            aliases: ["notice", "posted notice", "sign"],
+            description: "A notice nailed to a post. It reads: 'GOBLIN SIGHTINGS IN THE NORTH WOOD. BOUNTY OFFERED FOR THEIR REMOVAL. SEE BORIN AT THE GENERAL STORE.'",
+            weight: 0,
+            stackable: false,
+            portable: false,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 0
+          }
+        ],
+
+        backgrounds: [
+          {
+            id: "mercenary",
+            name: "Mercenary",
+            description: "You have fought in a dozen skirmishes for coin. You know the weight of steel and the smell of blood.",
+            statBonuses: { might: 1, endurance: 1 },
+            skillBonuses: { melee: 2, defense: 1, intimidation: 1 },
+            startingItems: [
+              { itemId: "iron_sword", quantity: 1 },
+              { itemId: "travel_rations", quantity: 2 },
+              { itemId: "flint_and_steel", quantity: 1 }
+            ],
+            startingEquipment: {
+              weapon: "iron_sword",
+              armor: "travel_cloak"
+            },
+            startingGold: 15,
+            flags: { veteran_fighter: true },
+            reputation: { village: 0, goblins: -1 }
+          },
+          {
+            id: "village_hunter",
+            name: "Village Hunter",
+            description: "You know the old tracks, the deer paths, and the silence before danger.",
+            statBonuses: { agility: 1, endurance: 1 },
+            skillBonuses: { survival: 2, ranged: 1, stealth: 1 },
+            startingItems: [
+              { itemId: "hunting_bow", quantity: 1 },
+              { itemId: "skinning_knife", quantity: 1 },
+              { itemId: "travel_cloak", quantity: 1 },
+              { itemId: "travel_rations", quantity: 3 },
+              { itemId: "flint_and_steel", quantity: 1 },
+              { itemId: "arrows", quantity: 10 }
+            ],
+            startingEquipment: {
+              weapon: "hunting_bow",
+              armor: "travel_cloak"
+            },
+            startingGold: 8,
+            flags: { knows_forest_paths: true },
+            reputation: { village: 1, goblins: -1 }
+          },
+          {
+            id: "hedge_wizard",
+            name: "Hedge Wizard",
+            description: "You learned a few tricks from a traveling mystic. Not true magic, perhaps, but close enough.",
+            statBonuses: { will: 1, intellect: 1 },
+            skillBonuses: { magic: 2, lore: 1, investigation: 1 },
+            startingItems: [
+              { itemId: "skinning_knife", quantity: 1 },
+              { itemId: "travel_rations", quantity: 2 },
+              { itemId: "torch", quantity: 2 }
+            ],
+            startingEquipment: {
+              weapon: "skinning_knife",
+              armor: "travel_cloak"
+            },
+            startingGold: 5,
+            flags: { knows_witchlight: true },
+            reputation: { village: 0, church: 1 }
+          },
+          {
+            id: "temple_acolyte",
+            name: "Temple Acolyte",
+            description: "You served in a small temple, learning the old rites and the patience of stone walls.",
+            statBonuses: { will: 1, presence: 1 },
+            skillBonuses: { lore: 2, persuasion: 1, magic: 1 },
+            startingItems: [
+              { itemId: "torch", quantity: 2 },
+              { itemId: "travel_rations", quantity: 2 },
+              { itemId: "flint_and_steel", quantity: 1 }
+            ],
+            startingEquipment: {
+              armor: "travel_cloak"
+            },
+            startingGold: 6,
+            flags: { temple_training: true },
+            reputation: { village: 0, church: 2 }
+          },
+          {
+            id: "street_urchin",
+            name: "Street Urchin",
+            description: "You grew up in the gutters, learning to survive by your wits and nimble fingers.",
+            statBonuses: { agility: 2 },
+            skillBonuses: { stealth: 2, thievery: 1, deception: 1 },
+            startingItems: [
+              { itemId: "skinning_knife", quantity: 1 },
+              { itemId: "travel_rations", quantity: 1 },
+              { itemId: "torch", quantity: 1 }
+            ],
+            startingEquipment: {
+              weapon: "skinning_knife",
+              armor: "travel_cloak"
+            },
+            startingGold: 12,
+            flags: { streetwise: true },
+            reputation: { village: -1, thieves_guild: 1 }
+          },
+          {
+            id: "disgraced_noble",
+            name: "Disgraced Noble",
+            description: "Your family name opened doors, once. Now you carry only the memory of better days and the skills of your upbringing.",
+            statBonuses: { presence: 2 },
+            skillBonuses: { persuasion: 2, deception: 1, lore: 1 },
+            startingItems: [
+              { itemId: "iron_sword", quantity: 1 },
+              { itemId: "travel_rations", quantity: 2 },
+              { itemId: "torch", quantity: 1 }
+            ],
+            startingEquipment: {
+              weapon: "iron_sword",
+              armor: "travel_cloak"
+            },
+            startingGold: 20,
+            flags: { noble_bearing: true },
+            reputation: { village: 1, church: 0 }
+          },
+          {
+            id: "grave_robber",
+            name: "Grave Robber",
+            description: "You know the weight of silence and the sound of a lock giving way. The dead do not argue.",
+            statBonuses: { agility: 1, intellect: 1 },
+            skillBonuses: { thievery: 2, stealth: 1, investigation: 1 },
+            startingItems: [
+              { itemId: "skinning_knife", quantity: 1 },
+              { itemId: "torch", quantity: 3 },
+              { itemId: "old_iron_key", quantity: 1 },
+              { itemId: "flint_and_steel", quantity: 1 }
+            ],
+            startingEquipment: {
+              weapon: "skinning_knife",
+              armor: "travel_cloak"
+            },
+            startingGold: 10,
+            flags: { unclean_hands: true },
+            reputation: { village: -1, church: -1, thieves_guild: 1 }
+          }
+        ],
+
+        npcs: [
+          {
+            id: "borin_shopkeeper",
+            name: "Borin the Shopkeeper",
+            aliases: ["borin", "shopkeeper", "merchant"],
+            type: "npc",
+            description: "Borin is a broad man with careful eyes and ink-stained fingers. He moves behind his counter with the unhurried precision of someone who has weighed every transaction in this village.",
+            stats: {
+              might: 1,
+              agility: 0,
+              endurance: 1,
+              intellect: 1,
+              will: 1,
+              presence: 2
+            },
+            skills: {
+              persuasion: 2,
+              lore: 1,
+              melee: 0,
+              defense: 0
+            },
+            resources: {
+              hp: 12,
+              maxHp: 12
+            },
+            defense: 10,
+            disposition: {
+              baseAttitude: 0,
+              faction: "village"
+            },
+            dialogueId: "borin_dialogue",
+            scheduleId: "borin_daily",
+            defaultLocation: "general_store"
+          }
+        ],
+
+        monsters: [
+          {
+            id: "goblin_scout",
+            name: "goblin scout",
+            aliases: ["goblin", "scout"],
+            type: "monster",
+            description: "A wiry goblin with yellow eyes and a jagged knife. It moves with a twitchy, nervous energy, its gaze darting between shadows.",
+            stats: {
+              might: 0,
+              agility: 2,
+              endurance: 0,
+              intellect: -1,
+              will: 0,
+              presence: -1
+            },
+            skills: {
+              stealth: 2,
+              melee: 1,
+              ranged: 1,
+              defense: 1
+            },
+            resources: {
+              hp: 8,
+              maxHp: 8
+            },
+            defense: 13,
+            attacks: [
+              {
+                id: "jagged_knife",
+                name: "jagged knife",
+                skill: "melee",
+                stat: "agility",
+                damage: "1d4+1"
+              }
+            ],
+            behavior: {
+              hostile: true,
+              morale: 8,
+              fleesAtHpPercent: 25
+            },
+            loot: [
+              { itemId: "goblin_knife", chance: 60 },
+              { itemId: "copper_coin", quantity: "1d6", chance: 80 }
+            ],
+            scheduleId: "goblin_patrol",
+            defaultLocation: "north_wood"
+          }
+        ],
+
+        schedules: [
+          {
+            id: "borin_daily",
+            entries: [
+              { start: 360, end: 480, location: "general_store", activity: "eating breakfast" },
+              { start: 480, end: 1080, location: "general_store", activity: "working behind the counter" },
+              { start: 1080, end: 1260, location: "silver_stag_tavern", activity: "drinking ale" },
+              { start: 1260, end: 360, location: "general_store", activity: "sleeping" }
+            ]
+          },
+          {
+            id: "goblin_patrol",
+            entries: [
+              { start: 300, end: 720, location: "north_wood", activity: "scouting the tree line" },
+              { start: 720, end: 900, location: "north_wood", activity: "resting in a thicket" },
+              { start: 900, end: 1200, location: "north_wood", activity: "prowling the southern edge" },
+              { start: 1200, end: 1440, location: "north_wood", activity: "lurking in the shadows" },
+              { start: 1440, end: 300, location: "north_wood", activity: "sleeping in a hollow" }
+            ]
+          }
+        ],
+
+        conditions: [
+          {
+            id: "poisoned",
+            name: "Poisoned",
+            description: "Your body aches and your hands tremble.",
+            modifiers: { endurance: -1, agility: -1 }
+          },
+          {
+            id: "bleeding",
+            name: "Bleeding",
+            description: "A wound refuses to close. You feel your strength draining.",
+            modifiers: { endurance: -1, might: -1 }
+          },
+          {
+            id: "wounded",
+            name: "Wounded",
+            description: "You bear a serious wound that slows your every movement.",
+            modifiers: { agility: -1, might: -1 }
+          },
+          {
+            id: "tired",
+            name: "Tired",
+            description: "You need sleep. Your stamina recovery is reduced.",
+            modifiers: { might: -1, will: -1 }
+          },
+          {
+            id: "exhausted",
+            name: "Exhausted",
+            description: "Prolonged exertion has drained you. Every action feels like wading through mud.",
+            modifiers: { might: -2, agility: -1, will: -1 }
+          },
+          {
+            id: "hungry",
+            name: "Hungry",
+            description: "Your stomach gnaws at you. You cannot think clearly.",
+            modifiers: { endurance: -1, will: -1 }
+          },
+          {
+            id: "afraid",
+            name: "Afraid",
+            description: "Fear grips your heart. Your hands shake and your resolve falters.",
+            modifiers: { will: -2, might: -1 }
+          },
+          {
+            id: "blessed",
+            name: "Blessed",
+            description: "A divine warmth surrounds you. You feel fortified against harm.",
+            modifiers: { will: 1, endurance: 1 }
+          },
+          {
+            id: "cursed",
+            name: "Cursed",
+            description: "A dark mark clings to your spirit. Misfortune follows in your wake.",
+            modifiers: { will: -1, presence: -1 }
+          },
+          {
+            id: "drunk",
+            name: "Drunk",
+            description: "The ale has loosened your tongue and dulled your reflexes.",
+            modifiers: { agility: -1, presence: 1, intellect: -1 }
+          },
+          {
+            id: "invisible",
+            name: "Invisible",
+            description: "You shimmer and fade from sight. Hard to target, but harder to hide completely.",
+            modifiers: { stealth: 3 }
+          },
+          {
+            id: "diseased",
+            name: "Diseased",
+            description: "A fever burns beneath your skin. Your body fights an unseen enemy.",
+            modifiers: { endurance: -2, might: -1 }
+          },
+          {
+            id: "encumbered",
+            name: "Encumbered",
+            description: "You carry too much. Your movements are labored and clumsy.",
+            modifiers: { agility: -1, stealth: -1 }
+          },
+          {
+            id: "chilled",
+            name: "Chilled",
+            description: "The cold seeps into your bones. Your fingers fumble and your thoughts slow.",
+            modifiers: { agility: -1, intellect: -1 }
+          }
+        ],
+
+        spells: [
+          {
+            id: "witchlight",
+            name: "Witchlight",
+            aliases: ["light", "witch light"],
+            cost: {
+              mana: 1
+            },
+            check: {
+              stat: "will",
+              skill: "magic",
+              difficulty: 8
+            },
+            effects: [
+              {
+                setFlag: "player_has_light",
+                value: true,
+                durationMinutes: 180
+              }
+            ],
+            successText: "A pale blue flame blossoms above your palm, casting steady light in a wide circle.",
+            failureText: "The air chills, but the spell slips from your grasp like smoke."
+          }
+        ],
+
+        skills: [
+          { id: "athletics", name: "Athletics", mainStat: "might" },
+          { id: "stealth", name: "Stealth", mainStat: "agility" },
+          { id: "thievery", name: "Thievery", mainStat: "agility" },
+          { id: "survival", name: "Survival", mainStat: "endurance" },
+          { id: "lore", name: "Lore", mainStat: "intellect" },
+          { id: "investigation", name: "Investigation", mainStat: "intellect" },
+          { id: "persuasion", name: "Persuasion", mainStat: "presence" },
+          { id: "deception", name: "Deception", mainStat: "presence" },
+          { id: "intimidation", name: "Intimidation", mainStat: "presence" },
+          { id: "melee", name: "Melee", mainStat: "might" },
+          { id: "ranged", name: "Ranged", mainStat: "agility" },
+          { id: "defense", name: "Defense", mainStat: "agility" },
+          { id: "magic", name: "Magic", mainStat: "will" }
+        ],
+
+        difficulties: {
+          trivial: 5,
+          easy: 8,
+          moderate: 12,
+          hard: 16,
+          veryHard: 20,
+          heroic: 24,
+          legendary: 28
+        },
+
+        verbAliases: {
+          n: "go", north: "go", s: "go", south: "go", e: "go", east: "go",
+          w: "go", west: "go", u: "go", up: "go", d: "go", down: "go",
+          i: "inventory", inv: "inventory", inventory: "inventory",
+          equipment: "inventory", status: "inventory", gear: "inventory",
+          get: "take", grab: "take", pickup: "take", "pick up": "take",
+          examine: "look", inspect: "look", x: "look",
+          wield: "equip", wear: "equip", "put on": "equip",
+          remove: "unequip", "take off": "unequip",
+          strike: "attack", hit: "attack", fight: "attack",
+          shoot: "attack"
+        }
+      },
       state: {},
       
       ui: {},
