@@ -442,7 +442,7 @@
             weight: 2,
             stackable: false,
             portable: true,
-            slot: "armor",
+            slot: "cloak",
             stat: null,
             skill: null,
             damage: null,
@@ -591,12 +591,13 @@
             skillBonuses: { melee: 2, defense: 1, intimidation: 1 },
             startingItems: [
               { itemId: "iron_sword", quantity: 1 },
+              { itemId: "travel_cloak", quantity: 1 },
               { itemId: "travel_rations", quantity: 2 },
               { itemId: "flint_and_steel", quantity: 1 }
             ],
             startingEquipment: {
               weapon: "iron_sword",
-              armor: "travel_cloak"
+              cloak: "travel_cloak"
             },
             startingGold: 15,
             flags: { veteran_fighter: true },
@@ -618,7 +619,7 @@
             ],
             startingEquipment: {
               weapon: "hunting_bow",
-              armor: "travel_cloak"
+              cloak: "travel_cloak"
             },
             startingGold: 8,
             flags: { knows_forest_paths: true },
@@ -632,12 +633,13 @@
             skillBonuses: { magic: 2, lore: 1, investigation: 1 },
             startingItems: [
               { itemId: "skinning_knife", quantity: 1 },
+              { itemId: "travel_cloak", quantity: 1 },
               { itemId: "travel_rations", quantity: 2 },
               { itemId: "torch", quantity: 2 }
             ],
             startingEquipment: {
               weapon: "skinning_knife",
-              armor: "travel_cloak"
+              cloak: "travel_cloak"
             },
             startingGold: 5,
             flags: { knows_witchlight: true },
@@ -650,12 +652,13 @@
             statBonuses: { will: 1, presence: 1 },
             skillBonuses: { lore: 2, persuasion: 1, magic: 1 },
             startingItems: [
+              { itemId: "travel_cloak", quantity: 1 },
               { itemId: "torch", quantity: 2 },
               { itemId: "travel_rations", quantity: 2 },
               { itemId: "flint_and_steel", quantity: 1 }
             ],
             startingEquipment: {
-              armor: "travel_cloak"
+              cloak: "travel_cloak"
             },
             startingGold: 6,
             flags: { temple_training: true },
@@ -669,12 +672,13 @@
             skillBonuses: { stealth: 2, thievery: 1, deception: 1 },
             startingItems: [
               { itemId: "skinning_knife", quantity: 1 },
+              { itemId: "travel_cloak", quantity: 1 },
               { itemId: "travel_rations", quantity: 1 },
               { itemId: "torch", quantity: 1 }
             ],
             startingEquipment: {
               weapon: "skinning_knife",
-              armor: "travel_cloak"
+              cloak: "travel_cloak"
             },
             startingGold: 12,
             flags: { streetwise: true },
@@ -688,12 +692,13 @@
             skillBonuses: { persuasion: 2, deception: 1, lore: 1 },
             startingItems: [
               { itemId: "iron_sword", quantity: 1 },
+              { itemId: "travel_cloak", quantity: 1 },
               { itemId: "travel_rations", quantity: 2 },
               { itemId: "torch", quantity: 1 }
             ],
             startingEquipment: {
               weapon: "iron_sword",
-              armor: "travel_cloak"
+              cloak: "travel_cloak"
             },
             startingGold: 20,
             flags: { noble_bearing: true },
@@ -707,13 +712,14 @@
             skillBonuses: { thievery: 2, stealth: 1, investigation: 1 },
             startingItems: [
               { itemId: "skinning_knife", quantity: 1 },
+              { itemId: "travel_cloak", quantity: 1 },
               { itemId: "torch", quantity: 3 },
               { itemId: "old_iron_key", quantity: 1 },
               { itemId: "flint_and_steel", quantity: 1 }
             ],
             startingEquipment: {
               weapon: "skinning_knife",
-              armor: "travel_cloak"
+              cloak: "travel_cloak"
             },
             startingGold: 10,
             flags: { unclean_hands: true },
@@ -823,7 +829,7 @@
               { start: 720, end: 900, location: "north_wood", activity: "resting in a thicket" },
               { start: 900, end: 1200, location: "north_wood", activity: "prowling the southern edge" },
               { start: 1200, end: 1440, location: "north_wood", activity: "lurking in the shadows" },
-              { start: 1440, end: 300, location: "north_wood", activity: "sleeping in a hollow" }
+              { start: 0, end: 300, location: "north_wood", activity: "sleeping in a hollow" }
             ]
           }
         ],
@@ -905,7 +911,7 @@
             id: "encumbered",
             name: "Encumbered",
             description: "You carry too much. Your movements are labored and clumsy.",
-            modifiers: { agility: -1, stealth: -1 }
+            modifiers: { agility: -2, stealth: -2 }
           },
           {
             id: "chilled",
