@@ -1151,27 +1151,27 @@
     ];
 
     Game.data.items = {
-      iron_sword: { id: 'iron_sword', name: 'iron sword', weight: 3, slot: 'weapon', type: 'weapon', value: 20 },
-      hunting_bow: { id: 'hunting_bow', name: 'hunting bow', weight: 2, slot: 'weapon', type: 'weapon', value: 15 },
-      skinning_knife: { id: 'skinning_knife', name: 'skinning knife', weight: 1, type: 'tool', value: 3 },
-      travel_cloak: { id: 'travel_cloak', name: 'travel cloak', weight: 2, slot: 'cloak', type: 'clothing', value: 5 },
-      travel_rations: { id: 'travel_rations', name: 'travel rations', weight: 1, type: 'consumable', stackable: true, value: 1 },
-      flint_and_steel: { id: 'flint_and_steel', name: 'flint and steel', weight: 1, type: 'tool', value: 2 },
-      leather_armor: { id: 'leather_armor', name: 'leather armor', weight: 15, slot: 'armor', type: 'armor', defenseBonus: 2, value: 30 },
-      gnarled_staff: { id: 'gnarled_staff', name: 'gnarled staff', weight: 3, slot: 'weapon', type: 'weapon', value: 5 },
-      traveling_robes: { id: 'traveling_robes', name: 'traveling robes', weight: 3, slot: 'armor', type: 'clothing', value: 5 },
-      spell_pouch: { id: 'spell_pouch', name: 'spell pouch', weight: 1, type: 'tool', value: 10 },
-      wooden_shield: { id: 'wooden_shield', name: 'wooden shield', weight: 6, slot: 'offhand', type: 'shield', shieldBonus: 1, value: 8 },
-      holy_symbol: { id: 'holy_symbol', name: 'holy symbol', weight: 0, type: 'misc', value: 0 },
-      rusty_dagger: { id: 'rusty_dagger', name: 'rusty dagger', weight: 1, slot: 'weapon', type: 'weapon', value: 2 },
-      ragged_cloak: { id: 'ragged_cloak', name: 'ragged cloak', weight: 1, slot: 'cloak', type: 'clothing', value: 1 },
-      lockpicks: { id: 'lockpicks', name: 'lockpicks', weight: 0, type: 'tool', value: 5 },
-      fine_sword: { id: 'fine_sword', name: 'fine sword', weight: 3, slot: 'weapon', type: 'weapon', value: 40 },
-      noble_clothes: { id: 'noble_clothes', name: 'noble clothes', weight: 3, slot: 'armor', type: 'clothing', value: 25 },
-      signet_ring: { id: 'signet_ring', name: 'signet ring', weight: 0, slot: 'accessory1', type: 'misc', value: 15 },
-      dark_cloak: { id: 'dark_cloak', name: 'dark cloak', weight: 2, slot: 'cloak', type: 'clothing', value: 5 },
-      torch: { id: 'torch', name: 'torch', weight: 1, type: 'light', stackable: true, value: 1 },
-      village_notice: { id: 'village_notice', name: 'notice board posting', weight: 0, type: 'misc', value: 0 }
+      iron_sword: { id: 'iron_sword', name: 'iron sword', aliases: ['sword', 'blade'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 20 },
+      hunting_bow: { id: 'hunting_bow', name: 'hunting bow', aliases: ['bow', 'yew bow'], weight: 2, slot: 'weapon', type: 'weapon', portable: true, value: 15 },
+      skinning_knife: { id: 'skinning_knife', name: 'skinning knife', aliases: ['knife'], weight: 1, type: 'tool', portable: true, value: 3 },
+      travel_cloak: { id: 'travel_cloak', name: 'travel cloak', aliases: ['cloak'], weight: 2, slot: 'cloak', type: 'clothing', portable: true, value: 5 },
+      travel_rations: { id: 'travel_rations', name: 'travel rations', aliases: ['rations', 'food', 'ration'], weight: 1, type: 'consumable', stackable: true, portable: true, value: 1 },
+      flint_and_steel: { id: 'flint_and_steel', name: 'flint and steel', aliases: ['flint', 'steel'], weight: 1, type: 'tool', portable: true, value: 2 },
+      leather_armor: { id: 'leather_armor', name: 'leather armor', aliases: ['armor', 'leather'], weight: 15, slot: 'armor', type: 'armor', portable: true, defenseBonus: 2, value: 30 },
+      gnarled_staff: { id: 'gnarled_staff', name: 'gnarled staff', aliases: ['staff'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 5 },
+      traveling_robes: { id: 'traveling_robes', name: 'traveling robes', aliases: ['robes'], weight: 3, slot: 'armor', type: 'clothing', portable: true, value: 5 },
+      spell_pouch: { id: 'spell_pouch', name: 'spell pouch', aliases: ['spell pouch'], weight: 1, type: 'tool', portable: true, value: 10 },
+      wooden_shield: { id: 'wooden_shield', name: 'wooden shield', aliases: ['shield'], weight: 6, slot: 'offhand', type: 'shield', portable: true, shieldBonus: 1, value: 8 },
+      holy_symbol: { id: 'holy_symbol', name: 'holy symbol', aliases: ['symbol', 'holy symbol'], weight: 0, type: 'misc', portable: true, value: 0 },
+      rusty_dagger: { id: 'rusty_dagger', name: 'rusty dagger', aliases: ['dagger', 'rusty dagger'], weight: 1, slot: 'weapon', type: 'weapon', portable: true, value: 2 },
+      ragged_cloak: { id: 'ragged_cloak', name: 'ragged cloak', aliases: ['cloak', 'ragged cloak'], weight: 1, slot: 'cloak', type: 'clothing', portable: true, value: 1 },
+      lockpicks: { id: 'lockpicks', name: 'lockpicks', aliases: ['lockpicks', 'picks'], weight: 0, type: 'tool', portable: true, value: 5 },
+      fine_sword: { id: 'fine_sword', name: 'fine sword', aliases: ['sword', 'blade', 'fine blade'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 40 },
+      noble_clothes: { id: 'noble_clothes', name: 'noble clothes', aliases: ['clothes', 'noble clothes'], weight: 3, slot: 'armor', type: 'clothing', portable: true, value: 25 },
+      signet_ring: { id: 'signet_ring', name: 'signet ring', aliases: ['ring', 'signet'], weight: 0, slot: 'accessory1', type: 'misc', portable: true, value: 15 },
+      dark_cloak: { id: 'dark_cloak', name: 'dark cloak', aliases: ['cloak', 'dark cloak'], weight: 2, slot: 'cloak', type: 'clothing', portable: true, value: 5 },
+      torch: { id: 'torch', name: 'torch', aliases: ['torches'], weight: 1, type: 'light', stackable: true, portable: true, value: 1 },
+      village_notice: { id: 'village_notice', name: 'notice board posting', aliases: ['notice', 'posting', 'notice board', 'sign'], weight: 0, type: 'misc', portable: false, value: 0 }
     };
 
     Game.data.locations = {
@@ -1350,6 +1350,212 @@
       ]
     };
 
+    Game.engine.take = function(itemName) {
+      const player = Game.state.player;
+      const loc = Game.data.locations[player.location];
+      if (!loc) {
+        Game.ui.print('You are nowhere in particular.', 'output-error');
+        return;
+      }
+      
+      if (!itemName) {
+        Game.ui.print('Take what?', 'output-error');
+        return;
+      }
+      
+      const staticIdx = loc.items.findIndex(id => {
+        const item = Game.data.items[id];
+        if (!item) return false;
+        return item.name === itemName || (item.aliases && item.aliases.includes(itemName));
+      });
+      
+      const locItems = Game.state.world.itemLocations[player.location] || [];
+      const dynamicIdx = locItems.findIndex(id => {
+        const item = Game.data.items[id];
+        if (!item) return false;
+        return item.name === itemName || (item.aliases && item.aliases.includes(itemName));
+      });
+      
+      let foundId = null;
+      let source = null;
+      
+      if (staticIdx !== -1) {
+        foundId = loc.items[staticIdx];
+        source = 'static';
+      } else if (dynamicIdx !== -1) {
+        foundId = locItems[dynamicIdx];
+        source = 'dynamic';
+      }
+      
+      if (!foundId) {
+        Game.ui.print(`You don't see "${itemName}" here.`, 'output-error');
+        return;
+      }
+      
+      const itemData = Game.data.items[foundId];
+      if (!itemData.portable) {
+        Game.ui.print(`You can't take the ${itemData.name}.`, 'output-error');
+        return;
+      }
+      
+      const oldTier = Game.inventory.getEncumbranceTier().tier;
+      
+      if (source === 'static') {
+        loc.items.splice(staticIdx, 1);
+      } else {
+        locItems.splice(dynamicIdx, 1);
+        Game.state.world.itemLocations[player.location] = locItems;
+      }
+      
+      Game.inventory.addItem(foundId, 1);
+      
+      const newTier = Game.inventory.getEncumbranceTier().tier;
+      
+      Game.ui.print(`You pick up the ${itemData.name}.`, 'output-narrative');
+      
+      if (oldTier !== newTier && newTier !== 'unencumbered') {
+        Game.ui.print(`You are now ${newTier}!`, 'output-highlight');
+      }
+      
+      Game.clock.advanceTime(1);
+    };
+
+    Game.engine.drop = function(input) {
+      const player = Game.state.player;
+      
+      let quantity = 1;
+      let itemName = input;
+      
+      const match = input.match(/^(\d+)\s+(.+)$/);
+      if (match) {
+        quantity = parseInt(match[1], 10);
+        itemName = match[2];
+      }
+      
+      const entry = player.inventory.find(e => {
+        const item = Game.data.items[e.itemId];
+        if (!item) return false;
+        return item.name === itemName || (item.aliases && item.aliases.includes(itemName));
+      });
+      
+      if (!entry) {
+        Game.ui.print(`You don't have "${itemName}".`, 'output-error');
+        return;
+      }
+      
+      if (entry.quantity < quantity) {
+        Game.ui.print(`You only have ${entry.quantity} ${Game.data.items[entry.itemId].name}.`, 'output-error');
+        return;
+      }
+      
+      const itemData = Game.data.items[entry.itemId];
+      
+      Game.inventory.removeItem(entry.itemId, quantity);
+      
+      const locId = player.location;
+      if (!Game.state.world.itemLocations[locId]) {
+        Game.state.world.itemLocations[locId] = [];
+      }
+      for (let i = 0; i < quantity; i++) {
+        Game.state.world.itemLocations[locId].push(entry.itemId);
+      }
+      
+      const qtyText = quantity > 1 ? `${quantity} ${itemData.name}` : `the ${itemData.name}`;
+      Game.ui.print(`You drop ${qtyText}.`, 'output-narrative');
+      
+      Game.clock.advanceTime(1);
+    };
+
+    Game.engine.equip = function(itemName) {
+      const player = Game.state.player;
+      
+      if (!itemName) {
+        Game.ui.print('Equip what?', 'output-error');
+        return;
+      }
+      
+      const entry = player.inventory.find(e => {
+        const item = Game.data.items[e.itemId];
+        if (!item) return false;
+        return item.name === itemName || (item.aliases && item.aliases.includes(itemName));
+      });
+      
+      if (!entry) {
+        Game.ui.print(`You don't have "${itemName}".`, 'output-error');
+        return;
+      }
+      
+      const itemData = Game.data.items[entry.itemId];
+      if (!itemData.slot) {
+        Game.ui.print(`You can't equip the ${itemData.name}.`, 'output-error');
+        return;
+      }
+      
+      const slot = itemData.slot;
+      
+      if (player.equipment[slot]) {
+        const currentItemId = player.equipment[slot];
+        const currentItem = Game.data.items[currentItemId];
+        Game.inventory.addItem(currentItemId, 1);
+        Game.ui.print(`You remove the ${currentItem ? currentItem.name : currentItemId}.`, 'output-narrative');
+      }
+      
+      Game.inventory.removeItem(entry.itemId, 1);
+      
+      player.equipment[slot] = entry.itemId;
+      
+      Game.ui.print(`You equip the ${itemData.name}.`, 'output-narrative');
+      
+      let timeCost = 1;
+      if (slot === 'armor') timeCost = 5;
+      
+      Game.clock.advanceTime(timeCost);
+    };
+
+    Game.engine.unequip = function(itemName) {
+      const player = Game.state.player;
+      
+      if (!itemName) {
+        Game.ui.print('Unequip what?', 'output-error');
+        return;
+      }
+      
+      let foundSlot = null;
+      let foundItemId = null;
+      
+      for (const [slot, itemId] of Object.entries(player.equipment)) {
+        if (!itemId) continue;
+        const item = Game.data.items[itemId];
+        if (item && (item.name === itemName || (item.aliases && item.aliases.includes(itemName)))) {
+          foundSlot = slot;
+          foundItemId = itemId;
+          break;
+        }
+        if (slot === itemName) {
+          foundSlot = slot;
+          foundItemId = itemId;
+          break;
+        }
+      }
+      
+      if (!foundSlot || !foundItemId) {
+        Game.ui.print(`You aren't wearing/holding "${itemName}".`, 'output-error');
+        return;
+      }
+      
+      const itemData = Game.data.items[foundItemId];
+      
+      Game.inventory.addItem(foundItemId, 1);
+      player.equipment[foundSlot] = null;
+      
+      Game.ui.print(`You remove the ${itemData ? itemData.name : foundItemId}.`, 'output-narrative');
+      
+      let timeCost = 1;
+      if (foundSlot === 'armor') timeCost = 3;
+      
+      Game.clock.advanceTime(timeCost);
+    };
+
     Game.engine.handleCommand = function(input) {
       const normalized = Game.parser.normalize(input);
       
@@ -1380,8 +1586,20 @@
       } else if (normalized === 'quit' || normalized === 'exit') {
         Game.ui.print('Saving before quit is recommended!', 'output-system');
         Game.ui.print('Type "quit" again to confirm, or use a different command.', 'output-system');
-      } else if (normalized === 'inventory' || normalized === 'i' || normalized === 'inv') {
+      } else if (normalized === 'inventory' || normalized === 'i' || normalized === 'inv' || normalized === 'status' || normalized === 'equipment' || normalized === 'gear') {
         this.showInventory();
+      } else if (normalized.startsWith('take ') || normalized.startsWith('get ') || normalized.startsWith('grab ') || normalized.startsWith('pickup ') || normalized.startsWith('pick up ')) {
+        const itemName = normalized.replace(/^(take|get|grab|pickup|pick up)\s+/, '');
+        this.take(itemName);
+      } else if (normalized.startsWith('drop ')) {
+        const itemName = normalized.replace(/^drop\s+/, '');
+        this.drop(itemName);
+      } else if (normalized.startsWith('equip ') || normalized.startsWith('wield ') || normalized.startsWith('wear ') || normalized.startsWith('put on ')) {
+        const itemName = normalized.replace(/^(equip|wield|wear|put on)\s+/, '');
+        this.equip(itemName);
+      } else if (normalized.startsWith('unequip ') || normalized.startsWith('remove ') || normalized.startsWith('take off ')) {
+        const itemName = normalized.replace(/^(unequip|remove|take off)\s+/, '');
+        this.unequip(itemName);
       } else {
         Game.ui.print(`I don't understand that command. Try "help" for options.`, 'output-error');
       }
@@ -1448,12 +1666,14 @@
       const bgName = bg ? bg.name : 'Unknown';
       Game.ui.print('', '');
       Game.ui.print('══════════════════════════════════════', 'separator');
-      Game.ui.print('  INVENTORY', 'output-highlight');
+      Game.ui.print('  CHARACTER STATUS', 'output-highlight');
       Game.ui.print('══════════════════════════════════════', 'separator');
       Game.ui.print('', '');
       Game.ui.print(`  Name:       ${player.name}`, 'output-narrative');
       Game.ui.print(`  Background: ${bgName}`, 'output-narrative');
-      Game.ui.print(`  Level:      ${player.level}`, 'output-narrative');
+      Game.ui.print(`  Level:      ${player.level}  XP: ${player.xp || 0}`, 'output-narrative');
+      Game.ui.print('', '');
+      Game.ui.print(`  Time: ${Game.clock.formatTime()}`, 'output-system');
       Game.ui.print('', '');
       Game.ui.print(`  Health:   ${player.resources.hp} / ${player.resources.maxHp}`, 'output-narrative');
       Game.ui.print(`  Stamina:  ${player.resources.stamina} / ${player.resources.maxStamina}`, 'output-narrative');
@@ -1470,7 +1690,30 @@
         }
       }
       Game.ui.print('', '');
+      if (player.conditions && player.conditions.length > 0) {
+        Game.ui.print('  Status Effects:', 'output-narrative');
+        for (const cond of player.conditions) {
+          const condData = Game.data.conditions.find(c => c.id === cond.id);
+          const condName = condData ? condData.name : cond.id;
+          const remaining = cond.remainingMinutes ? ` (${cond.remainingMinutes} min)` : '';
+          Game.ui.print(`    - ${condName}${remaining}`, 'output-highlight');
+        }
+        Game.ui.print('', '');
+      }
       Game.ui.print(`  Gold: ${player.gold}`, 'output-narrative');
+      Game.ui.print('', '');
+      const carriedWeight = Game.inventory.getCarriedWeight();
+      const carryCapacity = Game.inventory.getCarryCapacity();
+      const encumbrance = Game.inventory.getEncumbranceTier();
+      Game.ui.print(`  Weight: ${carriedWeight} / ${carryCapacity} lb`, 'output-narrative');
+      Game.ui.print(`  Encumbrance: ${encumbrance.tier}`, 'output-narrative');
+      if (encumbrance.tier === 'burdened') {
+        Game.ui.print('    (Stealth -1, Agility -1)', 'output-system');
+      } else if (encumbrance.tier === 'encumbered') {
+        Game.ui.print('    (Stealth -2, Agility -2, Travel time ×1.5)', 'output-system');
+      } else if (encumbrance.tier === 'overloaded') {
+        Game.ui.print('    (Cannot travel!)', 'output-error');
+      }
       Game.ui.print('', '');
       if (player.inventory.length === 0) {
         Game.ui.print('  Carried Items: None', 'output-system');
@@ -1481,7 +1724,7 @@
           const name = item ? item.name : entry.itemId;
           const weight = item ? (item.weight || 0) * entry.quantity : 0;
           const qty = entry.quantity > 1 ? ` x${entry.quantity}` : '';
-          Game.ui.print(`    - ${item ? item.name : entry.itemId}${qty}   ${weight} lb`, 'output-narrative');
+          Game.ui.print(`    - ${name}${qty}   ${weight} lb`, 'output-narrative');
         }
       }
       Game.ui.print('', '');
@@ -1512,11 +1755,22 @@
         Game.ui.print(`  ${dir.padEnd(8)} - ${exitName}`, 'output-narrative');
       }
       Game.ui.print('', '');
+      
+      const allItems = [];
       if (loc.items && loc.items.length > 0) {
-        Game.ui.print('You notice: ' + loc.items.map(id => {
+        for (const id of loc.items) {
           const item = Game.data.items[id];
-          return item ? item.name : id;
-        }).join(', '), 'output-system');
+          if (item) allItems.push(item.name);
+        }
+      }
+      const dynamicItems = Game.state.world.itemLocations[locId] || [];
+      for (const id of dynamicItems) {
+        const item = Game.data.items[id];
+        if (item) allItems.push(item.name);
+      }
+      
+      if (allItems.length > 0) {
+        Game.ui.print('You notice: ' + allItems.join(', '), 'output-system');
         Game.ui.print('', '');
       }
     };
@@ -2247,6 +2501,50 @@
       };
     };
 
+    Game.clock.advanceTime = function(minutes) {
+      if (!minutes || minutes <= 0) return;
+      
+      const clock = Game.state.clock;
+      clock.minute += minutes;
+      
+      while (clock.minute >= 60) {
+        clock.minute -= 60;
+        clock.hour++;
+      }
+      
+      while (clock.hour >= 24) {
+        clock.hour -= 24;
+        clock.day++;
+      }
+    };
+
+    Game.clock.getDayPhase = function() {
+      const hour = Game.state.clock.hour;
+      if (hour >= 5 && hour <= 7) return 'Dawn';
+      if (hour >= 8 && hour <= 11) return 'Morning';
+      if (hour >= 12 && hour <= 13) return 'Midday';
+      if (hour >= 14 && hour <= 16) return 'Afternoon';
+      if (hour >= 17 && hour <= 18) return 'Late afternoon';
+      if (hour >= 19 && hour <= 20) return 'Evening';
+      if (hour >= 21 && hour <= 23) return 'Night';
+      return 'Deep night';
+    };
+
+    Game.clock.getOrdinalDay = function() {
+      const day = Game.state.clock.day;
+      if (day === 1 || day === 21 || day === 31) return day + 'st';
+      if (day === 2 || day === 22) return day + 'nd';
+      if (day === 3 || day === 23) return day + 'rd';
+      return day + 'th';
+    };
+
+    Game.clock.formatTime = function() {
+      const phase = this.getDayPhase();
+      const ordinal = this.getOrdinalDay();
+      const month = Game.state.clock.month;
+      return `${phase}, ${ordinal} day of ${month}`;
+    };
+
     Game.inventory.init = function() {
       Game.state.inventory = [];
       Game.state.equipment = {
@@ -2257,6 +2555,82 @@
         accessory1: null,
         accessory2: null
       };
+    };
+
+    Game.inventory.addItem = function(itemId, quantity) {
+      quantity = quantity || 1;
+      const item = Game.data.items[itemId];
+      if (!item) return false;
+      
+      const inv = Game.state.player.inventory;
+      if (item.stackable) {
+        const existing = inv.find(e => e.itemId === itemId);
+        if (existing) {
+          existing.quantity += quantity;
+          return true;
+        }
+      }
+      
+      inv.push({ itemId: itemId, quantity: quantity });
+      return true;
+    };
+
+    Game.inventory.removeItem = function(itemId, quantity) {
+      quantity = quantity || 1;
+      const inv = Game.state.player.inventory;
+      const entry = inv.find(e => e.itemId === itemId);
+      if (!entry) return false;
+      
+      entry.quantity -= quantity;
+      if (entry.quantity <= 0) {
+        const idx = inv.indexOf(entry);
+        inv.splice(idx, 1);
+      }
+      return true;
+    };
+
+    Game.inventory.hasItem = function(itemId) {
+      return Game.state.player.inventory.some(e => e.itemId === itemId);
+    };
+
+    Game.inventory.getItemCount = function(itemId) {
+      const entry = Game.state.player.inventory.find(e => e.itemId === itemId);
+      return entry ? entry.quantity : 0;
+    };
+
+    Game.inventory.getCarriedWeight = function() {
+      const player = Game.state.player;
+      let weight = 0;
+      
+      for (const entry of player.inventory) {
+        const item = Game.data.items[entry.itemId];
+        if (item) weight += (item.weight || 0) * entry.quantity;
+      }
+      
+      for (const [slot, itemId] of Object.entries(player.equipment)) {
+        if (itemId) {
+          const item = Game.data.items[itemId];
+          if (item) weight += (item.weight || 0);
+        }
+      }
+      
+      return weight;
+    };
+
+    Game.inventory.getCarryCapacity = function() {
+      const player = Game.state.player;
+      return 50 + 10 * (player.stats.might || 0) + 5 * (player.stats.endurance || 0);
+    };
+
+    Game.inventory.getEncumbranceTier = function() {
+      const weight = this.getCarriedWeight();
+      const capacity = this.getCarryCapacity();
+      const percent = (weight / capacity) * 100;
+      
+      if (percent <= 100) return { tier: 'unencumbered', penalties: {} };
+      if (percent <= 125) return { tier: 'burdened', penalties: { stealth: -1, agility: -1 } };
+      if (percent <= 150) return { tier: 'encumbered', penalties: { stealth: -2, agility: -2, travelMultiplier: 1.5 } };
+      return { tier: 'overloaded', penalties: { cannotTravel: true } };
     };
 
     Game.combat.init = function() {
