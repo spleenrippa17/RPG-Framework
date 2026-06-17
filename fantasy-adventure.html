@@ -1341,7 +1341,8 @@
         { name: 'equip [item]', description: 'Equip an item' },
         { name: 'unequip [item]', description: 'Unequip an item' },
         { name: 'inventory', description: 'View your inventory' },
-        { name: 'wait', description: 'Pass some time' },
+        { name: 'wait', description: 'Pass some time (wait, wait 1 hour)' },
+        { name: 'sleep', description: 'Rest for several hours' },
         { name: 'save', description: 'Save your progress' },
         { name: 'load', description: 'Load a saved game' },
         { name: 'help', description: 'Show available commands' },
@@ -1556,6 +1557,59 @@
       Game.clock.advanceTime(timeCost);
     };
 
+    Game.engine.wait = function(args) {
+      let minutes = 15;
+      if (args) {
+        const restParts = args.trim().toLowerCase();
+        if (restParts === '' || restParts === 'a' || restParts === 'awhile' || restParts === 'a while') {
+          minutes = 15;
+        } else if (restParts === '1 hour' || restParts === 'hour' || restParts === 'an hour') {
+          minutes = 60;
+        } else {
+          const hourMatch = restParts.match(/^(\d+)\s*(?:hour|hr|hours|hrs|h)$/);
+          const minMatch = restParts.match(/^(\d+)\s*(?:minute|minutes|min|mins|m)$/);
+          if (hourMatch) {
+            minutes = parseInt(hourMatch[1], 10) * 60;
+          } else if (minMatch) {
+            minutes = parseInt(minMatch[1], 10);
+          } else {
+            const pureNum = parseInt(restParts, 10);
+            if (!isNaN(pureNum) && pureNum > 0) {
+              minutes = pureNum;
+            }
+          }
+        }
+      }
+      if (minutes <= 0) minutes = 15;
+      Game.ui.print('You wait for a while...', 'output-narrative');
+      Game.clock.advanceTime(minutes);
+      Game.ui.print('  (' + minutes + ' minutes passed)', 'output-system');
+    };
+
+    Game.engine.sleep = function(args) {
+      let hours = 8;
+      if (args) {
+        const restParts = args.trim().toLowerCase();
+        const hourMatch = restParts.match(/^(\d+)\s*(?:hour|hr|hours|hrs|h)?$/);
+        if (hourMatch) {
+          hours = parseInt(hourMatch[1], 10);
+        }
+      }
+      if (hours <= 0) hours = 1;
+      if (hours > 12) hours = 12;
+      Game.ui.print('You find a comfortable spot and settle down to rest...', 'output-narrative');
+      Game.clock.advanceTime(hours * 60);
+      const player = Game.state.player;
+      if (player && player.resources) {
+        const staminaRecovery = Math.floor(player.resources.maxStamina * 0.5);
+        player.resources.stamina = Math.min(player.resources.maxStamina, player.resources.stamina + staminaRecovery);
+        if (player.resources.maxHp === 0 || player.resources.hp < player.resources.maxHp) {
+          Game.ui.print('You feel somewhat rested.', 'output-narrative');
+        }
+      }
+      Game.ui.print('  (' + hours + ' hours passed — ' + Game.clock.formatTime() + ')', 'output-system');
+    };
+
     Game.engine.handleCommand = function(input) {
       const normalized = Game.parser.normalize(input);
       
@@ -1600,6 +1654,16 @@
       } else if (normalized.startsWith('unequip ') || normalized.startsWith('remove ') || normalized.startsWith('take off ')) {
         const itemName = normalized.replace(/^(unequip|remove|take off)\s+/, '');
         this.unequip(itemName);
+      } else if (normalized === 'wait') {
+        this.wait(null);
+      } else if (normalized.startsWith('wait ')) {
+        const args = normalized.replace(/^wait\s+/, '');
+        this.wait(args);
+      } else if (normalized === 'sleep' || normalized === 'rest') {
+        this.sleep(null);
+      } else if (normalized.startsWith('sleep ') || normalized.startsWith('rest ')) {
+        const args = normalized.replace(/^(sleep|rest)\s+/, '');
+        this.sleep(args);
       } else {
         Game.ui.print(`I don't understand that command. Try "help" for options.`, 'output-error');
       }
@@ -1646,11 +1710,13 @@
         return;
       }
       const exit = loc.exits[direction];
+      const travelMin = exit.travelMinutes || 1;
       player.location = exit.to;
       const newLoc = Game.data.locations[exit.to];
       if (newLoc) {
         Game.ui.print('', '');
         Game.ui.print(`You head ${direction}...`, 'output-narrative');
+        Game.clock.advanceTime(travelMin);
         Game.ui.print('', '');
         this.look();
       }
@@ -1783,64 +1849,16 @@
         return;
       }
       const exit = loc.exits[direction];
+      const travelMin = exit.travelMinutes || 1;
       player.location = exit.to;
       const newLoc = Game.data.locations[exit.to];
       if (newLoc) {
         Game.ui.print('', '');
         Game.ui.print(`You head ${direction}...`, 'output-narrative');
+        Game.clock.advanceTime(travelMin);
         Game.ui.print('', '');
         this.look();
       }
-    };
-
-    Game.engine.showInventory = function() {
-      const player = Game.state.player;
-      if (!player) {
-        Game.ui.print('No active character.', 'output-error');
-        return;
-      }
-      const bg = Game.data.backgrounds.find(b => b.id === player.background);
-      const bgName = bg ? bg.name : 'Unknown';
-      Game.ui.print('', '');
-      Game.ui.print('══════════════════════════════════════', 'separator');
-      Game.ui.print('  INVENTORY', 'output-highlight');
-      Game.ui.print('══════════════════════════════════════', 'separator');
-      Game.ui.print('', '');
-      Game.ui.print(`  Name:       ${player.name}`, 'output-narrative');
-      Game.ui.print(`  Background: ${bgName}`, 'output-narrative');
-      Game.ui.print(`  Level:      ${player.level}`, 'output-narrative');
-      Game.ui.print('', '');
-      Game.ui.print(`  Health:   ${player.resources.hp} / ${player.resources.maxHp}`, 'output-narrative');
-      Game.ui.print(`  Stamina:  ${player.resources.stamina} / ${player.resources.maxStamina}`, 'output-narrative');
-      Game.ui.print(`  Mana:     ${player.resources.mana} / ${player.resources.maxMana}`, 'output-narrative');
-      Game.ui.print('', '');
-      Game.ui.print('  Equipment:', 'output-narrative');
-      for (const [slot, itemId] of Object.entries(player.equipment)) {
-        const label = slot.padEnd(12);
-        if (itemId) {
-          const item = Game.data.items[itemId];
-          Game.ui.print(`    ${label}${item ? item.name : itemId}`, 'output-narrative');
-        } else {
-          Game.ui.print(`    ${label}None`, 'output-system');
-        }
-      }
-      Game.ui.print('', '');
-      Game.ui.print(`  Gold: ${player.gold}`, 'output-narrative');
-      Game.ui.print('', '');
-      if (player.inventory.length === 0) {
-        Game.ui.print('  Carried Items: None', 'output-system');
-      } else {
-        Game.ui.print('  Carried Items:', 'output-narrative');
-        for (const entry of player.inventory) {
-          const item = Game.data.items[entry.itemId];
-          const name = item ? item.name : entry.itemId;
-          const weight = item ? (item.weight || 0) * entry.quantity : 0;
-          const qty = entry.quantity > 1 ? ` x${entry.quantity}` : '';
-          Game.ui.print(`    - ${item ? item.name : entry.itemId}${qty}   ${weight} lb`, 'output-narrative');
-        }
-      }
-      Game.ui.print('', '');
-      Game.ui.print('══════════════════════════════════════', 'separator');
     };
 
     Game.characterCreation = {
@@ -2501,20 +2519,31 @@
       };
     };
 
+    Game.clock.months = ['Frostwane', 'Emberwane', 'Thornwane', 'Bloomwane', 'Sunwane', 'Harvestwane', 'Stormwane', 'Ashwane'];
+    Game.clock.daysPerMonth = 30;
+
     Game.clock.advanceTime = function(minutes) {
       if (!minutes || minutes <= 0) return;
-      
       const clock = Game.state.clock;
+      const prevPhase = Game.clock.getDayPhase();
       clock.minute += minutes;
-      
       while (clock.minute >= 60) {
         clock.minute -= 60;
         clock.hour++;
       }
-      
       while (clock.hour >= 24) {
         clock.hour -= 24;
         clock.day++;
+      }
+      if (clock.day > Game.clock.daysPerMonth) {
+        clock.day = 1;
+        const monthIdx = Game.clock.months.indexOf(clock.month);
+        clock.month = Game.clock.months[(monthIdx + 1) % Game.clock.months.length];
+      }
+      Game.clock.tickConditions(minutes);
+      const newPhase = Game.clock.getDayPhase();
+      if (newPhase !== prevPhase) {
+        Game.ui.print('[ ' + newPhase + ' ]', 'output-system');
       }
     };
 
@@ -2531,10 +2560,11 @@
     };
 
     Game.clock.getOrdinalDay = function() {
+      const ordinals = ['','first','second','third','fourth','fifth','sixth','seventh','eighth','ninth','tenth',
+        'eleventh','twelfth','thirteenth','fourteenth','fifteenth','sixteenth','seventeenth','eighteenth','nineteenth','twentieth',
+        'twenty-first','twenty-second','twenty-third','twenty-fourth','twenty-fifth','twenty-sixth','twenty-seventh','twenty-eighth','twenty-ninth','thirtieth'];
       const day = Game.state.clock.day;
-      if (day === 1 || day === 21 || day === 31) return day + 'st';
-      if (day === 2 || day === 22) return day + 'nd';
-      if (day === 3 || day === 23) return day + 'rd';
+      if (day >= 1 && day <= 30) return ordinals[day];
       return day + 'th';
     };
 
@@ -2640,6 +2670,95 @@
 
     Game.conditions.init = function() {
       Game.state.conditions = [];
+    };
+
+    Game.checks.rollDice = function(expression) {
+      if (!expression) return { total: 0, rolls: [], modifier: 0, expression: '' };
+      const expr = expression.toString().trim().toLowerCase();
+      const match = expr.match(/^(\d+)d(\d+)([+-]\d+)?$/);
+      if (!match) {
+        const num = parseInt(expr, 10);
+        if (!isNaN(num)) return { total: num, rolls: [num], modifier: 0, expression: expr };
+        return { total: 0, rolls: [], modifier: 0, expression: expr };
+      }
+      const numDice = parseInt(match[1], 10);
+      const numSides = parseInt(match[2], 10);
+      const modifier = match[3] ? parseInt(match[3], 10) : 0;
+      const rolls = [];
+      for (let i = 0; i < numDice; i++) {
+        rolls.push(Math.floor(Math.random() * numSides) + 1);
+      }
+      const sum = rolls.reduce((a, b) => a + b, 0);
+      return { total: sum + modifier, rolls: rolls, modifier: modifier, expression: expr };
+    };
+
+    Game.checks.rollCheck = function(player, stat, skill, difficulty) {
+      const die = Math.floor(Math.random() * 20) + 1;
+      const statVal = (player.stats && player.stats[stat]) || 0;
+      const skillVal = (player.skills && player.skills[skill]) || 0;
+      const condMods = this.getConditionModifiers(player);
+      const bonusTotal = statVal + skillVal + condMods.total;
+      const total = die + bonusTotal;
+      const margin = total - difficulty;
+      let degree;
+      if (die === 20) {
+        degree = 'critical_success';
+      } else if (die === 1) {
+        degree = 'critical_failure';
+      } else if (margin >= 5) {
+        degree = 'strong_success';
+      } else if (margin >= 0) {
+        degree = 'success';
+      } else if (margin > -5) {
+        degree = 'failure';
+      } else {
+        degree = 'bad_failure';
+      }
+      if (Game.checks.debugMode) {
+        let d = '[DEBUG] d20(' + die + ') + ' + stat + '(' + statVal + ') + ' + skill + '(' + skillVal + ')';
+        if (condMods.total !== 0) d += ' + cond(' + condMods.total + ')';
+        d += ' = ' + total + ' vs ' + difficulty + ' [' + degree + ']';
+        Game.ui.print(d, 'output-system');
+      }
+      return { die: die, stat: stat, statValue: statVal, skill: skill, skillValue: skillVal, conditionModifiers: condMods.details, difficulty: difficulty, total: total, margin: margin, degree: degree };
+    };
+
+    Game.checks.getConditionModifiers = function(actor) {
+      if (!actor || !actor.conditions || actor.conditions.length === 0) {
+        return { total: 0, details: [] };
+      }
+      let total = 0;
+      const details = [];
+      for (const cond of actor.conditions) {
+        const condData = Game.data.conditions.find(c => c.id === cond.id);
+        if (condData && condData.modifiers) {
+          for (const [k, v] of Object.entries(condData.modifiers)) {
+            total += v;
+            details.push({ condition: cond.id, stat: k, value: v });
+          }
+        }
+      }
+      return { total: total, details: details };
+    };
+
+    Game.checks.getProse = function(degree) {
+      const map = {
+        critical_success: 'an extraordinary success',
+        strong_success: 'a clear success',
+        success: 'a narrow success',
+        failure: 'a failure',
+        bad_failure: 'a disastrous failure',
+        critical_failure: 'a catastrophic failure'
+      };
+      return map[degree] || 'an uncertain outcome';
+    };
+
+    Game.checks.getDifficulty = function(name) {
+      const lower = name.toString().toLowerCase().trim();
+      if (Game.data.difficulties[lower] !== undefined) return Game.data.difficulties[lower];
+      const num = parseInt(lower, 10);
+      if (!isNaN(num)) return num;
+      return Game.data.difficulties.moderate;
     };
 
     Game.storage.init = function() {
