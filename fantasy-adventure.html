@@ -1191,6 +1191,66 @@
         },
         items: ['village_notice'],
         tags: ['settlement', 'outdoors']
+      },
+      general_store: {
+        id: 'general_store',
+        name: "Borin's General Store",
+        descriptions: [
+          {
+            text: 'Crates and barrels crowd the narrow shop. Dried herbs hang from the low ceiling, and a battered ledger lies open on the counter. Shelves groan under the weight of rope, nails, lamps, and sundry goods. The smell of ink and sawdust fills the air.',
+            conditions: []
+          }
+        ],
+        exits: {
+          south: { to: 'village_square', travelMinutes: 1 }
+        },
+        items: [],
+        tags: ['settlement', 'indoors', 'shop']
+      },
+      silver_stag_tavern: {
+        id: 'silver_stag_tavern',
+        name: 'The Silver Stag Tavern',
+        descriptions: [
+          {
+            text: 'A warm fire crackles in the stone hearth. Rough-hewn tables surround a bar of dark oak, behind which rows of bottles catch the firelight. A mounted stag head watches from above the mantle, its antlers draped with dried hops.',
+            conditions: []
+          }
+        ],
+        exits: {
+          north: { to: 'village_square', travelMinutes: 1 }
+        },
+        items: [],
+        tags: ['settlement', 'indoors', 'tavern']
+      },
+      temple_yard: {
+        id: 'temple_yard',
+        name: 'Temple Yard',
+        descriptions: [
+          {
+            text: 'A small stone temple stands at the edge of a weed-choked yard. Weathered statues of forgotten saints line a cracked flagstone path. A simple altar is visible through the open doorway, candles flickering within. The air here feels still and watchful.',
+            conditions: []
+          }
+        ],
+        exits: {
+          west: { to: 'village_square', travelMinutes: 1 }
+        },
+        items: [],
+        tags: ['settlement', 'outdoors', 'sacred']
+      },
+      north_wood: {
+        id: 'north_wood',
+        name: 'North Wood',
+        descriptions: [
+          {
+            text: 'The village gives way to a curtain of ancient oaks. The canopy is thick overhead, filtering the light into a dim green haze. A narrow trail winds between gnarled roots and fallen logs. Birdsong seems distant here, replaced by the creak of branches and the occasional snap of a twig.',
+            conditions: []
+          }
+        ],
+        exits: {
+          south: { to: 'village_square', travelMinutes: 1 }
+        },
+        items: [],
+        tags: ['wilderness', 'outdoors', 'forest']
       }
     };
 
@@ -1334,8 +1394,9 @@
       ],
       playing: [
         { name: 'look', description: 'Examine your surroundings' },
+        { name: 'look at [target]', description: 'Examine an NPC, monster, or item' },
         { name: 'go [direction]', description: 'Travel to a new area' },
-        { name: 'talk [npc]', description: 'Speak with an NPC' },
+        { name: 'talk to [npc]', description: 'Speak with an NPC' },
         { name: 'take [item]', description: 'Pick up an item' },
         { name: 'drop [item]', description: 'Drop an item from inventory' },
         { name: 'equip [item]', description: 'Equip an item' },
@@ -1418,7 +1479,8 @@
         Game.ui.print(`You are now ${newTier}!`, 'output-highlight');
       }
       
-      Game.clock.advanceTime(1);
+      const msgs = Game.clock.advanceTime(1);
+      for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
     };
 
     Game.engine.drop = function(input) {
@@ -1464,7 +1526,8 @@
       const qtyText = quantity > 1 ? `${quantity} ${itemData.name}` : `the ${itemData.name}`;
       Game.ui.print(`You drop ${qtyText}.`, 'output-narrative');
       
-      Game.clock.advanceTime(1);
+      const msgs = Game.clock.advanceTime(1);
+      for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
     };
 
     Game.engine.equip = function(itemName) {
@@ -1510,7 +1573,8 @@
       let timeCost = 1;
       if (slot === 'armor') timeCost = 5;
       
-      Game.clock.advanceTime(timeCost);
+      const msgs = Game.clock.advanceTime(timeCost);
+      for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
     };
 
     Game.engine.unequip = function(itemName) {
@@ -1582,7 +1646,8 @@
       }
       if (minutes <= 0) minutes = 15;
       Game.ui.print('You wait for a while...', 'output-narrative');
-      Game.clock.advanceTime(minutes);
+      const msgs = Game.clock.advanceTime(minutes);
+      for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
       Game.ui.print('  (' + minutes + ' minutes passed)', 'output-system');
     };
 
@@ -1598,7 +1663,8 @@
       if (hours <= 0) hours = 1;
       if (hours > 12) hours = 12;
       Game.ui.print('You find a comfortable spot and settle down to rest...', 'output-narrative');
-      Game.clock.advanceTime(hours * 60);
+      const sleepMsgs = Game.clock.advanceTime(hours * 60);
+      for (const msg of sleepMsgs) { Game.ui.print(msg, 'output-system'); }
       const player = Game.state.player;
       if (player && player.resources) {
         const staminaRecovery = Math.floor(player.resources.maxStamina * 0.5);
@@ -1664,61 +1730,14 @@
       } else if (normalized.startsWith('sleep ') || normalized.startsWith('rest ')) {
         const args = normalized.replace(/^(sleep|rest)\s+/, '');
         this.sleep(args);
+      } else if (normalized.startsWith('talk to ') || normalized.startsWith('talk ') || normalized.startsWith('speak to ') || normalized.startsWith('speak with ') || normalized.startsWith('ask ')) {
+        const target = normalized.replace(/^(talk to|talk|speak to|speak with|ask)\s+/, '');
+        this.talk(target);
+      } else if (normalized.startsWith('look at ') || normalized.startsWith('examine ') || normalized.startsWith('inspect ') || normalized.startsWith('x ')) {
+        const target = normalized.replace(/^(look at|examine|inspect|x)\s+/, '');
+        this.lookAt(target);
       } else {
         Game.ui.print(`I don't understand that command. Try "help" for options.`, 'output-error');
-      }
-    };
-
-    Game.engine.look = function() {
-      if (!Game.state.player || !Game.state.player.location) {
-        Game.ui.print('You are nowhere in particular.', 'output-narrative');
-        return;
-      }
-      const locId = Game.state.player.location;
-      const loc = Game.data.locations[locId];
-      if (!loc) {
-        Game.ui.print('This location does not exist.', 'output-error');
-        return;
-      }
-      Game.ui.print(`  --- ${loc.name} ---`, 'output-highlight');
-      Game.ui.print('', '');
-      for (const desc of loc.descriptions) {
-        Game.ui.print(`${desc.text}`, 'output-narrative');
-      }
-      Game.ui.print('', '');
-      Game.ui.print('Exits:', 'output-system');
-      for (const [dir, exit] of Object.entries(loc.exits)) {
-        const exitLoc = Game.data.locations[exit.to];
-        const exitName = exitLoc ? exitLoc.name : dir;
-        Game.ui.print(`  ${dir.padEnd(8)} - ${exitName}`, 'output-narrative');
-      }
-      Game.ui.print('', '');
-      if (loc.items && loc.items.length > 0) {
-        Game.ui.print('You notice: ' + loc.items.map(id => {
-          const item = Game.data.items[id];
-          return item ? item.name : id;
-        }).join(', '), 'output-system');
-        Game.ui.print('', '');
-      }
-    };
-
-    Game.engine.go = function(direction) {
-      const player = Game.state.player;
-      const loc = Game.data.locations[player.location];
-      if (!loc || !loc.exits[direction]) {
-        Game.ui.print(`You cannot go ${direction}.`, 'output-error');
-        return;
-      }
-      const exit = loc.exits[direction];
-      const travelMin = exit.travelMinutes || 1;
-      player.location = exit.to;
-      const newLoc = Game.data.locations[exit.to];
-      if (newLoc) {
-        Game.ui.print('', '');
-        Game.ui.print(`You head ${direction}...`, 'output-narrative');
-        Game.clock.advanceTime(travelMin);
-        Game.ui.print('', '');
-        this.look();
       }
     };
 
@@ -1822,6 +1841,19 @@
       }
       Game.ui.print('', '');
       
+      const presentNPCs = Game.schedules.getPresentNPCs(locId);
+      for (const entry of presentNPCs) {
+        const activityText = entry.activity ? ` (${entry.activity})` : '';
+        Game.ui.print(`  ${entry.npc.name} is here${activityText}.`, 'output-highlight');
+      }
+      if (presentNPCs.length > 0) Game.ui.print('', '');
+
+      const presentMonsters = Game.schedules.getPresentMonsters(locId);
+      for (const entry of presentMonsters) {
+        Game.ui.print(`  ${entry.monster.name} is here!`, 'output-error');
+      }
+      if (presentMonsters.length > 0) Game.ui.print('', '');
+      
       const allItems = [];
       if (loc.items && loc.items.length > 0) {
         for (const id of loc.items) {
@@ -1849,16 +1881,91 @@
         return;
       }
       const exit = loc.exits[direction];
-      const travelMin = exit.travelMinutes || 1;
+      const travelMinutes = exit.travelMinutes || 1;
+      const msgs = Game.clock.advanceTime(travelMinutes);
       player.location = exit.to;
       const newLoc = Game.data.locations[exit.to];
       if (newLoc) {
         Game.ui.print('', '');
         Game.ui.print(`You head ${direction}...`, 'output-narrative');
-        Game.clock.advanceTime(travelMin);
+        for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
         Game.ui.print('', '');
         this.look();
       }
+    };
+
+    Game.engine.talk = function(target) {
+      if (!target) {
+        Game.ui.print('Talk to whom?', 'output-error');
+        return;
+      }
+      const npc = Game.schedules.findNPCByName(target);
+      if (!npc) {
+        const monster = Game.schedules.findMonsterByName(target);
+        if (monster) {
+          const present = Game.schedules.isMonsterPresent(monster, Game.state.player.location);
+          if (!present) {
+            Game.ui.print(`You don't see ${monster.name} here.`, 'output-error');
+            return;
+          }
+          Game.ui.print(monster.description, 'output-narrative');
+          return;
+        }
+        Game.ui.print(`You don't see anyone by that name here.`, 'output-error');
+        return;
+      }
+      const playerLoc = Game.state.player.location;
+      const present = Game.schedules.isNPCPresent(npc, playerLoc);
+      if (!present) {
+        Game.ui.print(`${npc.name} is not here.`, 'output-error');
+        return;
+      }
+      const activity = Game.schedules.getActivity(npc, Game.state.clock);
+      if (activity) {
+        Game.ui.print(`You approach ${npc.name} (${activity}).`, 'output-narrative');
+      } else {
+        Game.ui.print(`You approach ${npc.name}.`, 'output-narrative');
+      }
+      Game.ui.print('', '');
+      Game.ui.print(npc.description, 'output-narrative');
+      const msgs = Game.clock.advanceTime(5);
+      for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
+    };
+
+    Game.engine.lookAt = function(target) {
+      if (!target) {
+        Game.ui.print('Look at what?', 'output-error');
+        return;
+      }
+      const npc = Game.schedules.findNPCByName(target);
+      if (npc) {
+        const present = Game.schedules.isNPCPresent(npc, Game.state.player.location);
+        if (!present) {
+          Game.ui.print(`You don't see ${npc.name} here.`, 'output-error');
+          return;
+        }
+        const activity = Game.schedules.getActivity(npc, Game.state.clock);
+        let text = npc.description;
+        if (activity) text += ` ${npc.name.split(' ')[0]} is ${activity}.`;
+        Game.ui.print(text, 'output-narrative');
+        return;
+      }
+      const monster = Game.schedules.findMonsterByName(target);
+      if (monster) {
+        const present = Game.schedules.isMonsterPresent(monster, Game.state.player.location);
+        if (!present) {
+          Game.ui.print(`You don't see ${monster.name} here.`, 'output-error');
+          return;
+        }
+        Game.ui.print(monster.description, 'output-narrative');
+        return;
+      }
+      const item = Game.data.items[target];
+      if (item) {
+        Game.ui.print(item.description || `You see nothing special about the ${item.name}.`, 'output-narrative');
+        return;
+      }
+      Game.ui.print(`You don't see "${target}" here.`, 'output-error');
     };
 
     Game.characterCreation = {
@@ -2523,7 +2630,7 @@
     Game.clock.daysPerMonth = 30;
 
     Game.clock.advanceTime = function(minutes) {
-      if (!minutes || minutes <= 0) return;
+      if (!minutes || minutes <= 0) return [];
       const clock = Game.state.clock;
       const prevPhase = Game.clock.getDayPhase();
       clock.minute += minutes;
@@ -2540,11 +2647,18 @@
         const monthIdx = Game.clock.months.indexOf(clock.month);
         clock.month = Game.clock.months[(monthIdx + 1) % Game.clock.months.length];
       }
-      Game.clock.tickConditions(minutes);
+      if (typeof Game.clock.tickConditions === 'function') {
+        Game.clock.tickConditions(minutes);
+      }
       const newPhase = Game.clock.getDayPhase();
       if (newPhase !== prevPhase) {
         Game.ui.print('[ ' + newPhase + ' ]', 'output-system');
       }
+      let scheduleMessages = [];
+      if (Game.schedules && typeof Game.schedules.update === 'function') {
+        scheduleMessages = Game.schedules.update();
+      }
+      return scheduleMessages;
     };
 
     Game.clock.getDayPhase = function() {
@@ -2765,6 +2879,166 @@
       Game.state.saveSlots = 3;
     };
 
+
+    Game.schedules = {};
+
+    Game.schedules.isTimeInRange = function(current, start, end) {
+      if (start <= end) {
+        return current >= start && current < end;
+      }
+      return current >= start || current < end;
+    };
+
+    Game.schedules.getSchedule = function(scheduleId) {
+      if (!scheduleId) return null;
+      return Game.data.schedules.find(s => s.id === scheduleId) || null;
+    };
+
+    Game.schedules.getCurrentMinutes = function(clock) {
+      return clock.hour * 60 + clock.minute;
+    };
+
+    Game.schedules.getScheduledLocation = function(entity, clock) {
+      if (!entity || !entity.scheduleId) return entity ? entity.defaultLocation : null;
+      const schedule = this.getSchedule(entity.scheduleId);
+      if (!schedule) return entity.defaultLocation;
+      const current = this.getCurrentMinutes(clock);
+      const entry = schedule.entries.find(e => this.isTimeInRange(current, e.start, e.end));
+      if (!entry) return entity.defaultLocation;
+      return entry.location;
+    };
+
+    Game.schedules.getActivity = function(entity, clock) {
+      if (!entity || !entity.scheduleId) return null;
+      const schedule = this.getSchedule(entity.scheduleId);
+      if (!schedule) return null;
+      const current = this.getCurrentMinutes(clock);
+      const entry = schedule.entries.find(e => this.isTimeInRange(current, e.start, e.end));
+      return entry ? entry.activity : null;
+    };
+
+    Game.schedules.resolveNPCLocation = function(npc) {
+      const override = Game.state.world.npcOverrides[npc.id];
+      if (override) return override.location;
+      return this.getScheduledLocation(npc, Game.state.clock);
+    };
+
+    Game.schedules.resolveMonsterLocation = function(monster) {
+      const mState = Game.state.world.monsterStates[monster.id];
+      if (mState && mState.locationOverride) return mState.locationOverride;
+      return this.getScheduledLocation(monster, Game.state.clock);
+    };
+
+    Game.schedules.getPresentNPCs = function(locationId) {
+      const result = [];
+      for (const npc of Game.data.npcs) {
+        const loc = this.resolveNPCLocation(npc);
+        if (loc === locationId) {
+          const activity = this.getActivity(npc, Game.state.clock);
+          result.push({ npc, activity });
+        }
+      }
+      return result;
+    };
+
+    Game.schedules.getPresentMonsters = function(locationId) {
+      const result = [];
+      for (const monster of Game.data.monsters) {
+        const mState = Game.state.world.monsterStates[monster.id];
+        if (mState && mState.defeated) continue;
+        const loc = this.resolveMonsterLocation(monster);
+        if (loc === locationId) {
+          const activity = this.getActivity(monster, Game.state.clock);
+          result.push({ monster, activity });
+        }
+      }
+      return result;
+    };
+
+    Game.schedules.isNPCPresent = function(npc, locationId) {
+      const loc = this.resolveNPCLocation(npc);
+      return loc === locationId;
+    };
+
+    Game.schedules.isMonsterPresent = function(monster, locationId) {
+      const mState = Game.state.world.monsterStates[monster.id];
+      if (mState && mState.defeated) return false;
+      const loc = this.resolveMonsterLocation(monster);
+      return loc === locationId;
+    };
+
+    Game.schedules.findNPCByName = function(name) {
+      for (const npc of Game.data.npcs) {
+        if (npc.name.toLowerCase() === name ||
+            npc.id === name ||
+            (npc.aliases && npc.aliases.includes(name))) {
+          return npc;
+        }
+      }
+      for (const npc of Game.data.npcs) {
+        if (npc.name.toLowerCase().includes(name)) return npc;
+      }
+      return null;
+    };
+
+    Game.schedules.findMonsterByName = function(name) {
+      for (const monster of Game.data.monsters) {
+        if (monster.name.toLowerCase() === name ||
+            monster.id === name ||
+            (monster.aliases && monster.aliases.includes(name))) {
+          return monster;
+        }
+      }
+      for (const monster of Game.data.monsters) {
+        if (monster.name.toLowerCase().includes(name)) return monster;
+      }
+      return null;
+    };
+
+    Game.schedules.init = function() {
+      Game.state.npcLocations = {};
+      Game.state.monsterLocations = {};
+      for (const npc of Game.data.npcs) {
+        Game.state.npcLocations[npc.id] = this.resolveNPCLocation(npc);
+      }
+      for (const monster of Game.data.monsters) {
+        Game.state.monsterLocations[monster.id] = this.resolveMonsterLocation(monster);
+      }
+    };
+
+    Game.schedules.update = function() {
+      const messages = [];
+      for (const npc of Game.data.npcs) {
+        const newLoc = this.resolveNPCLocation(npc);
+        const oldLoc = Game.state.npcLocations[npc.id];
+        if (newLoc !== oldLoc) {
+          Game.state.npcLocations[npc.id] = newLoc;
+          const playerLoc = Game.state.player ? Game.state.player.location : null;
+          if (oldLoc === playerLoc) {
+            const locData = Game.data.locations[oldLoc];
+            messages.push(npc.name + ' leaves' + (locData ? ' (' + locData.name + ')' : '') + '.');
+          }
+          if (newLoc === playerLoc) {
+            const locData = Game.data.locations[newLoc];
+            const activity = this.getActivity(npc, Game.state.clock);
+            let msg = npc.name + ' arrives' + (locData ? ' at ' + locData.name : '');
+            if (activity) msg += ', ' + activity;
+            messages.push(msg + '.');
+          }
+        }
+      }
+      for (const monster of Game.data.monsters) {
+        const mState = Game.state.world.monsterStates[monster.id];
+        if (mState && mState.defeated) continue;
+        const newLoc = this.resolveMonsterLocation(monster);
+        const oldLoc = Game.state.monsterLocations[monster.id];
+        if (newLoc !== oldLoc) {
+          Game.state.monsterLocations[monster.id] = newLoc;
+        }
+      }
+      return messages;
+    };
+
     Game.state.player = null;
     Game.state.flags = {};
     Game.state.variables = {};
@@ -2781,6 +3055,7 @@
       this.combat.init();
       this.conditions.init();
       this.storage.init();
+      this.schedules.init();
       
       Game.ui.showTitle();
       Game.ui.print('', '');
