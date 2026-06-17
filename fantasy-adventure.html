@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fantasy Adventure</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #1a1a2e;
+      color: #eee;
+      font-family: 'Courier New', Courier, monospace;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #header {
+      background-color: #0f0f1e;
+      border-bottom: 2px solid #4a4a7a;
+      padding: 12px 20px;
+      text-align: center;
+      color: #8be9fd;
+      font-size: 1.2em;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(139, 233, 253, 0.5);
+    }
+
+    #main-container {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    #output-area {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background-color: #16213e;
+      border-right: 2px solid #4a4a7a;
+    }
+
+    #output-area::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #output-area::-webkit-scrollbar-track {
+      background: #0f0f1e;
+    }
+
+    #output-area::-webkit-scrollbar-thumb {
+      background: #4a4a7a;
+      border-radius: 4px;
+    }
+
+    #output-area::-webkit-scrollbar-thumb:hover {
+      background: #6c6ca0;
+    }
+
+    .output-line {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+
+    .output-command {
+      color: #50fa7b;
+      font-weight: bold;
+    }
+
+    .output-narrative {
+      color: #f8f8f2;
+    }
+
+    .output-system {
+      color: #bd93f9;
+      font-style: italic;
+    }
+
+    .output-error {
+      color: #ff5555;
+    }
+
+    .output-highlight {
+      color: #ffb86c;
+    }
+
+    /* TODO: Enable sidebar during PLAYING mode in a later phase */
+    #sidebar {
+      width: 280px;
+      background-color: #0f0f1e;
+      padding: 20px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .sidebar-title {
+      color: #ff79c6;
+      font-size: 1.1em;
+      font-weight: bold;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #4a4a7a;
+      padding-bottom: 5px;
+    }
+
+    .sidebar-content {
+      color: #ccc;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
+
+    #input-area {
+      background-color: #0f0f1e;
+      border-top: 2px solid #4a4a7a;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+    }
+
+    #prompt {
+      color: #8be9fd;
+      margin-right: 10px;
+      font-weight: bold;
+    }
+
+    #command-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #f8f8f2;
+      font-family: inherit;
+      font-size: 1em;
+      caret-color: #50fa7b;
+    }
+
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 1em;
+      background-color: #50fa7b;
+      animation: blink 1s infinite;
+    }
+
+    .separator {
+      color: #4a4a7a;
+      text-align: center;
+      margin: 15px 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="header">⚔ FANTASY ADVENTURE ⚔</div>
+  
+  <div id="main-container">
+    <div id="output-area"></div>
+    <div id="sidebar">
+      <div class="sidebar-title">Status</div>
+      <div class="sidebar-content" id="sidebar-content">
+        No active session
+      </div>
+    </div>
+  </div>
+  
+  <div id="input-area">
+    <span id="prompt">&gt;</span>
+    <input type="text" id="command-input" autocomplete="off" autofocus>
+    <span class="cursor"></span>
+  </div>
+
+  <script>
+    const Game = {
+      version: "1.0.0",
+      
+      data: {},
+      state: {},
+      
+      ui: {},
+      parser: {},
+      engine: {},
+      checks: {},
+      inventory: {},
+      characterCreation: {},
+      clock: {},
+      schedules: {},
+      storage: {},
+      conditions: {},
+      combat: {},
+      dialogue: {},
+      utilities: {}
+    };
+
+    const GameModes = {
+      TITLE: "title",
+      CHARACTER_CREATION: "character_creation",
+      PLAYING: "playing",
+      GAME_OVER: "game_over"
+    };
+
+    Game.state.commandHistory = [];
+    Game.state.mode = GameModes.TITLE;
+    Game.state.pendingQuit = false;
+
+    const STAT_NAMES = ['might', 'agility', 'endurance', 'intellect', 'will', 'presence'];
+
+    Game.data.skills = [
+      { id: 'athletics', name: 'Athletics', stat: 'might', description: 'Climbing, jumping, forcing, grappling' },
+      { id: 'stealth', name: 'Stealth', stat: 'agility', description: 'Sneaking, hiding, ambushes' },
+      { id: 'thievery', name: 'Thievery', stat: 'agility', description: 'Lockpicking, traps, sleight of hand' },
+      { id: 'survival', name: 'Survival', stat: 'endurance', description: 'Tracking, foraging, wilderness travel' },
+      { id: 'lore', name: 'Lore', stat: 'intellect', description: 'History, magic, religion, monsters' },
+      { id: 'investigation', name: 'Investigation', stat: 'intellect', description: 'Searching, clues, hidden details' },
+      { id: 'persuasion', name: 'Persuasion', stat: 'presence', description: 'Friendly social influence' },
+      { id: 'deception', name: 'Deception', stat: 'presence', description: 'Lying, disguise, misdirection' },
+      { id: 'intimidation', name: 'Intimidation', stat: 'presence', description: 'Threats and coercion' },
+      { id: 'melee', name: 'Melee', stat: 'might', description: 'Swords, axes, clubs, brawling' },
+      { id: 'ranged', name: 'Ranged', stat: 'agility', description: 'Bows, thrown weapons' },
+      { id: 'defense', name: 'Defense', stat: 'agility', description: 'Avoiding or absorbing harm' },
+      { id: 'magic', name: 'Magic', stat: 'will', description: 'Spellcasting and rituals' }
+    ];
+
+    Game.data.backgrounds = [
+      {
+        id: 'mercenary',
+        name: 'Mercenary',
+        description: 'You have fought in border skirmishes and tavern brawls alike. Steel is your oldest companion.',
+        magical: false,
+        statBonuses: { might: 1, endurance: 1 },
+        skillBonuses: { melee: 2, defense: 1, intimidation: 1 },
+        startingItems: [
+          { itemId: 'iron_sword', slot: 'weapon', quantity: 1 },
+          { itemId: 'leather_armor', slot: 'armor', quantity: 1 },
+          { itemId: 'travel_rations', quantity: 2 }
+        ],
+        startingGold: 12,
+        flags: { soldier_background: true },
+        reputation: { village: 0, goblins: -1 }
+      },
+      {
+        id: 'village_hunter',
+        name: 'Village Hunter',
+        description: 'You know the old tracks, the deer paths, and the silence before danger.',
+        magical: false,
+        statBonuses: { agility: 1, endurance: 1 },
+        skillBonuses: { survival: 2, ranged: 1, stealth: 1 },
+        startingItems: [
+          { itemId: 'hunting_bow', slot: 'weapon', quantity: 1 },
+          { itemId: 'skinning_knife', quantity: 1 },
+          { itemId: 'travel_cloak', slot: 'cloak', quantity: 1 },
+          { itemId: 'travel_rations', quantity: 3 },
+          { itemId: 'flint_and_steel', quantity: 1 }
+        ],
+        startingGold: 8,
+        flags: { knows_forest_paths: true },
+        reputation: { village: 1, goblins: -1 }
+      },
+      {
+        id: 'hedge_wizard',
+        name: 'Hedge Wizard',
+        description: 'You learned scraps of the arcane arts from a wandering sage. The village folk call you clever — or strange.',
+        magical: true,
+        statBonuses: { intellect: 1, will: 1 },
+        skillBonuses: { magic: 2, lore: 1, investigation: 1 },
+        startingItems: [
+          { itemId: 'gnarled_staff', slot: 'weapon', quantity: 1 },
+          { itemId: 'traveling_robes', slot: 'armor', quantity: 1 },
+          { itemId: 'spell_pouch', quantity: 1 },
+          { itemId: 'travel_rations', quantity: 2 }
+        ],
+        startingGold: 5,
+        flags: { magical_training: true },
+        reputation: { village: 0, church: 1 }
+      },
+      {
+        id: 'temple_acolyte',
+        name: 'Temple Acolyte',
+        description: 'You served the old shrine since childhood. Your faith is quiet but unshakable.',
+        magical: false,
+        statBonuses: { will: 1, presence: 1 },
+        skillBonuses: { lore: 2, persuasion: 1, defense: 1 },
+        startingItems: [
+          { itemId: 'wooden_shield', slot: 'offhand', quantity: 1 },
+          { itemId: 'traveling_robes', slot: 'armor', quantity: 1 },
+          { itemId: 'holy_symbol', quantity: 1 },
+          { itemId: 'travel_rations', quantity: 2 }
+        ],
+        startingGold: 6,
+        flags: { temple_background: true },
+        reputation: { village: 1, church: 2 }
+      },
+      {
+        id: 'street_urchin',
+        name: 'Street Urchin',
+        description: 'You grew up in the gutters of a larger town. You learned to fight, lie, and run — in that order.',
+        magical: false,
+        statBonuses: { agility: 1, presence: 1 },
+        skillBonuses: { stealth: 2, deception: 1, thievery: 1 },
+        startingItems: [
+          { itemId: 'rusty_dagger', slot: 'weapon', quantity: 1 },
+          { itemId: 'ragged_cloak', slot: 'cloak', quantity: 1 },
+          { itemId: 'lockpicks', quantity: 1 }
+        ],
+        startingGold: 15,
+        flags: { streetwise: true },
+        reputation: { village: -1, thieves_guild: 1 }
+      },
+      {
+        id: 'disgraced_noble',
+        name: 'Disgraced Noble',
+        description: 'Your family name once opened doors. Now it closes them — but your bearing still commands a room.',
+        magical: false,
+        statBonuses: { presence: 2 },
+        skillBonuses: { persuasion: 2, deception: 1, lore: 1 },
+        startingItems: [
+          { itemId: 'fine_sword', slot: 'weapon', quantity: 1 },
+          { itemId: 'noble_clothes', slot: 'armor', quantity: 1 },
+          { itemId: 'signet_ring', slot: 'accessory1', quantity: 1 }
+        ],
+        startingGold: 20,
+        flags: { noble_background: true },
+        reputation: { village: 0, church: 0 }
+      },
+      {
+        id: 'grave_robber',
+        name: 'Grave Robber',
+        description: 'You have looted the dead for coin. The church does not forgive; the dead do not forget.',
+        magical: false,
+        statBonuses: { agility: 1, intellect: 1 },
+        skillBonuses: { thievery: 2, investigation: 1, stealth: 1 },
+        startingItems: [
+          { itemId: 'rusty_dagger', slot: 'weapon', quantity: 1 },
+          { itemId: 'dark_cloak', slot: 'cloak', quantity: 1 },
+          { itemId: 'lockpicks', quantity: 1 },
+          { itemId: 'torch', quantity: 2 }
+        ],
+        startingGold: 10,
+        flags: { grave_robber_background: true },
+        reputation: { village: -1, church: -2 }
+      }
+    ];
+
+    Game.data.items = {
+      iron_sword: { id: 'iron_sword', name: 'iron sword', weight: 3, slot: 'weapon', type: 'weapon', value: 20 },
+      hunting_bow: { id: 'hunting_bow', name: 'hunting bow', weight: 2, slot: 'weapon', type: 'weapon', value: 15 },
+      skinning_knife: { id: 'skinning_knife', name: 'skinning knife', weight: 1, type: 'tool', value: 3 },
+      travel_cloak: { id: 'travel_cloak', name: 'travel cloak', weight: 2, slot: 'cloak', type: 'clothing', value: 5 },
+      travel_rations: { id: 'travel_rations', name: 'travel rations', weight: 1, type: 'consumable', stackable: true, value: 1 },
+      flint_and_steel: { id: 'flint_and_steel', name: 'flint and steel', weight: 1, type: 'tool', value: 2 },
+      leather_armor: { id: 'leather_armor', name: 'leather armor', weight: 15, slot: 'armor', type: 'armor', defenseBonus: 2, value: 30 },
+      gnarled_staff: { id: 'gnarled_staff', name: 'gnarled staff', weight: 3, slot: 'weapon', type: 'weapon', value: 5 },
+      traveling_robes: { id: 'traveling_robes', name: 'traveling robes', weight: 3, slot: 'armor', type: 'clothing', value: 5 },
+      spell_pouch: { id: 'spell_pouch', name: 'spell pouch', weight: 1, type: 'tool', value: 10 },
+      wooden_shield: { id: 'wooden_shield', name: 'wooden shield', weight: 6, slot: 'offhand', type: 'shield', shieldBonus: 1, value: 8 },
+      holy_symbol: { id: 'holy_symbol', name: 'holy symbol', weight: 0, type: 'misc', value: 0 },
+      rusty_dagger: { id: 'rusty_dagger', name: 'rusty dagger', weight: 1, slot: 'weapon', type: 'weapon', value: 2 },
+      ragged_cloak: { id: 'ragged_cloak', name: 'ragged cloak', weight: 1, slot: 'cloak', type: 'clothing', value: 1 },
+      lockpicks: { id: 'lockpicks', name: 'lockpicks', weight: 0, type: 'tool', value: 5 },
+      fine_sword: { id: 'fine_sword', name: 'fine sword', weight: 3, slot: 'weapon', type: 'weapon', value: 40 },
+      noble_clothes: { id: 'noble_clothes', name: 'noble clothes', weight: 3, slot: 'armor', type: 'clothing', value: 25 },
+      signet_ring: { id: 'signet_ring', name: 'signet ring', weight: 0, slot: 'accessory1', type: 'misc', value: 15 },
+      dark_cloak: { id: 'dark_cloak', name: 'dark cloak', weight: 2, slot: 'cloak', type: 'clothing', value: 5 },
+      torch: { id: 'torch', name: 'torch', weight: 1, type: 'light', stackable: true, value: 1 },
+      village_notice: { id: 'village_notice', name: 'notice board posting', weight: 0, type: 'misc', value: 0 }
+    };
+
+    Game.data.locations = {
+      village_square: {
+        id: 'village_square',
+        name: 'Village Square',
+        descriptions: [
+          {
+            text: 'You stand in the muddy square of a small frontier village. A stone well sits at the center, its rope darkened by years of use. Timber-framed buildings crowd the edges — the general store to the north, the Silver Stag tavern to the south, and the temple yard to the east. A notice board stands near the well, plastered with faded parchments.',
+            conditions: []
+          }
+        ],
+        exits: {
+          north: { to: 'general_store', travelMinutes: 1 },
+          south: { to: 'silver_stag_tavern', travelMinutes: 1 },
+          east: { to: 'temple_yard', travelMinutes: 1 }
+        },
+        items: ['village_notice'],
+        tags: ['settlement', 'outdoors']
+      }
+    };
+
+    Game.ui.print = function(text, className = 'output-narrative') {
+      const outputArea = document.getElementById('output-area');
+      const div = document.createElement('div');
+      div.className = `output-line ${className}`;
+      div.textContent = text;
+      outputArea.appendChild(div);
+      outputArea.scrollTop = outputArea.scrollHeight;
+    };
+
+    Game.ui.clearOutput = function() {
+      const outputArea = document.getElementById('output-area');
+      outputArea.innerHTML = '';
+      this.print('═══════════════════════════════════════', 'separator');
+      this.print('Screen cleared.', 'output-system');
+      this.print('═══════════════════════════════════════', 'separator');
+    };
+
+    Game.ui.echoCommand = function(command) {
+      this.print(`> ${command}`, 'output-command');
+    };
+
+    Game.ui.showTitle = function() {
+      this.print('', '');
+      this.print('╔══════════════════════════════════════╗', 'separator');
+      this.print('║                                      ║', 'separator');
+      this.print('║     FANTASY TEXT ADVENTURE           ║', 'output-highlight');
+      this.print('║     A Classic RPG Experience         ║', 'output-system');
+      this.print('║                                      ║', 'separator');
+      this.print('╠══════════════════════════════════════╣', 'separator');
+      this.print('║                                      ║', 'separator');
+      this.print('║   Type "start" to begin your quest   ║', 'output-narrative');
+      this.print('║   Type "help" for available commands ║', 'output-narrative');
+      this.print('║   Type "about" for game info         ║', 'output-narrative');
+      this.print('║                                      ║', 'separator');
+      this.print('╚══════════════════════════════════════╝', 'separator');
+      this.print('', '');
+    };
+
+    Game.ui.handleInput = function(input) {
+      if (!input.trim()) return;
+      
+      this.echoCommand(input);
+      Game.state.commandHistory.push(input);
+      Game.state.pendingQuit = false;
+      
+      const trimmed = input.trim().toLowerCase();
+      
+      switch (Game.state.mode) {
+        case GameModes.TITLE:
+          this.handleTitleInput(trimmed);
+          break;
+        case GameModes.CHARACTER_CREATION:
+          Game.characterCreation.handleInput(trimmed);
+          break;
+        case GameModes.PLAYING:
+          Game.engine.handleCommand(trimmed);
+          break;
+        case GameModes.GAME_OVER:
+          this.handleGameOverInput(trimmed);
+          break;
+      }
+    };
+
+    Game.ui.handleTitleInput = function(input) {
+      if (input === 'start' || input === 'begin' || input === 'play') {
+        this.print('', '');
+        this.print('Starting new adventure...', 'output-system');
+        this.print('', '');
+        
+        Game.characterCreation.start();
+        Game.state.mode = GameModes.CHARACTER_CREATION;
+      } else if (input === 'help') {
+        this.showHelp(Game.engine.availableCommands.title);
+      } else if (input === 'clear') {
+        this.clearOutput();
+        setTimeout(() => this.showTitle(), 100);
+      } else if (input === 'about') {
+        this.showAbout();
+      } else {
+        this.print('Please type "start" to begin your adventure.', 'output-system');
+      }
+    };
+
+    Game.ui.handleGameOverInput = function(input) {
+      if (input === 'restart' || input === 'start' || input === 'new') {
+        location.reload();
+      } else if (input === 'quit' || input === 'exit') {
+        this.print('Thank you for playing!', 'output-system');
+        setTimeout(() => window.location.href = 'about:blank', 2000);
+      } else {
+        this.print('Type "restart" for a new game or "quit" to exit.', 'output-system');
+      }
+    };
+
+    Game.ui.showHelp = function(commands) {
+      this.print('', '');
+      this.print('━━━━━━━━━━ AVAILABLE COMMANDS ━━━━━━━━━━', 'output-highlight');
+      this.print('', '');
+      
+      if (commands) {
+        commands.forEach(cmd => {
+          this.print(`  ${cmd.name.padEnd(20)} - ${cmd.description}`, 'output-narrative');
+        });
+      }
+      
+      this.print('', '');
+      this.print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'output-highlight');
+      this.print('', '');
+    };
+
+    Game.ui.showAbout = function() {
+      this.print('', '');
+      this.print('━━━━━━━━━━ ABOUT THIS GAME ━━━━━━━━━━━━', 'output-highlight');
+      this.print('', '');
+      this.print('Fantasy Text Adventure v' + Game.version, 'output-system');
+      this.print('A classic text-based RPG engine', 'output-narrative');
+      this.print('', '');
+      this.print('Features:', 'output-highlight');
+      this.print('  • Character creation with stats and skills', 'output-narrative');
+      this.print('  • Inventory and equipment management', 'output-narrative');
+      this.print('  • Turn-based time progression', 'output-narrative');
+      this.print('  • NPCs, monsters, and combat', 'output-narrative');
+      this.print('  • Save/load and export/import support', 'output-narrative');
+      this.print('', '');
+      this.print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'output-highlight');
+      this.print('', '');
+    };
+
+    Game.parser.normalize = function(input) {
+      return input.toLowerCase().trim().replace(/\s+/g, ' ');
+    };
+
+    Game.engine.availableCommands = {
+      title: [
+        { name: 'start', description: 'Begin a new adventure' },
+        { name: 'help', description: 'Show available commands' },
+        { name: 'clear', description: 'Clear the screen' },
+        { name: 'about', description: 'Display game information' }
+      ],
+      playing: [
+        { name: 'look', description: 'Examine your surroundings' },
+        { name: 'go [direction]', description: 'Travel to a new area' },
+        { name: 'talk [npc]', description: 'Speak with an NPC' },
+        { name: 'take [item]', description: 'Pick up an item' },
+        { name: 'drop [item]', description: 'Drop an item from inventory' },
+        { name: 'equip [item]', description: 'Equip an item' },
+        { name: 'unequip [item]', description: 'Unequip an item' },
+        { name: 'inventory', description: 'View your inventory' },
+        { name: 'wait', description: 'Pass some time' },
+        { name: 'save', description: 'Save your progress' },
+        { name: 'load', description: 'Load a saved game' },
+        { name: 'help', description: 'Show available commands' },
+        { name: 'clear', description: 'Clear the screen' },
+        { name: 'about', description: 'Display game information' }
+      ]
+    };
+
+    Game.engine.handleCommand = function(input) {
+      const normalized = Game.parser.normalize(input);
+      
+      if (normalized === 'help') {
+        Game.ui.showHelp(this.availableCommands.playing);
+      } else if (normalized === 'clear') {
+        Game.ui.clearOutput();
+      } else if (normalized === 'about') {
+        Game.ui.showAbout();
+      } else if (normalized === 'look' || normalized === 'l') {
+        this.look();
+      } else if (normalized === 'north' || normalized === 'n') {
+        this.go('north');
+      } else if (normalized === 'south' || normalized === 's') {
+        this.go('south');
+      } else if (normalized === 'east' || normalized === 'e') {
+        this.go('east');
+      } else if (normalized === 'west' || normalized === 'w') {
+        this.go('west');
+      } else if (normalized === 'go north') {
+        this.go('north');
+      } else if (normalized === 'go south') {
+        this.go('south');
+      } else if (normalized === 'go east') {
+        this.go('east');
+      } else if (normalized === 'go west') {
+        this.go('west');
+      } else if (normalized === 'quit' || normalized === 'exit') {
+        if (Game.state.pendingQuit) {
+          Game.state.mode = GameModes.GAME_OVER;
+          Game.ui.print('', '');
+          Game.ui.print('══════════════════════════════════════', 'separator');
+          Game.ui.print('  GAME OVER', 'output-highlight');
+          Game.ui.print('══════════════════════════════════════', 'separator');
+          Game.ui.print('', '');
+          Game.ui.print('Thank you for playing!', 'output-system');
+          Game.ui.print('Type "restart" for a new game.', 'output-system');
+        } else {
+          Game.state.pendingQuit = true;
+          Game.ui.print('Saving before quit is recommended!', 'output-system');
+          Game.ui.print('Type "quit" again to confirm, or use a different command.', 'output-system');
+        }
+      } else if (normalized === 'inventory' || normalized === 'i' || normalized === 'inv') {
+        this.showInventory();
+      } else {
+        Game.ui.print(`I don't understand that command. Try "help" for options.`, 'output-error');
+      }
+    };
+
+    Game.engine.look = function() {
+      if (!Game.state.player || !Game.state.player.location) {
+        Game.ui.print('You are nowhere in particular.', 'output-narrative');
+        return;
+      }
+      const locId = Game.state.player.location;
+      const loc = Game.data.locations[locId];
+      if (!loc) {
+        Game.ui.print('This location does not exist.', 'output-error');
+        return;
+      }
+      Game.ui.print(`  --- ${loc.name} ---`, 'output-highlight');
+      Game.ui.print('', '');
+      for (const desc of loc.descriptions) {
+        Game.ui.print(`${desc.text}`, 'output-narrative');
+      }
+      Game.ui.print('', '');
+      Game.ui.print('Exits:', 'output-system');
+      for (const [dir, exit] of Object.entries(loc.exits)) {
+        const exitLoc = Game.data.locations[exit.to];
+        const exitName = exitLoc ? exitLoc.name : dir;
+        Game.ui.print(`  ${dir.padEnd(8)} - ${exitName}`, 'output-narrative');
+      }
+      Game.ui.print('', '');
+      if (loc.items && loc.items.length > 0) {
+        Game.ui.print('You notice: ' + loc.items.map(id => {
+          const item = Game.data.items[id];
+          return item ? item.name : id;
+        }).join(', '), 'output-system');
+        Game.ui.print('', '');
+      }
+    };
+
+    Game.engine.go = function(direction) {
+      const player = Game.state.player;
+      const loc = Game.data.locations[player.location];
+      if (!loc || !loc.exits[direction]) {
+        Game.ui.print(`You cannot go ${direction}.`, 'output-error');
+        return;
+      }
+      const exit = loc.exits[direction];
+      player.location = exit.to;
+      const newLoc = Game.data.locations[exit.to];
+      if (newLoc) {
+        Game.ui.print('', '');
+        Game.ui.print(`You head ${direction}...`, 'output-narrative');
+        Game.ui.print('', '');
+        this.look();
+      }
+    };
+
+    Game.engine.showInventory = function() {
+      const player = Game.state.player;
+      if (!player) {
+        Game.ui.print('No active character.', 'output-error');
+        return;
+      }
+      const bg = Game.data.backgrounds.find(b => b.id === player.background);
+      const bgName = bg ? bg.name : 'Unknown';
+      Game.ui.print('', '');
+      Game.ui.print('══════════════════════════════════════', 'separator');
+      Game.ui.print('  INVENTORY', 'output-highlight');
+      Game.ui.print('══════════════════════════════════════', 'separator');
+      Game.ui.print('', '');
+      Game.ui.print(`  Name:       ${player.name}`, 'output-narrative');
+      Game.ui.print(`  Background: ${bgName}`, 'output-narrative');
+      Game.ui.print(`  Level:      ${player.level}`, 'output-narrative');
+      Game.ui.print('', '');
+      Game.ui.print(`  Health:   ${player.resources.hp} / ${player.resources.maxHp}`, 'output-narrative');
+      Game.ui.print(`  Stamina:  ${player.resources.stamina} / ${player.resources.maxStamina}`, 'output-narrative');
+      Game.ui.print(`  Mana:     ${player.resources.mana} / ${player.resources.maxMana}`, 'output-narrative');
+      Game.ui.print('', '');
+      Game.ui.print('  Equipment:', 'output-narrative');
+      for (const [slot, itemId] of Object.entries(player.equipment)) {
+        const label = slot.padEnd(12);
+        if (itemId) {
+          const item = Game.data.items[itemId];
+          Game.ui.print(`    ${label}${item ? item.name : itemId}`, 'output-narrative');
+        } else {
+          Game.ui.print(`    ${label}None`, 'output-system');
+        }
+      }
+      Game.ui.print('', '');
+      Game.ui.print(`  Gold: ${player.gold}`, 'output-narrative');
+      Game.ui.print('', '');
+      if (player.inventory.length === 0) {
+        Game.ui.print('  Carried Items: None', 'output-system');
+      } else {
+        Game.ui.print('  Carried Items:', 'output-narrative');
+        for (const entry of player.inventory) {
+          const item = Game.data.items[entry.itemId];
+          const name = item ? item.name : entry.itemId;
+          const weight = item ? (item.weight || 0) * entry.quantity : 0;
+          const qty = entry.quantity > 1 ? ` x${entry.quantity}` : '';
+          Game.ui.print(`    - ${item ? item.name : entry.itemId}${qty}   ${weight} lb`, 'output-narrative');
+        }
+      }
+      Game.ui.print('', '');
+      Game.ui.print('══════════════════════════════════════', 'separator');
+    };
+
+    Game.engine.look = function() {
+      if (!Game.state.player || !Game.state.player.location) {
+        Game.ui.print('You are nowhere in particular.', 'output-narrative');
+        return;
+      }
+      const locId = Game.state.player.location;
+      const loc = Game.data.locations[locId];
+      if (!loc) {
+        Game.ui.print('This location does not exist.', 'output-error');
+        return;
+      }
+      Game.ui.print(`  --- ${loc.name} ---`, 'output-highlight');
+      Game.ui.print('', '');
+      for (const desc of loc.descriptions) {
+        Game.ui.print(`${desc.text}`, 'output-narrative');
+      }
+      Game.ui.print('', '');
+      Game.ui.print('Exits:', 'output-system');
+      for (const [dir, exit] of Object.entries(loc.exits)) {
+        const exitLoc = Game.data.locations[exit.to];
+        const exitName = exitLoc ? exitLoc.name : dir;
+        Game.ui.print(`  ${dir.padEnd(8)} - ${exitName}`, 'output-narrative');
+      }
+      Game.ui.print('', '');
+      if (loc.items && loc.items.length > 0) {
+        Game.ui.print('You notice: ' + loc.items.map(id => {
+          const item = Game.data.items[id];
+          return item ? item.name : id;
+        }).join(', '), 'output-system');
+        Game.ui.print('', '');
+      }
+    };
+
+    Game.engine.go = function(direction) {
+      const player = Game.state.player;
+      const loc = Game.data.locations[player.location];
+      if (!loc || !loc.exits[direction]) {
+        Game.ui.print(`You cannot go ${direction}.`, 'output-error');
+        return;
+      }
+      const exit = loc.exits[direction];
+      player.location = exit.to;
+      const newLoc = Game.data.locations[exit.to];
+      if (newLoc) {
+        Game.ui.print('', '');
+        Game.ui.print(`You head ${direction}...`, 'output-narrative');
+        Game.ui.print('', '');
+        this.look();
+      }
+    };
+
+    Game.engine.showInventory = function() {
+      const player = Game.state.player;
+      if (!player) {
+        Game.ui.print('No active character.', 'output-error');
+        return;
+      }
+      const bg = Game.data.backgrounds.find(b => b.id === player.background);
+      const bgName = bg ? bg.name : 'Unknown';
+      Game.ui.print('', '');
+      Game.ui.print('══════════════════════════════════════', 'separator');
+      Game.ui.print('  INVENTORY', 'output-highlight');
+      Game.ui.print('══════════════════════════════════════', 'separator');
+      Game.ui.print('', '');
+      Game.ui.print(`  Name:       ${player.name}`, 'output-narrative');
+      Game.ui.print(`  Background: ${bgName}`, 'output-narrative');
+      Game.ui.print(`  Level:      ${player.level}`, 'output-narrative');
+      Game.ui.print('', '');
+      Game.ui.print(`  Health:   ${player.resources.hp} / ${player.resources.maxHp}`, 'output-narrative');
+      Game.ui.print(`  Stamina:  ${player.resources.stamina} / ${player.resources.maxStamina}`, 'output-narrative');
+      Game.ui.print(`  Mana:     ${player.resources.mana} / ${player.resources.maxMana}`, 'output-narrative');
+      Game.ui.print('', '');
+      Game.ui.print('  Equipment:', 'output-narrative');
+      for (const [slot, itemId] of Object.entries(player.equipment)) {
+        const label = slot.padEnd(12);
+        if (itemId) {
+          const item = Game.data.items[itemId];
+          Game.ui.print(`    ${label}${item ? item.name : itemId}`, 'output-narrative');
+        } else {
+          Game.ui.print(`    ${label}None`, 'output-system');
+        }
+      }
+      Game.ui.print('', '');
+      Game.ui.print(`  Gold: ${player.gold}`, 'output-narrative');
+      Game.ui.print('', '');
+      if (player.inventory.length === 0) {
+        Game.ui.print('  Carried Items: None', 'output-system');
+      } else {
+        Game.ui.print('  Carried Items:', 'output-narrative');
+        for (const entry of player.inventory) {
+          const item = Game.data.items[entry.itemId];
+          const name = item ? item.name : entry.itemId;
+          const weight = item ? (item.weight || 0) * entry.quantity : 0;
+          const qty = entry.quantity > 1 ? ` x${entry.quantity}` : '';
+          Game.ui.print(`    - ${item ? item.name : entry.itemId}${qty}   ${weight} lb`, 'output-narrative');
+        }
+      }
+      Game.ui.print('', '');
+      Game.ui.print('══════════════════════════════════════', 'separator');
+    };
+
+    Game.characterCreation = {
+      currentStep: 0,
+      characterDraft: null,
+
+      initDraft: function() {
+        this.characterDraft = {
+          name: '',
+          backgroundId: null,
+          baseStats: { might: 0, agility: 0, endurance: 0, intellect: 0, will: 0, presence: 0 },
+          allocatedStatPoints: 0,
+          maxStatPoints: 6,
+          chosenSkills: [],
+          finalStats: {},
+          finalSkills: {},
+          startingItems: [],
+          startingGold: 0,
+          sacrificedStat: null
+        };
+        this.currentStep = 1;
+      },
+
+      start: function() {
+        this.initDraft();
+        Game.ui.print('', '');
+        this.showStep1();
+      },
+
+      showStep1: function() {
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('  CREATE YOUR CHARACTER', 'output-highlight');
+        Game.ui.print('  Step 1 of 7: Enter Your Name', 'output-highlight');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('', '');
+        Game.ui.print('What is your name, adventurer?', 'output-narrative');
+        Game.ui.print('', '');
+        Game.ui.print('Type your character name.', 'output-system');
+      },
+
+      showStep2: function() {
+        Game.ui.print('', '');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('  Step 2 of 7: Choose Your Background', 'output-highlight');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('', '');
+        const backgrounds = Game.data.backgrounds;
+        for (let i = 0; i < backgrounds.length; i++) {
+          const bg = backgrounds[i];
+          Game.ui.print(`  ${i + 1}. ${bg.name}`, 'output-highlight');
+          Game.ui.print(`     ${bg.description}`, 'output-narrative');
+          Game.ui.print('', '');
+        }
+        Game.ui.print('Type a number (1-7) or the background name.', 'output-system');
+        Game.ui.print('Type "back" to go to the previous step.', 'output-system');
+      },
+
+      showStep3: function() {
+        Game.ui.print('', '');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('  Step 3 of 7: Allocate Stat Points', 'output-highlight');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('', '');
+        Game.ui.print('You have 6 points to spend. No stat may exceed 3.', 'output-narrative');
+        Game.ui.print('You may lower one stat to -1 to gain an extra point.', 'output-narrative');
+        Game.ui.print('', '');
+        this.displayStats();
+        Game.ui.print('', '');
+        Game.ui.print('Commands:', 'output-system');
+        Game.ui.print('  increase might     - Raise a stat by 1', 'output-narrative');
+        Game.ui.print('  decrease agility   - Lower a stat by 1', 'output-narrative');
+        Game.ui.print('  set will 2         - Set a stat to a value', 'output-narrative');
+        Game.ui.print('  continue           - Move to next step', 'output-narrative');
+        Game.ui.print('  back               - Go to previous step', 'output-narrative');
+      },
+
+      displayStats: function() {
+        const draft = this.characterDraft;
+        const remaining = draft.maxStatPoints - draft.allocatedStatPoints;
+        Game.ui.print(`  Points remaining: ${remaining}`, 'output-highlight');
+        Game.ui.print('', '');
+        for (const stat of STAT_NAMES) {
+          const val = draft.baseStats[stat];
+          const label = stat.charAt(0).toUpperCase() + stat.slice(1);
+          const padded = label.padEnd(12);
+          Game.ui.print(`  ${padded}${val}`, 'output-narrative');
+        }
+      },
+
+      showStep4: function() {
+        Game.ui.print('', '');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('  Step 4 of 7: Choose Trained Skills', 'output-highlight');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('', '');
+        Game.ui.print('Choose 4 skills to train. Each gets +1. No skill above 3.', 'output-narrative');
+        Game.ui.print('', '');
+        this.displaySkills();
+        Game.ui.print('', '');
+        Game.ui.print('Commands:', 'output-system');
+        Game.ui.print('  train stealth      - Train a skill', 'output-narrative');
+        Game.ui.print('  untrain lore       - Untrain a skill', 'output-narrative');
+        Game.ui.print('  continue           - Move to next step', 'output-narrative');
+        Game.ui.print('  back               - Go to previous step', 'output-narrative');
+      },
+
+      displaySkills: function() {
+        const draft = this.characterDraft;
+        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        Game.ui.print(`  Skills trained: ${draft.chosenSkills.length} / 4`, 'output-highlight');
+        Game.ui.print('', '');
+        for (const skill of Game.data.skills) {
+          const bgBonus = (bg && bg.skillBonuses && bg.skillBonuses[skill.id]) ? bg.skillBonuses[skill.id] : 0;
+          const trained = draft.chosenSkills.includes(skill.id) ? 1 : 0;
+          const total = bgBonus + trained;
+          const trainedMark = trained ? ' [TRAINED]' : '';
+          const bgMark = bgBonus > 0 ? ` (+${bgBonus} bg)` : '';
+          const label = skill.name.padEnd(16);
+          Game.ui.print(`  ${label}${total}${bgMark}${trainedMark}`, 'output-narrative');
+        }
+      },
+
+      showStep5: function() {
+        Game.ui.print('', '');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('  Step 5 of 7: Review Starting Equipment', 'output-highlight');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('', '');
+
+        const draft = this.characterDraft;
+        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+
+        Game.ui.print(`  Starting Gold: ${bg.startingGold}`, 'output-highlight');
+        Game.ui.print('', '');
+        Game.ui.print('  Starting Items:', 'output-narrative');
+        for (const item of bg.startingItems) {
+          const data = Game.data.items[item.itemId];
+          const name = data ? data.name : item.itemId;
+          Game.ui.print(`    - ${name}`, 'output-narrative');
+        }
+
+        Game.ui.print('', '');
+        Game.ui.print('  Starting Equipment:', 'output-narrative');
+        const equipItems = bg.startingItems.filter(i => i.slot);
+        if (equipItems.length === 0) {
+          Game.ui.print('    None', 'output-system');
+        } else {
+          for (const item of equipItems) {
+            const data = Game.data.items[item.itemId];
+            const name = data ? data.name : item.itemId;
+            Game.ui.print(`    ${item.slot}: ${name}`, 'output-narrative');
+          }
+        }
+
+        Game.ui.print('', '');
+        Game.ui.print('Type "continue" to proceed, or "back" to go to the previous step.', 'output-system');
+      },
+
+      showStep6: function() {
+        Game.ui.print('', '');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('  Step 6 of 7: Confirm Your Character', 'output-highlight');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('', '');
+
+        const draft = this.characterDraft;
+        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        const finalStats = this.calculateFinalStats();
+        const finalSkills = this.calculateFinalSkills();
+        const maxHp = 10 + 2 * finalStats.endurance;
+        const maxStamina = 8 + finalStats.endurance + finalStats.might;
+        const maxMana = bg.magical ? 4 + finalStats.will + finalStats.intellect : 0;
+
+        Game.ui.print(`  Name:       ${draft.name}`, 'output-highlight');
+        Game.ui.print(`  Background: ${bg.name}`, 'output-highlight');
+        Game.ui.print('', '');
+        Game.ui.print('  Stats:', 'output-narrative');
+        for (const stat of STAT_NAMES) {
+          const label = stat.charAt(0).toUpperCase() + stat.slice(1);
+          Game.ui.print(`    ${label.padEnd(12)}${finalStats[stat]}`, 'output-narrative');
+        }
+        Game.ui.print('', '');
+        Game.ui.print('  Skills:', 'output-narrative');
+        for (const skill of Game.data.skills) {
+          if (finalSkills[skill.id] > 0) {
+            Game.ui.print(`    ${skill.name.padEnd(16)}${finalSkills[skill.id]}`, 'output-narrative');
+          }
+        }
+        Game.ui.print('', '');
+        Game.ui.print(`  Health:   ${maxHp}`, 'output-narrative');
+        Game.ui.print(`  Stamina:  ${maxStamina}`, 'output-narrative');
+        if (bg.magical) {
+          Game.ui.print(`  Mana:     ${maxMana}`, 'output-narrative');
+        }
+        Game.ui.print(`  Gold:     ${bg.startingGold}`, 'output-narrative');
+
+        Game.ui.print('', '');
+        Game.ui.print('Type "confirm" to begin your adventure.', 'output-system');
+        Game.ui.print('Type "restart" to start over, or "back" to go to the previous step.', 'output-system');
+      },
+
+      calculateFinalStats: function() {
+        const draft = this.characterDraft;
+        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        const final = {};
+        for (const stat of STAT_NAMES) {
+          final[stat] = draft.baseStats[stat] + ((bg.statBonuses && bg.statBonuses[stat]) ? bg.statBonuses[stat] : 0);
+        }
+        return final;
+      },
+
+      calculateFinalSkills: function() {
+        const draft = this.characterDraft;
+        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        const final = {};
+        for (const skill of Game.data.skills) {
+          let val = 0;
+          if (bg.skillBonuses && bg.skillBonuses[skill.id]) val += bg.skillBonuses[skill.id];
+          if (draft.chosenSkills.includes(skill.id)) val += 1;
+          final[skill.id] = val;
+        }
+        return final;
+      },
+
+      createPlayer: function() {
+        const draft = this.characterDraft;
+        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        const finalStats = this.calculateFinalStats();
+        const finalSkills = this.calculateFinalSkills();
+        const maxHp = 10 + 2 * finalStats.endurance;
+        const maxStamina = 8 + finalStats.endurance + finalStats.might;
+        const maxMana = bg.magical ? 4 + finalStats.will + finalStats.intellect : 0;
+
+        const inventory = [];
+        const equipment = { weapon: null, offhand: null, armor: null, cloak: null, accessory1: null, accessory2: null };
+
+        for (const item of bg.startingItems) {
+          if (item.slot && equipment[item.slot] === null) {
+            equipment[item.slot] = item.itemId;
+          } else {
+            inventory.push({ itemId: item.itemId, quantity: item.quantity || 1 });
+          }
+        }
+
+        const reputation = Object.assign({}, bg.reputation);
+
+        const player = {
+          id: 'player',
+          name: draft.name,
+          background: draft.backgroundId,
+          level: 1,
+          xp: 0,
+          stats: finalStats,
+          skills: finalSkills,
+          resources: {
+            hp: maxHp, maxHp: maxHp,
+            stamina: maxStamina, maxStamina: maxStamina,
+            mana: maxMana, maxMana: maxMana
+          },
+          inventory: inventory,
+          equipment: equipment,
+          gold: bg.startingGold,
+          conditions: [],
+          reputation: reputation,
+          flags: Object.assign({}, bg.flags),
+          location: 'village_square'
+        };
+
+        return player;
+      },
+
+      showStep7: function() {
+        Game.state.player = this.createPlayer();
+
+        Game.ui.print('', '');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('  Step 7 of 7: Your Adventure Begins', 'output-highlight');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('', '');
+        Game.ui.print(`  Welcome, ${Game.state.player.name}.`, 'output-highlight');
+        Game.ui.print('', '');
+
+        this.showOpeningScene();
+
+        Game.state.mode = GameModes.PLAYING;
+      },
+
+      showOpeningScene: function() {
+        const loc = Game.data.locations.village_square;
+        Game.ui.print(`  --- ${loc.name} ---`, 'output-highlight');
+        Game.ui.print('', '');
+        for (const desc of loc.descriptions) {
+          Game.ui.print(`  ${desc.text}`, 'output-narrative');
+          Game.ui.print('', '');
+        }
+
+        Game.ui.print('  Exits:', 'output-system');
+        for (const [dir, exit] of Object.entries(loc.exits)) {
+          const exitLoc = Game.data.locations[exit.to];
+          const exitName = exitLoc ? exitLoc.name : dir;
+          Game.ui.print(`    ${dir.padEnd(8)} - ${exitName}`, 'output-narrative');
+        }
+        Game.ui.print('', '');
+
+        if (loc.items && loc.items.length > 0) {
+          Game.ui.print('  You notice: ' + loc.items.map(id => {
+            const item = Game.data.items[id];
+            return item ? item.name : id;
+          }).join(', '), 'output-system');
+          Game.ui.print('', '');
+        }
+
+        Game.ui.print('Type "help" for available commands.', 'output-system');
+      },
+
+      handleStep1: function(input) {
+        if (input.length < 1 || input.length > 24) {
+          Game.ui.print('Please enter a name between 1 and 24 characters.', 'output-error');
+          return;
+        }
+        if (input === 'back' || input === 'cancel') {
+          this.initDraft();
+          this.currentStep = 1;
+          this.showStep1();
+          return;
+        }
+        this.characterDraft.name = input.trim();
+        this.currentStep = 2;
+        this.showStep2();
+      },
+
+      handleStep2: function(input) {
+        if (input === 'back') {
+          this.currentStep = 1;
+          this.showStep1();
+          return;
+        }
+
+        let chosen = null;
+        const num = parseInt(input, 10);
+        if (!isNaN(num) && num >= 1 && num <= Game.data.backgrounds.length) {
+          chosen = Game.data.backgrounds[num - 1];
+        } else {
+          for (const bg of Game.data.backgrounds) {
+            if (bg.name.toLowerCase() === input || bg.id === input) {
+              chosen = bg;
+              break;
+            }
+          }
+          if (!chosen) {
+            for (const bg of Game.data.backgrounds) {
+              if (bg.name.toLowerCase().includes(input)) {
+                chosen = bg;
+                break;
+              }
+            }
+          }
+        }
+
+        if (!chosen) {
+          Game.ui.print('Please choose a valid background by number or name.', 'output-error');
+          return;
+        }
+
+        this.characterDraft.backgroundId = chosen.id;
+        this.currentStep = 3;
+        Game.ui.print(`  You chose: ${chosen.name}`, 'output-highlight');
+        this.showStep3();
+      },
+
+      handleStep3: function(input) {
+        const draft = this.characterDraft;
+        const parts = input.split(/\s+/);
+
+        if (input === 'back') {
+          this.currentStep = 2;
+          this.showStep2();
+          return;
+        }
+
+        if (input === 'continue' || input === 'next' || input === 'done') {
+          if (draft.allocatedStatPoints > draft.maxStatPoints) {
+            Game.ui.print('You have used more points than allowed. Lower some stats first.', 'output-error');
+            return;
+          }
+          this.currentStep = 4;
+          this.showStep4();
+          return;
+        }
+
+        if (input === 'help' || input === 'help stats') {
+          Game.ui.print('', '');
+          Game.ui.print('Stat Allocation Help:', 'output-highlight');
+          Game.ui.print('  increase <stat>    - Raise a stat by 1 (costs 1 point)', 'output-narrative');
+          Game.ui.print('  decrease <stat>    - Lower a stat by 1 (refunds 1 point)', 'output-narrative');
+          Game.ui.print('  set <stat> <val>   - Set a stat to a specific value', 'output-narrative');
+          Game.ui.print('  continue           - Move to next step', 'output-narrative');
+          Game.ui.print('  back               - Go to previous step', 'output-narrative');
+          Game.ui.print('', '');
+          Game.ui.print('Stats: might, agility, endurance, intellect, will, presence', 'output-system');
+          Game.ui.print('', '');
+          this.displayStats();
+          return;
+        }
+
+        if (parts[0] === 'increase' && parts[1]) {
+          return this.increaseStat(parts[1]);
+        }
+        if (parts[0] === 'decrease' && parts[1]) {
+          return this.decreaseStat(parts[1]);
+        }
+        if (parts[0] === 'set' && parts[1] && parts[2]) {
+          const val = parseInt(parts[2], 10);
+          if (isNaN(val)) {
+            Game.ui.print('Please provide a valid number.', 'output-error');
+            return;
+          }
+          return this.setStat(parts[1], val);
+        }
+
+        Game.ui.print('Unknown command. Try "increase might", "set will 2", "continue", or "help".', 'output-error');
+      },
+
+      increaseStat: function(statName) {
+        const draft = this.characterDraft;
+        if (!STAT_NAMES.includes(statName)) {
+          Game.ui.print(`Unknown stat: ${statName}. Valid stats: ${STAT_NAMES.join(', ')}`, 'output-error');
+          return;
+        }
+        if (draft.baseStats[statName] >= 3) {
+          Game.ui.print(`${statName} is already at the maximum of 3.`, 'output-error');
+          return;
+        }
+        const remaining = draft.maxStatPoints - draft.allocatedStatPoints;
+        if (remaining <= 0) {
+          Game.ui.print('No points remaining. Lower a stat or continue.', 'output-error');
+          return;
+        }
+        draft.baseStats[statName]++;
+        draft.allocatedStatPoints++;
+        Game.ui.print(`${statName} increased to ${draft.baseStats[statName]}. (${draft.maxStatPoints - draft.allocatedStatPoints} points remaining)`, 'output-system');
+        Game.ui.print('');
+        this.displayStats();
+      },
+
+      decreaseStat: function(statName) {
+        const draft = this.characterDraft;
+        if (!STAT_NAMES.includes(statName)) {
+          Game.ui.print(`Unknown stat: ${statName}. Valid stats: ${STAT_NAMES.join(', ')}`, 'output-error');
+          return;
+        }
+        if (draft.baseStats[statName] <= -1) {
+          Game.ui.print(`${statName} is already at the minimum of -1.`, 'output-error');
+          return;
+        }
+        if (draft.baseStats[statName] === 0) {
+          if (draft.sacrificedStat !== null) {
+            Game.ui.print('You have already sacrificed one stat. You cannot sacrifice another.', 'output-error');
+            return;
+          }
+        }
+        const newTarget = draft.baseStats[statName] - 1;
+        if (draft.baseStats[statName] === 0 && newTarget === -1) {
+          draft.sacrificedStat = statName;
+        }
+        draft.baseStats[statName]--;
+        draft.allocatedStatPoints = Math.max(0, draft.allocatedStatPoints - 1);
+        Game.ui.print(`${statName} decreased to ${draft.baseStats[statName]}. (${draft.maxStatPoints - draft.allocatedStatPoints} points remaining)`, 'output-system');
+        Game.ui.print('');
+        this.displayStats();
+      },
+
+      setStat: function(statName, value) {
+        const draft = this.characterDraft;
+        if (!STAT_NAMES.includes(statName)) {
+          Game.ui.print(`Unknown stat: ${statName}. Valid stats: ${STAT_NAMES.join(', ')}`, 'output-error');
+          return;
+        }
+        if (value > 3) {
+          Game.ui.print('No stat may be set above 3.', 'output-error');
+          return;
+        }
+        if (value < -1) {
+          Game.ui.print('No stat may be set below -1.', 'output-error');
+          return;
+        }
+        if (value === -1 && draft.sacrificedStat !== null && draft.sacrificedStat !== statName) {
+          Game.ui.print('Only one stat may be lowered to -1.', 'output-error');
+          return;
+        }
+
+        const oldValue = draft.baseStats[statName];
+        const cost = value - oldValue;
+        const newAllocated = draft.allocatedStatPoints + cost;
+
+        if (newAllocated > draft.maxStatPoints) {
+          Game.ui.print(`Cannot set ${statName} to ${value}. Not enough points.`, 'output-error');
+          return;
+        }
+        if (newAllocated < 0) {
+          Game.ui.print(`Cannot set ${statName} to ${value}.`, 'output-error');
+          return;
+        }
+
+        if (value === -1) {
+          draft.sacrificedStat = statName;
+        } else if (oldValue === -1 && value >= 0) {
+          draft.sacrificedStat = null;
+        }
+
+        draft.baseStats[statName] = value;
+        draft.allocatedStatPoints = newAllocated;
+        Game.ui.print(`${statName} set to ${value}. (${draft.maxStatPoints - draft.allocatedStatPoints} points remaining)`, 'output-system');
+        Game.ui.print('');
+        this.displayStats();
+      },
+
+      handleStep4: function(input) {
+        const draft = this.characterDraft;
+        const parts = input.split(/\s+/);
+
+        if (input === 'back') {
+          this.currentStep = 3;
+          this.showStep3();
+          return;
+        }
+
+        if (input === 'continue' || input === 'next' || input === 'done') {
+          if (draft.chosenSkills.length < 4) {
+            Game.ui.print(`You have trained ${draft.chosenSkills.length} of 4 skills. Train all 4 before continuing.`, 'output-error');
+            return;
+          }
+          this.currentStep = 5;
+          this.showStep5();
+          return;
+        }
+
+        if (parts[0] === 'train' && parts[1]) {
+          return this.trainSkill(parts.slice(1).join(' '));
+        }
+        if (parts[0] === 'untrain' && parts[1]) {
+          return this.untrainSkill(parts.slice(1).join(' '));
+        }
+
+        Game.ui.print('Unknown command. Try "train stealth", "untrain lore", "continue", or "back".', 'output-error');
+      },
+
+      findSkillId: function(name) {
+        const lower = name.toLowerCase();
+        for (const skill of Game.data.skills) {
+          if (skill.id === lower || skill.name.toLowerCase() === lower || skill.name.toLowerCase().includes(lower)) {
+            return skill.id;
+          }
+        }
+        return null;
+      },
+
+      getBackgroundSkillTotal: function(skillId) {
+        const bg = Game.data.backgrounds.find(b => b.id === this.characterDraft.backgroundId);
+        if (bg && bg.skillBonuses && bg.skillBonuses[skillId]) return bg.skillBonuses[skillId];
+        return 0;
+      },
+
+      trainSkill: function(name) {
+        const draft = this.characterDraft;
+        const skillId = this.findSkillId(name);
+        if (!skillId) {
+          Game.ui.print(`Unknown skill: ${name}. Available: ${Game.data.skills.map(s => s.id).join(', ')}`, 'output-error');
+          return;
+        }
+        if (draft.chosenSkills.includes(skillId)) {
+          Game.ui.print(`${skillId} is already trained.`, 'output-error');
+          return;
+        }
+        if (draft.chosenSkills.length >= 4) {
+          Game.ui.print('You have already chosen 4 skills. Untrain one first.', 'output-error');
+          return;
+        }
+        const bgBonus = this.getBackgroundSkillTotal(skillId);
+        if (bgBonus + 1 > 3) {
+          Game.ui.print(`Cannot train ${skillId}: would exceed the skill cap of 3.`, 'output-error');
+          return;
+        }
+        draft.chosenSkills.push(skillId);
+        Game.ui.print(`Trained: ${skillId} (+1). (${draft.chosenSkills.length}/4)`, 'output-system');
+        Game.ui.print('');
+        this.displaySkills();
+      },
+
+      untrainSkill: function(name) {
+        const draft = this.characterDraft;
+        const skillId = this.findSkillId(name);
+        if (!skillId) {
+          Game.ui.print(`Unknown skill: ${name}.`, 'output-error');
+          return;
+        }
+        const idx = draft.chosenSkills.indexOf(skillId);
+        if (idx === -1) {
+          Game.ui.print(`${skillId} is not currently trained.`, 'output-error');
+          return;
+        }
+        draft.chosenSkills.splice(idx, 1);
+        Game.ui.print(`Untrained: ${skillId}. (${draft.chosenSkills.length}/4)`, 'output-system');
+        Game.ui.print('');
+        this.displaySkills();
+      },
+
+      handleStep5: function(input) {
+        if (input === 'back') {
+          this.currentStep = 4;
+          this.showStep4();
+          return;
+        }
+        if (input === 'continue' || input === 'next') {
+          this.currentStep = 6;
+          this.showStep6();
+          return;
+        }
+        Game.ui.print('Type "continue" to proceed, or "back" to go to the previous step.', 'output-system');
+      },
+
+      handleStep6: function(input) {
+        if (input === 'back') {
+          this.currentStep = 5;
+          this.showStep5();
+          return;
+        }
+        if (input === 'confirm' || input === 'yes' || input === 'start') {
+          this.currentStep = 7;
+          this.showStep7();
+          return;
+        }
+        if (input === 'restart') {
+          this.start();
+          return;
+        }
+        Game.ui.print('Type "confirm" to begin, "restart" to start over, or "back".', 'output-system');
+      },
+
+      handleInput: function(input) {
+        switch (this.currentStep) {
+          case 1: this.handleStep1(input); break;
+          case 2: this.handleStep2(input); break;
+          case 3: this.handleStep3(input); break;
+          case 4: this.handleStep4(input); break;
+          case 5: this.handleStep5(input); break;
+          case 6: this.handleStep6(input); break;
+        }
+      }
+    };
+
+    Game.clock.init = function() {
+      Game.state.clock = {
+        day: 1,
+        hour: 8,
+        minute: 0,
+        month: 'Frostwane'
+      };
+    };
+
+    Game.inventory.init = function() {
+      Game.state.inventory = [];
+      Game.state.equipment = {
+        weapon: null,
+        offhand: null,
+        armor: null,
+        cloak: null,
+        accessory1: null,
+        accessory2: null
+      };
+    };
+
+    Game.combat.init = function() {
+      Game.state.inCombat = false;
+      Game.state.currentEnemy = null;
+    };
+
+    Game.conditions.init = function() {
+      Game.state.conditions = [];
+    };
+
+    Game.storage.init = function() {
+      Game.state.saveSlots = 3;
+    };
+
+    Game.state.player = null;
+    Game.state.flags = {};
+    Game.state.variables = {};
+    Game.state.world = {
+      itemLocations: {},
+      npcOverrides: {},
+      monsterStates: {},
+      locationStates: {}
+    };
+
+    Game.init = function() {
+      this.clock.init();
+      this.inventory.init();
+      this.combat.init();
+      this.conditions.init();
+      this.storage.init();
+      
+      Game.ui.showTitle();
+      Game.ui.print('', '');
+    };
+
+    const commandInput = document.getElementById('command-input');
+    
+    commandInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        const value = this.value;
+        this.value = '';
+        Game.ui.handleInput(value);
+      }
+    });
+
+    commandInput.addEventListener('focus', function() {
+      document.querySelector('.cursor').style.display = 'none';
+    });
+
+    commandInput.addEventListener('blur', function() {
+      document.querySelector('.cursor').style.display = 'inline-block';
+      this.focus();
+    });
+
+    setTimeout(() => commandInput.focus(), 100);
+    Game.init();
+  </script>
+</body>
+</html>
