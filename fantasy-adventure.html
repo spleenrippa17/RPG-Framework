@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fantasy Adventure</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #1a1a2e;
+      color: #eee;
+      font-family: 'Courier New', Courier, monospace;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #header {
+      background-color: #0f0f1e;
+      border-bottom: 2px solid #4a4a7a;
+      padding: 12px 20px;
+      text-align: center;
+      color: #8be9fd;
+      font-size: 1.2em;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(139, 233, 253, 0.5);
+    }
+
+    #main-container {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    #output-area {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background-color: #16213e;
+      border-right: 2px solid #4a4a7a;
+    }
+
+    #output-area::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #output-area::-webkit-scrollbar-track {
+      background: #0f0f1e;
+    }
+
+    #output-area::-webkit-scrollbar-thumb {
+      background: #4a4a7a;
+      border-radius: 4px;
+    }
+
+    #output-area::-webkit-scrollbar-thumb:hover {
+      background: #6c6ca0;
+    }
+
+    .output-line {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+
+    .output-command {
+      color: #50fa7b;
+      font-weight: bold;
+    }
+
+    .output-narrative {
+      color: #f8f8f2;
+    }
+
+    .output-system {
+      color: #bd93f9;
+      font-style: italic;
+    }
+
+    .output-error {
+      color: #ff5555;
+    }
+
+    .output-highlight {
+      color: #ffb86c;
+    }
+
+    #sidebar {
+      width: 280px;
+      background-color: #0f0f1e;
+      padding: 20px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .sidebar-title {
+      color: #ff79c6;
+      font-size: 1.1em;
+      font-weight: bold;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #4a4a7a;
+      padding-bottom: 5px;
+    }
+
+    .sidebar-content {
+      color: #ccc;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
+
+    #input-area {
+      background-color: #0f0f1e;
+      border-top: 2px solid #4a4a7a;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+    }
+
+    #prompt {
+      color: #8be9fd;
+      margin-right: 10px;
+      font-weight: bold;
+    }
+
+    #command-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #f8f8f2;
+      font-family: inherit;
+      font-size: 1em;
+      caret-color: #50fa7b;
+    }
+
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 1em;
+      background-color: #50fa7b;
+      animation: blink 1s infinite;
+    }
+
+    .separator {
+      color: #4a4a7a;
+      text-align: center;
+      margin: 15px 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="header">⚔ FANTASY ADVENTURE ⚔</div>
+  
+  <div id="main-container">
+    <div id="output-area"></div>
+    <div id="sidebar">
+      <div class="sidebar-title">Status</div>
+      <div class="sidebar-content" id="sidebar-content">
+        No active session
+      </div>
+    </div>
+  </div>
+  
+  <div id="input-area">
+    <span id="prompt">&gt;</span>
+    <input type="text" id="command-input" autocomplete="off" autofocus>
+    <span class="cursor"></span>
+  </div>
+
+  <script>
+    const Game = {
+      version: "1.0.0",
+      
+      data: {},
+      state: {},
+      
+      ui: {},
+      parser: {},
+      engine: {},
+      checks: {},
+      inventory: {},
+      characterCreation: {},
+      clock: {},
+      schedules: {},
+      storage: {},
+      conditions: {},
+      combat: {},
+      dialogue: {},
+      utilities: {}
+    };
+
+    const GameModes = {
+      TITLE: "title",
+      CHARACTER_CREATION: "character_creation",
+      PLAYING: "playing",
+      GAME_OVER: "game_over"
+    };
+
+    Game.data.commandHistory = [];
+    Game.state.mode = GameModes.TITLE;
+
+    Game.ui.print = function(text, className = 'output-narrative') {
+      const outputArea = document.getElementById('output-area');
+      const div = document.createElement('div');
+      div.className = `output-line ${className}`;
+      div.textContent = text;
+      outputArea.appendChild(div);
+      outputArea.scrollTop = outputArea.scrollHeight;
+    };
+
+    Game.ui.clearOutput = function() {
+      const outputArea = document.getElementById('output-area');
+      outputArea.innerHTML = '';
+      this.print('═══════════════════════════════════════', 'separator');
+      this.print('Screen cleared.', 'output-system');
+      this.print('═══════════════════════════════════════', 'separator');
+    };
+
+    Game.ui.echoCommand = function(command) {
+      this.print(`> ${command}`, 'output-command');
+    };
+
+    Game.ui.showTitle = function() {
+      this.print('', '');
+      this.print('╔══════════════════════════════════════╗', 'separator');
+      this.print('║                                      ║', 'separator');
+      this.print('║     FANTASY TEXT ADVENTURE           ║', 'output-highlight');
+      this.print('║     A Classic RPG Experience         ║', 'output-system');
+      this.print('║                                      ║', 'separator');
+      this.print('╠══════════════════════════════════════╣', 'separator');
+      this.print('║                                      ║', 'separator');
+      this.print('║   Type "start" to begin your quest   ║', 'output-narrative');
+      this.print('║   Type "help" for available commands ║', 'output-narrative');
+      this.print('║   Type "about" for game info         ║', 'output-narrative');
+      this.print('║                                      ║', 'separator');
+      this.print('╚══════════════════════════════════════╝', 'separator');
+      this.print('', '');
+    };
+
+    Game.ui.handleInput = function(input) {
+      if (!input.trim()) return;
+      
+      this.echoCommand(input);
+      Game.data.commandHistory.push(input);
+      
+      const trimmed = input.trim().toLowerCase();
+      
+      switch (Game.state.mode) {
+        case GameModes.TITLE:
+          this.handleTitleInput(trimmed);
+          break;
+        case GameModes.CHARACTER_CREATION:
+          Game.characterCreation.handleInput(trimmed);
+          break;
+        case GameModes.PLAYING:
+          Game.engine.handleCommand(trimmed);
+          break;
+        case GameModes.GAME_OVER:
+          this.handleGameOverInput(trimmed);
+          break;
+      }
+    };
+
+    Game.ui.handleTitleInput = function(input) {
+      if (input === 'start' || input === 'begin' || input === 'play') {
+        this.print('', '');
+        this.print('Starting new adventure...', 'output-system');
+        this.print('', '');
+        
+        Game.characterCreation.start();
+        Game.state.mode = GameModes.CHARACTER_CREATION;
+      } else if (input === 'help') {
+        this.showHelp(Game.engine.availableCommands.title);
+      } else if (input === 'clear') {
+        this.clearOutput();
+        setTimeout(() => this.showTitle(), 100);
+      } else if (input === 'about') {
+        this.showAbout();
+      } else {
+        this.print('Please type "start" to begin your adventure.', 'output-system');
+      }
+    };
+
+    Game.ui.handleGameOverInput = function(input) {
+      if (input === 'restart' || input === 'start' || input === 'new') {
+        location.reload();
+      } else if (input === 'quit' || input === 'exit') {
+        this.print('Thank you for playing!', 'output-system');
+        setTimeout(() => window.close(), 2000);
+      } else {
+        this.print('Type "restart" for a new game or "quit" to exit.', 'output-system');
+      }
+    };
+
+    Game.ui.showHelp = function(commands) {
+      this.print('', '');
+      this.print('━━━━━━━━━━ AVAILABLE COMMANDS ━━━━━━━━━━', 'output-highlight');
+      this.print('', '');
+      
+      if (commands) {
+        commands.forEach(cmd => {
+          this.print(`  ${cmd.name.padEnd(20)} - ${cmd.description}`, 'output-narrative');
+        });
+      }
+      
+      this.print('', '');
+      this.print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'output-highlight');
+      this.print('', '');
+    };
+
+    Game.ui.showAbout = function() {
+      this.print('', '');
+      this.print('━━━━━━━━━━ ABOUT THIS GAME ━━━━━━━━━━━━', 'output-highlight');
+      this.print('', '');
+      this.print('Fantasy Text Adventure v' + Game.version, 'output-system');
+      this.print('A classic text-based RPG engine', 'output-narrative');
+      this.print('', '');
+      this.print('Features:', 'output-highlight');
+      this.print('  • Character creation with stats and skills', 'output-narrative');
+      this.print('  • Inventory and equipment management', 'output-narrative');
+      this.print('  • Turn-based time progression', 'output-narrative');
+      this.print('  • NPCs, monsters, and combat', 'output-narrative');
+      this.print('  • Save/load and export/import support', 'output-narrative');
+      this.print('', '');
+      this.print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'output-highlight');
+      this.print('', '');
+    };
+
+    Game.parser.normalize = function(input) {
+      return input.toLowerCase().trim().replace(/\s+/g, ' ');
+    };
+
+    Game.engine.availableCommands = {
+      title: [
+        { name: 'start', description: 'Begin a new adventure' },
+        { name: 'help', description: 'Show available commands' },
+        { name: 'clear', description: 'Clear the screen' },
+        { name: 'about', description: 'Display game information' }
+      ],
+      playing: [
+        { name: 'look', description: 'Examine your surroundings' },
+        { name: 'go [direction]', description: 'Travel to a new area' },
+        { name: 'talk [npc]', description: 'Speak with an NPC' },
+        { name: 'take [item]', description: 'Pick up an item' },
+        { name: 'drop [item]', description: 'Drop an item from inventory' },
+        { name: 'equip [item]', description: 'Equip an item' },
+        { name: 'unequip [item]', description: 'Unequip an item' },
+        { name: 'inventory', description: 'View your inventory' },
+        { name: 'wait', description: 'Pass some time' },
+        { name: 'save', description: 'Save your progress' },
+        { name: 'load', description: 'Load a saved game' },
+        { name: 'help', description: 'Show available commands' },
+        { name: 'clear', description: 'Clear the screen' },
+        { name: 'about', description: 'Display game information' }
+      ]
+    };
+
+    Game.engine.handleCommand = function(input) {
+      const normalized = Game.parser.normalize(input);
+      
+      if (normalized === 'help') {
+        Game.ui.showHelp(this.availableCommands.playing);
+      } else if (normalized === 'clear') {
+        Game.ui.clearOutput();
+      } else if (normalized === 'about') {
+        Game.ui.showAbout();
+      } else if (normalized === 'quit' || normalized === 'exit') {
+        Game.ui.print('Saving before quit is recommended!', 'output-system');
+        Game.ui.print('Type "quit" again to confirm, or use a different command.', 'output-system');
+      } else {
+        Game.ui.print(`I don't understand that command. Try "help" for options.`, 'output-error');
+      }
+    };
+
+    Game.characterCreation.start = function() {
+      Game.ui.print('', '');
+      Game.ui.print('╔══════════════════════════════════════╗', 'separator');
+      Game.ui.print('║       CREATE YOUR CHARACTER          ║', 'output-highlight');
+      Game.ui.print('╚══════════════════════════════════════╝', 'separator');
+      Game.ui.print('', '');
+      Game.ui.print('Character creation will begin soon...', 'output-system');
+      Game.ui.print('(This feature is coming in the next phase)', 'output-system');
+      Game.ui.print('', '');
+      Game.ui.print('For now, type "back" to return to the title screen.', 'output-system');
+    };
+
+    Game.characterCreation.handleInput = function(input) {
+      if (input === 'back' || input === 'cancel') {
+        Game.state.mode = GameModes.TITLE;
+        Game.ui.print('Returning to title screen...', 'output-system');
+        Game.ui.print('', '');
+        Game.ui.showTitle();
+      } else {
+        Game.ui.print('Type "back" to return to the title screen.', 'output-system');
+      }
+    };
+
+    Game.clock.init = function() {
+      Game.state.clock = {
+        day: 1,
+        hour: 8,
+        minute: 0,
+        month: 'Frostwane'
+      };
+    };
+
+    Game.inventory.init = function() {
+      Game.state.inventory = [];
+      Game.state.equipment = {
+        weapon: null,
+        offhand: null,
+        armor: null,
+        cloak: null,
+        accessory1: null,
+        accessory2: null
+      };
+    };
+
+    Game.combat.init = function() {
+      Game.state.inCombat = false;
+      Game.state.currentEnemy = null;
+    };
+
+    Game.conditions.init = function() {
+      Game.state.conditions = [];
+    };
+
+    Game.storage.init = function() {
+      Game.state.saveSlots = 3;
+    };
+
+    Game.state.player = null;
+    Game.state.flags = {};
+    Game.state.variables = {};
+    Game.state.world = {
+      itemLocations: {},
+      npcOverrides: {},
+      monsterStates: {},
+      locationStates: {}
+    };
+
+    Game.init = function() {
+      this.clock.init();
+      this.inventory.init();
+      this.combat.init();
+      this.conditions.init();
+      this.storage.init();
+      
+      Game.ui.showTitle();
+      Game.ui.print('', '');
+    };
+
+    const commandInput = document.getElementById('command-input');
+    
+    commandInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        const value = this.value;
+        this.value = '';
+        Game.ui.handleInput(value);
+      }
+    });
+
+    commandInput.addEventListener('focus', function() {
+      document.querySelector('.cursor').style.display = 'none';
+    });
+
+    commandInput.addEventListener('blur', function() {
+      document.querySelector('.cursor').style.display = 'inline-block';
+      this.focus();
+    });
+
+    setTimeout(() => commandInput.focus(), 100);
+    Game.init();
+  </script>
+</body>
+</html>
