@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fantasy Text RPG</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background-color: #16213e;
+      color: #c8c8c8;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    #game-container {
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 40px);
+    }
+    #header {
+      text-align: center;
+      padding: 8px 0;
+      color: #bd93f9;
+      font-size: 16px;
+      font-weight: bold;
+      border-bottom: 1px solid #44475a;
+      text-shadow: 0 0 10px rgba(189, 147, 249, 0.4);
+    }
+    #output-wrap {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      margin-top: 8px;
+      background-color: #1a1b26;
+      border: 1px solid #44475a;
+      border-radius: 4px;
+    }
+    #output {
+      flex: 1;
+      padding: 12px 16px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    #sidebar {
+      width: 200px;
+      background-color: #1e1f2f;
+      border-left: 1px solid #44475a;
+      padding: 12px;
+      font-size: 12px;
+      color: #6272a4;
+      overflow-y: auto;
+    }
+    #sidebar .label { color: #bd93f9; font-weight: bold; }
+    #sidebar .value { color: #f8f8f2; }
+    #input-area {
+      display: flex;
+      align-items: center;
+      padding: 8px 0;
+      gap: 6px;
+    }
+    #prompt-label {
+      color: #50fa7b;
+      font-weight: bold;
+    }
+    #command-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #44475a;
+      color: #f8f8f2;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 6px 4px;
+      caret-color: #50fa7b;
+    }
+    #command-input:focus { outline: none; border-bottom-color: #50fa7b; }
+    #output::-webkit-scrollbar, #sidebar::-webkit-scrollbar { width: 6px; }
+    #output::-webkit-scrollbar-track, #sidebar::-webkit-scrollbar-track { background: #1a1b26; }
+    #output::-webkit-scrollbar-thumb, #sidebar::-webkit-scrollbar-thumb { background: #44475a; border-radius: 3px; }
+
+    .narrative { color: #f8f8f2; }
+    .command { color: #50fa7b; }
+    .system { color: #bd93f9; }
+    .error { color: #ff5555; }
+    .highlight { color: #ffb86c; }
+    .separator { color: #6272a4; }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="header">Fantasy Text RPG</div>
+    <div id="output-wrap">
+      <div id="output"></div>
+      <div id="sidebar"></div>
+    </div>
+    <div id="input-area">
+      <span id="prompt-label">&gt; </span>
+      <input type="text" id="command-input" autocomplete="off" autocapitalize="none" spellcheck="false" autofocus>
+    </div>
+  </div>
+
+  <script>
+(function () {
+  "use strict";
+
+  const Game = {
+    version: "1.0.0",
+    data: {},
+    state: {},
+    ui: {},
+    parser: {},
+    engine: {},
+    checks: {},
+    inventory: {},
+    characterCreation: {},
+    clock: {},
+    schedules: {},
+    storage: {},
+    conditions: {},
+    combat: {},
+    dialogue: {},
+    utilities: {}
+  };
+
+  // ─── Data System ─────────────────────────────────────────────────────────
+
+  const DATA = {
+    locations: [
+      {
+        id: "village_square",
+        name: "Village Square",
+        descriptions: [{ text: "You stand in the muddy square of a small frontier village. A stone well sits in the center, its rope fraying in the wind.", conditions: [] }],
+        exits: {
+          north: { to: "general_store", travelMinutes: 10, conditions: [] },
+          south: { to: "silver_stag_tavern", travelMinutes: 10, conditions: [] },
+          east:  { to: "temple_yard", travelMinutes: 15, conditions: [] },
+          west:  { to: "village_outskirts", travelMinutes: 10, conditions: [] }
+        },
+        items: ["village_notice"],
+        tags: ["settlement", "outdoors"]
+      },
+      {
+        id: "general_store",
+        name: "General Store",
+        descriptions: [{ text: "Borin's General Store is filled with supplies for adventurers. Shelves line the walls with various goods, and a bell hangs above the door.", conditions: [] }],
+        exits: { south: { to: "village_square", travelMinutes: 10, conditions: [] } },
+        items: [],
+        tags: ["indoors", "shop"]
+      },
+      {
+        id: "silver_stag_tavern",
+        name: "Silver Stag Tavern",
+        descriptions: [{ text: "The warm glow of the hearth illuminates this cozy tavern. The smell of ale and stew fills the air.", conditions: [] }],
+        exits: { north: { to: "village_square", travelMinutes: 10, conditions: [] } },
+        items: [],
+        tags: ["indoors", "tavern"]
+      },
+      {
+        id: "temple_yard",
+        name: "Temple Yard",
+        descriptions: [{ text: "A small stone temple dedicated to the goddess of home and healing. Peaceful chants echo softly within.", conditions: [] }],
+        exits: { west: { to: "village_square", travelMinutes: 15, conditions: [] } },
+        items: [],
+        tags: ["indoors", "temple"]
+      },
+      {
+        id: "north_wood",
+        name: "Northern Woods",
+        descriptions: [{ text: "Dense trees block much of the sunlight here. The air is cool and damp, with the occasional rustle of unseen creatures.", conditions: [] }],
+        exits: { south: { to: "village_outskirts", travelMinutes: 20, conditions: [] } },
+        items: [],
+        tags: ["outdoors", "forest"]
+      },
+      {
+        id: "village_outskirts",
+        name: "Village Outskirts",
+        descriptions: [{ text: "The edge of civilization gives way to wild grasslands and scattered trees. A path leads north into the woods.", conditions: [] }],
+        exits: {
+          east:  { to: "village_square", travelMinutes: 10, conditions: [] },
+          north: { to: "north_wood", travelMinutes: 20, conditions: [] }
+        },
+        items: [],
+        tags: ["outdoors", "wilderness"]
+      }
+    ],
+
+    items: [
+      { id: "hunting_bow", name: "hunting bow", type: "weapon", aliases: ["bow"], description: "A well-crafted wooden bow suitable for hunting.", weight: 2, stackable: false, portable: true, slot: "weapon", stat: "agility", skill: "ranged", damage: "1d6", attackBonus: 0, value: 15 },
+      { id: "rusty_sword", name: "rusty sword", type: "weapon", aliases: ["sword", "blade"], description: "A plain iron sword showing signs of age.", weight: 3, stackable: false, portable: true, slot: "weapon", stat: "might", skill: "melee", damage: "1d6", attackBonus: 0, value: 5 },
+      { id: "iron_sword", name: "iron sword", type: "weapon", aliases: ["sword", "blade"], description: "A reliable iron sword with a keen edge.", weight: 3, stackable: false, portable: true, slot: "weapon", stat: "might", skill: "melee", damage: "1d8", attackBonus: 0, value: 20 },
+      { id: "travel_rations", name: "travel rations", type: "consumable", aliases: ["rations", "food"], description: "Dried meat and hardbread that keeps well on journeys.", weight: 1, stackable: true, portable: true, value: 2 },
+      { id: "old_iron_key", name: "old iron key", type: "key", aliases: ["key"], description: "A heavy iron key that looks quite old.", weight: 0, stackable: false, portable: true, value: 10 },
+      { id: "chainmail", name: "chainmail", type: "armor", aliases: ["mail", "chain"], description: "Interlinked metal rings form this flexible armor.", weight: 35, stackable: false, portable: true, slot: "armor", defenseBonus: 3, stealthPenalty: -2, agilityPenalty: -1, value: 75 },
+      { id: "travel_cloak", name: "travel cloak", type: "armor", aliases: ["cloak"], description: "A sturdy wool cloak suitable for travel.", weight: 2, stackable: false, portable: true, slot: "cloak", defenseBonus: 1, value: 5 },
+      { id: "torch", name: "torch", type: "light", aliases: ["light"], description: "A wooden torch soaked in oil.", weight: 1, stackable: true, portable: true, value: 1 },
+      { id: "skinning_knife", name: "skinning knife", type: "tool", aliases: ["knife"], description: "A sharp blade used for preparing animal hides.", weight: 1, stackable: false, portable: true, value: 4 },
+      { id: "flint_and_steel", name: "flint and steel", type: "tool", aliases: ["flint", "steel"], description: "Used to create sparks for starting fires.", weight: 1, stackable: false, portable: true, value: 3 },
+      { id: "coil_of_rope", name: "coil of rope", type: "tool", aliases: ["rope"], description: "About fifty feet of sturdy hemp rope.", weight: 10, stackable: false, portable: true, value: 5 },
+      { id: "arrows", name: "arrows", type: "ammunition", aliases: ["arrow"], description: "A bundle of iron-tipped arrows.", weight: 1, stackable: true, portable: true, value: 1 },
+      { id: "copper_coin", name: "copper coin", type: "treasure", aliases: ["coin", "copper"], description: "A standard copper coin.", weight: 0, stackable: true, portable: true, value: 1 },
+      { id: "goblin_knife", name: "goblin knife", type: "weapon", aliases: ["knife"], description: "A crude but sharp blade of goblin make.", weight: 1, stackable: false, portable: true, slot: "weapon", stat: "might", skill: "melee", damage: "1d4", attackBonus: 0, value: 2 },
+      { id: "village_notice", name: "notice board posting", type: "quest", aliases: ["notice", "posting"], description: "A weathered notice nailed to the village board. It reads: \"Adventurers needed to deal with goblin threat in the northern woods. See the guard captain.\"", weight: 0, stackable: false, portable: false, value: 0 }
+    ],
+
+    backgrounds: [
+      { id: "mercenary", name: "Mercenary", description: "A hardened fighter seeking coin and glory.", statBonuses: { might: 1, agility: 0, endurance: 1, intellect: 0, will: 0, presence: 0 }, skillBonuses: { athletics: 1, melee: 1, defense: 1 }, startingItems: ["iron_sword", "travel_rations"], startingEquipment: { weapon: null, offhand: null, armor: null, cloak: null, accessory1: null, accessory2: null }, startingGold: 15, flags: {}, reputation: {} },
+      { id: "village_hunter", name: "Village Hunter", description: "A keen-eyed tracker who knows the wilds.", statBonuses: { might: 0, agility: 1, endurance: 1, intellect: 0, will: 0, presence: 0 }, skillBonuses: { athletics: 1, ranged: 1, survival: 1 }, startingItems: ["hunting_bow", "arrows", "skinning_knife", "travel_rations"], startingEquipment: { weapon: null, offhand: null, armor: null, cloak: null, accessory1: null, accessory2: null }, startingGold: 10, flags: {}, reputation: {} },
+      { id: "hedge_wizard", name: "Hedge Wizard", description: "A self-taught practitioner of minor magics.", statBonuses: { might: 0, agility: 0, endurance: 0, intellect: 1, will: 1, presence: 0 }, skillBonuses: { magic: 1, lore: 1, investigation: 1 }, startingItems: ["travel_rations", "flint_and_steel"], startingEquipment: { weapon: null, offhand: null, armor: null, cloak: null, accessory1: null, accessory2: null }, startingGold: 5, flags: {}, reputation: {} },
+      { id: "temple_acolyte", name: "Temple Acolyte", description: "A devout servant of the hearth goddess.", statBonuses: { might: 0, agility: 0, endurance: 0, intellect: 1, will: 2, presence: 0 }, skillBonuses: { lore: 1, persuasion: 1, medicine: 1 }, startingItems: ["travel_rations"], startingEquipment: { weapon: null, offhand: null, armor: null, cloak: null, accessory1: null, accessory2: null }, startingGold: 5, flags: {}, reputation: {} },
+      { id: "street_urchin", name: "Street Urchin", description: "A scrappy survivor from the city slums.", statBonuses: { might: 0, agility: 1, endurance: 1, intellect: 0, will: 0, presence: 0 }, skillBonuses: { stealth: 2, thievery: 1 }, startingItems: ["skinning_knife", "travel_rations"], startingEquipment: { weapon: null, offhand: null, armor: null, cloak: null, accessory1: null, accessory2: null }, startingGold: 3, flags: {}, reputation: {} },
+      { id: "disgraced_noble", name: "Disgraced Noble", description: "Once wealthy, now forced to make do.", statBonuses: { might: 0, agility: 0, endurance: 0, intellect: 1, will: 0, presence: 1 }, skillBonuses: { persuasion: 1, deception: 1, lore: 1 }, startingItems: ["iron_sword", "travel_cloak"], startingEquipment: { weapon: null, offhand: null, armor: null, cloak: null, accessory1: null, accessory2: null }, startingGold: 25, flags: {}, reputation: {} },
+      { id: "grave_robber", name: "Grave Robber", description: "One who lives by the dead.", statBonuses: { might: 0, agility: 1, endurance: 1, intellect: 0, will: 0, presence: 0 }, skillBonuses: { stealth: 1, thievery: 1, investigation: 1 }, startingItems: ["skinning_knife", "torch", "torch", "flint_and_steel"], startingEquipment: { weapon: null, offhand: null, armor: null, cloak: null, accessory1: null, accessory2: null }, startingGold: 8, flags: {}, reputation: {} }
+    ],
+
+    npcs: [
+      {
+        id: "borin_shopkeeper",
+        name: "Borin the Shopkeeper",
+        aliases: ["borin", "shopkeeper", "merchant"],
+        type: "npc",
+        description: "Borin is a broad man with careful eyes and ink-stained fingers. He watches you with a merchant's calculating gaze.",
+        stats: { might: 1, agility: 0, endurance: 1, intellect: 1, will: 1, presence: 2 },
+        skills: { persuasion: 2, lore: 1 },
+        resources: { hp: 12, maxHp: 12 },
+        defense: 10,
+        disposition: { baseAttitude: 0, faction: "village" },
+        dialogueId: "borin_dialogue",
+        scheduleId: "borin_daily",
+        defaultLocation: "general_store"
+      }
+    ],
+
+    monsters: [
+      {
+        id: "goblin_scout",
+        name: "goblin scout",
+        aliases: ["goblin", "scout"],
+        type: "monster",
+        description: "A wiry goblin with yellow eyes and a jagged knife. It grins at you with sharp teeth.",
+        stats: { might: 0, agility: 2, endurance: 0, intellect: -1, will: 0, presence: -1 },
+        skills: { stealth: 2, melee: 1, ranged: 1, defense: 1 },
+        resources: { hp: 8, maxHp: 8 },
+        defense: 13,
+        attacks: [{ id: "jagged_knife", name: "jagged knife", skill: "melee", stat: "agility", damage: "1d4+1" }],
+        behavior: { hostile: true, morale: 8, fleesAtHpPercent: 25 },
+        loot: [{ itemId: "goblin_knife", chance: 60 }, { itemId: "copper_coin", quantity: "1d6", chance: 80 }],
+        scheduleId: "goblin_patrol",
+        defaultLocation: "north_wood"
+      }
+    ],
+
+    schedules: [
+      {
+        id: "borin_daily",
+        entries: [
+          { start: 360, end: 480, location: "general_store", activity: "opening up shop" },
+          { start: 480, end: 1080, location: "general_store", activity: "working behind the counter" },
+          { start: 1080, end: 1260, location: "silver_stag_tavern", activity: "unwinding with ale" },
+          { start: 1260, end: 360, location: "general_store", activity: "sleeping in the back room" }
+        ]
+      },
+      {
+        id: "goblin_patrol",
+        entries: [
+          { start: 0, end: 360, location: "north_wood", activity: "lurking in the shadows" },
+          { start: 360, end: 720, location: "north_wood", activity: "scavenging for food" },
+          { start: 720, end: 1080, location: "village_outskirts", activity: "scouting the village edges" },
+          { start: 1080, end: 1440, location: "north_wood", activity: "returning to the woods" }
+        ]
+      }
+    ],
+
+    conditions: [
+      { id: "poisoned", name: "Poisoned", description: "Toxin courses through your veins.", modifiers: { endurance: -1, agility: -1 } },
+      { id: "bleeding", name: "Bleeding", description: "You are losing blood.", modifiers: { endurance: -1 } },
+      { id: "wounded", name: "Wounded", description: "Your wounds slow you down.", modifiers: { might: -1, agility: -1 } },
+      { id: "tired", name: "Tired", description: "You feel fatigued.", modifiers: { might: -1, endurance: -1 } },
+      { id: "exhausted", name: "Exhausted", description: "Exhaustion weighs heavy on your limbs.", modifiers: { might: -2, agility: -1, endurance: -2 } },
+      { id: "hungry", name: "Hungry", description: "Your stomach gnaws at you.", modifiers: { might: -1 } },
+      { id: "afraid", name: "Afraid", description: "Fear clouds your judgment.", modifiers: { will: -1, presence: -1 } },
+      { id: "blessed", name: "Blessed", description: "Divine favor protects you.", modifiers: { will: 1 } },
+      { id: "cursed", name: "Cursed", description: "A dark hex clings to you.", modifiers: { will: -1, presence: -1 } },
+      { id: "drunk", name: "Drunk", description: "Ale has loosened your tongue and dulled your reflexes.", modifiers: { agility: -1, might: -1 } },
+      { id: "invisible", name: "Invisible", description: "You fade from sight.", modifiers: { stealth: 3 } },
+      { id: "diseased", name: "Diseased", description: "A sickness ravages your body.", modifiers: { endurance: -2, might: -1 } },
+      { id: "encumbered", name: "Encumbered", description: "You carry too much weight.", modifiers: { agility: -2, stealth: -2 } },
+      { id: "chilled", name: "Chilled", description: "The cold saps your strength.", modifiers: { endurance: -1, agility: -1 } }
+    ],
+
+    spells: [
+      { id: "witchlight", name: "witchlight", aliases: ["light spell", "glow"], cost: { mana: 1 }, check: { stat: "will", skill: "magic", difficulty: 8 }, effects: { light: 30 }, successText: "A pale green light flickers to life in your palm.", failureText: "The magic fizzles, leaving only the faintest spark." }
+    ],
+
+    skills: [
+      { id: "athletics", name: "Athletics", mainStat: "might" },
+      { id: "stealth", name: "Stealth", mainStat: "agility" },
+      { id: "thievery", name: "Thievery", mainStat: "agility" },
+      { id: "survival", name: "Survival", mainStat: "endurance" },
+      { id: "lore", name: "Lore", mainStat: "intellect" },
+      { id: "investigation", name: "Investigation", mainStat: "intellect" },
+      { id: "persuasion", name: "Persuasion", mainStat: "presence" },
+      { id: "deception", name: "Deception", mainStat: "presence" },
+      { id: "intimidation", name: "Intimidation", mainStat: "presence" },
+      { id: "melee", name: "Melee", mainStat: "might" },
+      { id: "ranged", name: "Ranged", mainStat: "agility" },
+      { id: "defense", name: "Defense", mainStat: "agility" },
+      { id: "magic", name: "Magic", mainStat: "will" },
+      { id: "medicine", name: "Medicine", mainStat: "intellect" }
+    ]
+  };
+
+  // ─── State Manager ───────────────────────────────────────────────────────
+
+  const GameModes = {
+    TITLE: "title",
+    CHARACTER_CREATION: "character_creation",
+    PLAYING: "playing",
+    GAME_OVER: "game_over"
+  };
+
+  function createInitialState() {
+    return {
+      mode: GameModes.TITLE,
+      player: {
+        name: "",
+        backgroundId: null,
+        stats: { might: 0, agility: 0, endurance: 0, intellect: 0, will: 0, presence: 0 },
+        skills: {},
+        resources: { hp: 10, maxHp: 10, stamina: 8, maxStamina: 8, mana: 0, maxMana: 0 },
+        equipment: { weapon: null, offhand: null, armor: null, cloak: null, accessory1: null, accessory2: null },
+        inventory: [],
+        gold: 0,
+        xp: 0,
+        level: 1,
+        conditions: [],
+      locationId: "village_square",
+      reputation: {}
+    },
+    clock: { day: 1, hour: 8, minute: 0, month: "Frostwane" },
+    commandHistory: [],
+    pendingQuit: false,
+    flags: {},
+    variables: {},
+      world: {
+        itemLocations: {},
+        npcOverrides: {},
+        monsterStates: {},
+        locationStates: {}
+      }
+    };
+  }
+
+  Game.state = createInitialState();
+  Game.data = DATA;
+
+  // ─── UI System ───────────────────────────────────────────────────────────
+
+  const outputEl = document.getElementById("output");
+  const inputEl = document.getElementById("command-input");
+
+  Game.ui.print = function (text, className) {
+    const span = document.createElement("span");
+    span.className = className || "narrative";
+    span.textContent = text + "\n";
+    outputEl.appendChild(span);
+    outputEl.scrollTop = outputEl.scrollHeight;
+  };
+
+  Game.ui.echoCommand = function (text) {
+    Game.ui.print("> " + text, "command");
+  };
+
+  Game.ui.clearOutput = function () {
+    outputEl.innerHTML = "";
+  };
+
+  Game.ui.printSeparator = function () {
+    Game.ui.print("─".repeat(50), "separator");
+  };
+
+  Game.ui.showHelp = function () {
+    Game.ui.print("Available commands:", "system");
+    Game.ui.print("  look (l) / look at <thing>  - Observe your surroundings", "narrative");
+    Game.ui.print("  go <direction> / n/s/e/w    - Move to a new location", "narrative");
+    Game.ui.print("  take <item>                 - Pick up an item", "narrative");
+    Game.ui.print("  drop <item>                 - Drop an item", "narrative");
+    Game.ui.print("  equip <item>                - Equip a weapon or armor", "narrative");
+    Game.ui.print("  unequip <item>              - Remove equipped item", "narrative");
+    Game.ui.print("  inventory (i)               - View your inventory", "narrative");
+    Game.ui.print("  attack <target>             - Attack a creature", "narrative");
+    Game.ui.print("  talk to <npc>               - Speak with someone", "narrative");
+    Game.ui.print("  wait                        - Pass some time", "narrative");
+    Game.ui.print("  save / load                 - Save or load your game", "narrative");
+    Game.ui.print("  help                        - Show this help", "narrative");
+    Game.ui.print("  clear                       - Clear the screen", "narrative");
+    Game.ui.print("  about                       - About this game", "narrative");
+    Game.ui.print("  quit                        - Exit the game", "narrative");
+  };
+
+  Game.ui.showAbout = function () {
+    Game.ui.print("Fantasy Text RPG Engine v" + Game.version, "system");
+    Game.ui.print("A medieval fantasy text adventure with hidden dice rolls,", "narrative");
+    Game.ui.print("RPG mechanics, and a living world.", "narrative");
+  };
+
+  // ─── Parser ──────────────────────────────────────────────────────────────
+
+  const VERB_ALIASES = {
+    i: "inventory",
+    inv: "inventory",
+    inventory: "inventory",
+    equipment: "inventory",
+    status: "inventory",
+    gear: "inventory",
+    showinv: "inventory",
+
+    n: "go",
+    north: "go",
+    s: "go",
+    south: "go",
+    e: "go",
+    east: "go",
+    w: "go",
+    west: "go",
+    u: "go",
+    up: "go",
+    d: "go",
+    down: "go",
+
+    get: "take",
+    grab: "take",
+    pickup: "take",
+
+    examine: "look",
+    inspect: "look",
+    x: "look",
+
+    wield: "equip",
+    wear: "equip",
+
+    remove: "unequip",
+
+    strike: "attack",
+    hit: "attack",
+    fight: "attack",
+
+    "pick up": "take",
+    "put on": "equip",
+    "take off": "unequip",
+    "look at": "look",
+    "talk to": "talk",
+    "ask about": "talk",
+    "show inv": "inventory",
+
+    use: "use",
+    read: "read",
+    cast: "cast",
+    give: "give",
+    search: "search",
+    open: "open",
+    close: "close",
+    push: "push",
+    pull: "pull",
+    wait: "wait",
+    rest: "wait",
+    sleep: "sleep",
+    save: "save",
+    load: "load",
+    help: "help",
+    clear: "clear",
+    cls: "clear",
+    about: "about",
+    quit: "quit",
+    exit: "quit",
+    start: "start",
+    begin: "start",
+    play: "start"
+  };
+
+  const MULTI_WORD_ALIASES = [
+    "pick up",
+    "put on",
+    "take off",
+    "look at",
+    "talk to",
+    "ask about",
+    "show inv"
+  ];
+
+  const DIRECTION_TOKENS = {
+    n: "north", north: "north",
+    s: "south", south: "south",
+    e: "east", east: "east",
+    w: "west", west: "west",
+    u: "up", up: "up",
+    d: "down", down: "down"
+  };
+
+  const PREPOSITIONS = [
+    "at", "to", "on", "in", "into", "with", "using",
+    "from", "about", "for", "around", "off", "over",
+    "under", "behind", "inside", "outside", "upon", "against"
+  ];
+
+  const WORD_TO_NUMBER = {
+    one: 1, two: 2, three: 3, four: 4, five: 5,
+    six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+    a: 1, an: 1, some: 2
+  };
+
+  const KNOWN_VERBS = [
+    "look", "go", "take", "drop", "equip", "unequip",
+    "attack", "talk", "ask", "wait", "sleep", "use", "read",
+    "cast", "give", "search", "open", "close", "push", "pull",
+    "save", "load", "export", "import", "help", "clear",
+    "about", "quit", "start", "begin", "play", "inventory"
+  ];
+
+  function normalize(raw) {
+    return raw.toLowerCase().replace(/\s+/g, " ").trim();
+  }
+
+  function tokenize(text) {
+    return text.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  }
+
+  function matchMultiWordAlias(tokens) {
+    for (let i = 0; i < MULTI_WORD_ALIASES.length; i++) {
+      const alias = MULTI_WORD_ALIASES[i];
+      const parts = alias.split(" ");
+      if (tokens.length >= parts.length) {
+        let match = true;
+        for (let j = 0; j < parts.length; j++) {
+          if (tokens[j] !== parts[j]) { match = false; break; }
+        }
+        if (match) {
+          const canonical = VERB_ALIASES[alias] || alias;
+          return { verb: canonical, consumed: parts.length };
+        }
+      }
+    }
+    return null;
+  }
+
+  function matchVerb(tokens) {
+    const multi = matchMultiWordAlias(tokens);
+    if (multi) return multi;
+
+    const first = tokens[0];
+    if (VERB_ALIASES[first]) {
+      return { verb: VERB_ALIASES[first], consumed: 1 };
+    }
+    if (first) {
+      return { verb: first, consumed: 1 };
+    }
+    return { verb: null, consumed: 0 };
+  }
+
+  function findPrepositionIndex(tokens) {
+    for (let i = 0; i < tokens.length; i++) {
+      if (PREPOSITIONS.includes(tokens[i])) return i;
+    }
+    return -1;
+  }
+
+  function parseQuantity(tokens) {
+    if (tokens.length === 0) return null;
+    const first = tokens[0];
+    if (WORD_TO_NUMBER[first] !== undefined) {
+      tokens.shift();
+      return WORD_TO_NUMBER[first];
+    }
+    const num = Number(first);
+    if (!isNaN(num) && num > 0) {
+      tokens.shift();
+      return num;
+    }
+    return null;
+  }
+
+  function untokenize(tokens) {
+    return tokens.join(" ");
+  }
+
+  function levenshtein(a, b) {
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+    return matrix[b.length][a.length];
+  }
+
+  function suggestCommand(unrecognized) {
+    const suggestions = [];
+    const lower = unrecognized.toLowerCase();
+    for (let i = 0; i < KNOWN_VERBS.length; i++) {
+      const dist = levenshtein(lower, KNOWN_VERBS[i]);
+      if (dist <= 2) {
+        suggestions.push({ word: KNOWN_VERBS[i], dist: dist });
+      }
+    }
+    suggestions.sort(function (a, b) { return a.dist - b.dist; });
+    return suggestions.slice(0, 3).map(function (s) { return s.word; });
+  }
+
+  Game.parser.parse = function (rawInput) {
+    const raw = rawInput;
+    const normalized = normalize(rawInput);
+    if (!normalized) return null;
+
+    const tokens = tokenize(normalized);
+    if (tokens.length === 0) return null;
+
+    const verbMatch = matchVerb(tokens);
+    const verb = verbMatch.verb;
+    tokens.splice(0, verbMatch.consumed);
+
+    let direction = null;
+    if (verb === "go" && tokens.length > 0 && DIRECTION_TOKENS[tokens[0]]) {
+      direction = DIRECTION_TOKENS[tokens[0]];
+      tokens.shift();
+    } else if (verb === "go" && tokens.length === 0) {
+      const raw0 = normalized.split(/\s+/)[0];
+      if (DIRECTION_TOKENS[raw0]) {
+        direction = DIRECTION_TOKENS[raw0];
+      } else if (verbMatch.consumed === 1 && DIRECTION_TOKENS[verbMatch.verb]) {
+        direction = DIRECTION_TOKENS[verbMatch.verb];
+      }
+    }
+
+    const quantity = parseQuantity(tokens);
+
+    const prepIdx = findPrepositionIndex(tokens);
+    const preposition = prepIdx >= 0 ? tokens[prepIdx] : null;
+
+    let directObjectText = null;
+    let indirectObjectText = null;
+
+    if (prepIdx >= 0) {
+      directObjectText = untokenize(tokens.slice(0, prepIdx)) || null;
+      indirectObjectText = untokenize(tokens.slice(prepIdx + 1)) || null;
+    } else {
+      directObjectText = untokenize(tokens) || null;
+    }
+
+    if (verb === "go" && !directObjectText && direction) {
+      directObjectText = direction;
+    }
+
+    return {
+      raw: raw,
+      verb: verb,
+      directObjectText: directObjectText,
+      quantity: quantity,
+      preposition: preposition,
+      indirectObjectText: indirectObjectText
+    };
+  };
+
+  Game.parser.verbAliases = VERB_ALIASES;
+  Game.parser.prepositions = PREPOSITIONS;
+
+  Game.parser.getCanonicalVerbs = function () {
+    return [...new Set(Object.values(VERB_ALIASES))].sort();
+  };
+
+  Game.parser.addAliases = function (extraAliases) {
+    Object.assign(VERB_ALIASES, extraAliases);
+    for (const key in extraAliases) {
+      if (extraAliases[key] && !KNOWN_VERBS.includes(extraAliases[key])) {
+        KNOWN_VERBS.push(extraAliases[key]);
+      }
+    }
+  };
+
+  Game.parser.suggestCommand = suggestCommand;
+
+  // ─── Command Router ──────────────────────────────────────────────────────
+
+  const COMMAND_HANDLERS = {};
+
+  Game.parser.registerCommand = function (verbs, handler) {
+    if (!Array.isArray(verbs)) verbs = [verbs];
+    for (let i = 0; i < verbs.length; i++) {
+      COMMAND_HANDLERS[verbs[i]] = handler;
+    }
+  };
+
+  Game.parser.handleCommand = function (rawInput) {
+    const trimmed = rawInput.trim();
+    if (!trimmed) return;
+
+    Game.ui.echoCommand(trimmed);
+
+    const mode = Game.state.mode;
+
+    if (mode === GameModes.TITLE) {
+      Game.parser.handleTitleInput(trimmed);
+      return;
+    }
+    if (mode === GameModes.GAME_OVER) {
+      Game.parser.handleGameOverInput(trimmed);
+      return;
+    }
+
+    const parsed = Game.parser.parse(trimmed);
+    if (!parsed || !parsed.verb) {
+      Game.parser.showUnrecognizedMessage(trimmed);
+      Game.state.pendingQuit = false;
+      return;
+    }
+
+    if (Game.state.pendingQuit) {
+      if (parsed.verb === "quit") {
+        Game.state.pendingQuit = false;
+        Game.state.mode = GameModes.GAME_OVER;
+        Game.ui.printSeparator();
+        Game.ui.print("Your adventure comes to an end...", "system");
+        Game.ui.print("Type 'restart' to play again.", "system");
+        return;
+      }
+      Game.state.pendingQuit = false;
+    }
+
+    const handler = COMMAND_HANDLERS[parsed.verb];
+    if (handler) {
+      handler(parsed);
+    } else if (DIRECTION_TOKENS[parsed.verb]) {
+      Game.parser.handleGo({ verb: "go", directObjectText: DIRECTION_TOKENS[parsed.verb], quantity: null, preposition: null, indirectObjectText: null, raw: trimmed });
+    } else {
+      Game.parser.showUnrecognizedMessage(trimmed);
+    }
+  };
+
+  Game.parser.showUnrecognizedMessage = function (input) {
+    if (!input || !input.trim()) return;
+    const words = input.trim().toLowerCase().split(/\s+/);
+    const firstWord = words[0];
+    const suggestions = suggestCommand(firstWord);
+
+    Game.ui.print("I'm not sure what you mean by \"" + input.trim() + "\".", "error");
+    if (suggestions.length > 0) {
+      Game.ui.print("Did you mean: " + suggestions.join(", ") + "?", "highlight");
+    }
+    Game.ui.print("Type 'help' for a list of commands.", "system");
+  };
+
+  Game.parser.handleTitleInput = function (input) {
+    const lower = input.toLowerCase().trim();
+    if (lower === "start" || lower === "begin" || lower === "play" || lower === "new") {
+      Game.state.mode = GameModes.CHARACTER_CREATION;
+      Game.ui.printSeparator();
+      Game.ui.print("Character creation is not yet implemented.", "system");
+      Game.ui.print("Type 'back' to return to the title screen.", "system");
+    } else if (lower === "help") {
+      Game.ui.showHelp();
+    } else if (lower === "clear") {
+      Game.ui.clearOutput();
+    } else if (lower === "about") {
+      Game.ui.showAbout();
+    } else {
+      Game.ui.print("Welcome! Type 'start' to begin your adventure.", "system");
+    }
+  };
+
+  Game.parser.handleGameOverInput = function (input) {
+    const lower = input.toLowerCase().trim();
+    if (lower === "restart" || lower === "start" || lower === "new") {
+      Game.state = createInitialState();
+      Game.ui.clearOutput();
+      Game.ui.showTitleScreen();
+    } else if (lower === "quit" || lower === "exit") {
+      Game.ui.print("Thanks for playing!", "system");
+      window.location.href = 'about:blank';
+    } else {
+      Game.ui.print("Type 'restart' to play again, or 'quit' to exit.", "system");
+    }
+  };
+
+  // ─── Built-in Command Handlers ───────────────────────────────────────────
+
+  Game.parser.handleLook = function (parsed) {
+    if (parsed.directObjectText && parsed.preposition === "at") {
+      Game.ui.print("You examine the " + parsed.directObjectText + ".", "narrative");
+      Game.ui.print("Look command: examining something is not yet fully implemented.", "system");
+    } else if (parsed.directObjectText && !parsed.preposition) {
+      Game.ui.print("You examine the " + parsed.directObjectText + ".", "narrative");
+      Game.ui.print("Look command: examining something is not yet fully implemented.", "system");
+    } else {
+      const loc = findLocation(Game.state.player.locationId);
+      if (loc) {
+        Game.ui.print(loc.name, "highlight");
+        Game.ui.print(loc.descriptions[0].text, "narrative");
+        const exits = Object.keys(loc.exits);
+        if (exits.length > 0) {
+          Game.ui.print("Exits: " + exits.join(", "), "system");
+        }
+        if (loc.items && loc.items.length > 0) {
+          Game.ui.print("You see: " + loc.items.join(", "), "narrative");
+        }
+      }
+    }
+  };
+
+
+  Game.parser.handleGo = function (parsed) {
+    const dir = parsed.directObjectText;
+    if (!dir) {
+      Game.ui.print("Which direction? (north, south, east, west, up, down)", "error");
+      return;
+    }
+    const dirNorm = dir.toLowerCase().trim();
+    const loc = findLocation(Game.state.player.locationId);
+    if (!loc) {
+      Game.ui.print("You are nowhere. This shouldn't happen.", "error");
+      return;
+    }
+    const exit = loc.exits[dirNorm];
+    if (!exit) {
+      Game.ui.print("You can't go " + dirNorm + " from here.", "error");
+      return;
+    }
+    Game.state.player.locationId = exit.to;
+    const newLoc = findLocation(exit.to);
+    Game.ui.print("You travel to " + (newLoc ? newLoc.name : exit.to) + ".", "narrative");
+    if (newLoc) {
+      Game.ui.print(newLoc.descriptions[0].text, "narrative");
+      const exits = Object.keys(newLoc.exits);
+      if (exits.length > 0) {
+        Game.ui.print("Exits: " + exits.join(", "), "system");
+      }
+    }
+  };
+
+  function findLocation(id) {
+    for (let i = 0; i < DATA.locations.length; i++) {
+      if (DATA.locations[i].id === id) return DATA.locations[i];
+    }
+    return null;
+  }
+
+  Game.parser.handleTake = function (parsed) {
+    if (!parsed.directObjectText) {
+      Game.ui.print("Take what?", "error");
+      return;
+    }
+    Game.ui.print("You pick up the " + parsed.directObjectText + ".", "narrative");
+    Game.ui.print("Take command: full implementation pending inventory system.", "system");
+  };
+
+  Game.parser.handleDrop = function (parsed) {
+    if (!parsed.directObjectText) {
+      Game.ui.print("Drop what?", "error");
+      return;
+    }
+    const qty = parsed.quantity ? parsed.quantity + " " : "";
+    Game.ui.print("You drop " + qty + parsed.directObjectText + ".", "narrative");
+    Game.ui.print("Drop command: full implementation pending inventory system.", "system");
+  };
+
+  Game.parser.handleEquip = function (parsed) {
+    if (!parsed.directObjectText) {
+      Game.ui.print("Equip what?", "error");
+      return;
+    }
+    Game.ui.print("You equip the " + parsed.directObjectText + ".", "narrative");
+    Game.ui.print("Equip command: full implementation pending inventory system.", "system");
+  };
+
+  Game.parser.handleUnequip = function (parsed) {
+    if (!parsed.directObjectText) {
+      Game.ui.print("Unequip what?", "error");
+      return;
+    }
+    Game.ui.print("You remove the " + parsed.directObjectText + ".", "narrative");
+    Game.ui.print("Unequip command: full implementation pending inventory system.", "system");
+  };
+
+  Game.parser.handleAttack = function (parsed) {
+    if (!parsed.directObjectText) {
+      Game.ui.print("Attack what?", "error");
+      return;
+    }
+    Game.ui.print("You attack the " + parsed.directObjectText + "...", "narrative");
+    Game.ui.print("Attack command: full implementation pending combat system.", "system");
+  };
+
+  Game.parser.handleTalk = function (parsed) {
+    if (!parsed.directObjectText) {
+      Game.ui.print("Talk to whom?", "error");
+      return;
+    }
+    Game.ui.print("You try to speak with " + parsed.directObjectText + ".", "narrative");
+    Game.ui.print("Talk command: full implementation pending dialogue system.", "system");
+  };
+
+  Game.parser.handleWait = function () {
+    Game.ui.print("You wait for a while...", "narrative");
+    Game.ui.print("Wait command: full implementation pending clock system.", "system");
+  };
+
+  Game.parser.handleSleep = function () {
+    Game.ui.print("You lie down and rest...", "narrative");
+    Game.ui.print("Sleep command: full implementation pending clock system.", "system");
+  };
+
+  Game.parser.handleUse = function (parsed) {
+    if (!parsed.directObjectText) {
+      Game.ui.print("Use what?", "error");
+      return;
+    }
+    let target = parsed.directObjectText;
+    if (parsed.preposition && parsed.indirectObjectText) {
+      target = target + " " + parsed.preposition + " " + parsed.indirectObjectText;
+    }
+    Game.ui.print("You try to use " + target + ".", "narrative");
+    Game.ui.print("Use command: full implementation pending game engine.", "system");
+  };
+
+  Game.parser.handleInventory = function () {
+    const p = Game.state.player;
+    Game.ui.printSeparator();
+    Game.ui.print("  " + (p.name || "Unnamed") + "  " + (p.backgroundId || "No background"), "system");
+    Game.ui.print("  HP: " + p.resources.hp + "/" + p.resources.maxHp +
+      "  Stamina: " + p.resources.stamina + "/" + p.resources.maxStamina +
+      (p.resources.maxMana > 0 ? "  Mana: " + p.resources.mana + "/" + p.resources.maxMana : ""), "narrative");
+    Game.ui.print("  Gold: " + p.gold, "narrative");
+    Game.ui.print("─ Equipment ─", "highlight");
+    for (const slot in p.equipment) {
+      const item = p.equipment[slot] ? formatItemName(p.equipment[slot]) : "(empty)";
+      Game.ui.print("  " + capitalize(slot) + ": " + item, "narrative");
+    }
+    const invCount = p.inventory ? p.inventory.length : 0;
+    Game.ui.print("─ Inventory (" + invCount + " items) ─", "highlight");
+    if (invCount === 0) {
+      Game.ui.print("  Your pack is empty.", "narrative");
+    } else {
+      for (let i = 0; i < p.inventory.length; i++) {
+        const entry = p.inventory[i];
+        const name = formatItemName(entry.itemId);
+        const qty = entry.quantity > 1 ? " x" + entry.quantity : "";
+        Game.ui.print("  " + name + qty, "narrative");
+      }
+    }
+    Game.ui.printSeparator();
+    Game.ui.print("Inventory display: encumbrance and weight pending inventory system.", "system");
+  };
+
+  function formatItemName(itemId) {
+    for (let i = 0; i < DATA.items.length; i++) {
+      if (DATA.items[i].id === itemId) return DATA.items[i].name;
+    }
+    return itemId;
+  }
+
+  function capitalize(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  Game.parser.handleSave = function () {
+    Game.ui.print("Save command: full implementation pending storage system.", "system");
+  };
+
+  Game.parser.handleLoad = function () {
+    Game.ui.print("Load command: full implementation pending storage system.", "system");
+  };
+
+  Game.parser.handleClear = function () {
+    Game.ui.clearOutput();
+  };
+
+  Game.parser.handleHelp = function () {
+    Game.ui.showHelp();
+  };
+
+  Game.parser.handleAbout = function () {
+    Game.ui.showAbout();
+  };
+
+  Game.parser.handleQuit = function () {
+    if (Game.state.pendingQuit) {
+      Game.state.pendingQuit = false;
+      Game.state.mode = GameModes.GAME_OVER;
+      Game.ui.printSeparator();
+      Game.ui.print("Your adventure comes to an end...", "system");
+      Game.ui.print("Type 'restart' to play again.", "system");
+      return;
+    }
+    Game.ui.print("Are you sure you want to quit? Type 'quit' again to confirm.", "error");
+    Game.state.pendingQuit = true;
+  };
+
+  Game.parser.handleRead = function (parsed) {
+    if (!parsed.directObjectText) {
+      Game.ui.print("Read what?", "error");
+      return;
+    }
+    Game.ui.print("You read the " + parsed.directObjectText + ".", "narrative");
+    Game.ui.print("Read command: full implementation pending game engine.", "system");
+  };
+
+  Game.parser.handleCast = function (parsed) {
+    if (!parsed.directObjectText) {
+      Game.ui.print("Cast what spell?", "error");
+      return;
+    }
+    Game.ui.print("You attempt to cast " + parsed.directObjectText + "...", "narrative");
+    Game.ui.print("Cast command: full implementation pending checks and combat system.", "system");
+  };
+
+  Game.parser.handleGive = function (parsed) {
+    if (!parsed.directObjectText) {
+      Game.ui.print("Give what?", "error");
+      return;
+    }
+    let msg = "You offer " + parsed.directObjectText;
+    if (parsed.preposition && parsed.indirectObjectText) {
+      msg += " " + parsed.preposition + " " + parsed.indirectObjectText;
+    }
+    Game.ui.print(msg + ".", "narrative");
+    Game.ui.print("Give command: full implementation pending dialogue system.", "system");
+  };
+
+  Game.parser.handleSearch = function () {
+    Game.ui.print("You search the area thoroughly...", "narrative");
+    Game.ui.print("Search command: full implementation pending game engine.", "system");
+  };
+
+  Game.parser.handleOpen = function (parsed) {
+    if (!parsed.directObjectText) {
+      Game.ui.print("Open what?", "error");
+      return;
+    }
+    Game.ui.print("You try to open the " + parsed.directObjectText + ".", "narrative");
+    Game.ui.print("Open command: full implementation pending game engine.", "system");
+  };
+
+  Game.parser.handleClose = function (parsed) {
+    if (!parsed.directObjectText) {
+      Game.ui.print("Close what?", "error");
+      return;
+    }
+    Game.ui.print("You close the " + parsed.directObjectText + ".", "narrative");
+    Game.ui.print("Close command: full implementation pending game engine.", "system");
+  };
+
+  Game.parser.handlePush = function (parsed) {
+    if (!parsed.directObjectText) {
+      Game.ui.print("Push what?", "error");
+      return;
+    }
+    Game.ui.print("You push the " + parsed.directObjectText + ".", "narrative");
+    Game.ui.print("Push command: no effect (not yet implemented).", "system");
+  };
+
+  Game.parser.handlePull = function (parsed) {
+    if (!parsed.directObjectText) {
+      Game.ui.print("Pull what?", "error");
+      return;
+    }
+    Game.ui.print("You pull the " + parsed.directObjectText + ".", "narrative");
+    Game.ui.print("Pull command: no effect (not yet implemented).", "system");
+  };
+
+  // Register all command handlers
+  Game.parser.registerCommand("look", Game.parser.handleLook);
+  Game.parser.registerCommand("go", Game.parser.handleGo);
+  Game.parser.registerCommand("take", Game.parser.handleTake);
+  Game.parser.registerCommand("drop", Game.parser.handleDrop);
+  Game.parser.registerCommand("equip", Game.parser.handleEquip);
+  Game.parser.registerCommand("unequip", Game.parser.handleUnequip);
+  Game.parser.registerCommand("attack", Game.parser.handleAttack);
+  Game.parser.registerCommand(["talk", "ask"], Game.parser.handleTalk);
+  Game.parser.registerCommand("wait", Game.parser.handleWait);
+  Game.parser.registerCommand("sleep", Game.parser.handleSleep);
+  Game.parser.registerCommand("use", Game.parser.handleUse);
+  Game.parser.registerCommand("inventory", Game.parser.handleInventory);
+  Game.parser.registerCommand("save", Game.parser.handleSave);
+  Game.parser.registerCommand("load", Game.parser.handleLoad);
+  Game.parser.registerCommand("help", Game.parser.handleHelp);
+  Game.parser.registerCommand("clear", Game.parser.handleClear);
+  Game.parser.registerCommand("about", Game.parser.handleAbout);
+  Game.parser.registerCommand("quit", Game.parser.handleQuit);
+  Game.parser.registerCommand("read", Game.parser.handleRead);
+  Game.parser.registerCommand("cast", Game.parser.handleCast);
+  Game.parser.registerCommand("give", Game.parser.handleGive);
+  Game.parser.registerCommand("search", Game.parser.handleSearch);
+  Game.parser.registerCommand("open", Game.parser.handleOpen);
+  Game.parser.registerCommand("close", Game.parser.handleClose);
+  Game.parser.registerCommand("push", Game.parser.handlePush);
+  Game.parser.registerCommand("pull", Game.parser.handlePull);
+
+  // ─── Title Screen ────────────────────────────────────────────────────────
+
+  Game.ui.showTitleScreen = function () {
+    Game.ui.print("", "separator");
+    Game.ui.print("  ╔══════════════════════════════════════╗", "highlight");
+    Game.ui.print("  ║                                      ║", "highlight");
+    Game.ui.print("  ║       FANTASY TEXT RPG ENGINE        ║", "highlight");
+    Game.ui.print("  ║                                      ║", "highlight");
+    Game.ui.print("  ║   A medieval fantasy text adventure  ║", "highlight");
+    Game.ui.print("  ║   with hidden dice and deep RPG      ║", "highlight");
+    Game.ui.print("  ║   mechanics                          ║", "highlight");
+    Game.ui.print("  ║                                      ║", "highlight");
+    Game.ui.print("  ╚══════════════════════════════════════╝", "highlight");
+    Game.ui.print("", "separator");
+    Game.ui.print("  Type 'start' to begin your adventure.", "system");
+    Game.ui.print("  Type 'help' for a list of commands.", "system");
+    Game.ui.print("  Type 'about' for more information.", "system");
+  };
+
+  // ─── DOM Event Wiring ────────────────────────────────────────────────────
+
+  // TODO: Populate sidebar during PLAYING mode once inventory and character
+  // creation systems are implemented. Show: character name, HP/stamina/mana,
+  // equipped items, conditions, location name, time of day.
+
+  // TODO: Populate sidebar during PLAYING mode once inventory and character
+  // creation systems are implemented. Show: character name, HP/stamina/mana,
+  // equipped items, conditions, location name, time of day.
+
+  let historyIndex = -1;
+
+  inputEl.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const value = inputEl.value;
+      if (value.trim()) {
+        Game.state.commandHistory.push(value);
+        historyIndex = Game.state.commandHistory.length;
+        Game.parser.handleCommand(value);
+      }
+      inputEl.value = "";
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (historyIndex > 0) {
+        historyIndex--;
+        inputEl.value = Game.state.commandHistory[historyIndex];
+      }
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (historyIndex < Game.state.commandHistory.length - 1) {
+        historyIndex++;
+        inputEl.value = Game.state.commandHistory[historyIndex];
+      } else {
+        historyIndex = Game.state.commandHistory.length;
+        inputEl.value = "";
+      }
+    }
+  });
+
+  // ─── Initialize ──────────────────────────────────────────────────────────
+
+  Game.ui.showTitleScreen();
+
+  window.Game = Game;
+  window.DATA = DATA;
+  window.GameModes = GameModes;
+})();
+  </script>
+</body>
+</html>
