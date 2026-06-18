@@ -2090,12 +2090,11 @@
       for (const id of dynamicItems) {
         const item = Game.data.items[id];
         if (item) allItems.push(item.name);
-      }if (allItems.length > 0) {
+      }
+      if (allItems.length > 0) {
         Game.ui.print('You notice: ' + allItems.join(', '), 'output-system');
         Game.ui.print('', '');
       }
-    Game.ui.updateSidebar();
-      Game.ui.updateSidebar();
       Game.ui.updateSidebar();
     };
     Game.engine.go = function(direction) {
@@ -4101,6 +4100,7 @@
           var itemData = Game.data.items[effect.giveItem];
           if (!itemData) {
             if (effect.giveItem === 'charm_of_protection') {
+              Game.inventory.addItem('charm_of_protection', effect.quantity || 1);
               Game.ui.print('[Received: charm of protection]', 'output-highlight');
             } else {
               Game.ui.print('[Item not found: ' + effect.giveItem + ']', 'output-error');
@@ -4384,43 +4384,6 @@
         Game.ui.print(`${npc.name} laughs at your feeble attempt. (Attitude: +1)`, 'output-error');
       }
       Game.clock.advanceTime(5);
-    };
-
-    Game.engine.castSpell = function(spellName) {
-      if (!spellName) { Game.ui.print('Cast what spell?', 'output-error'); return; }
-      const player = Game.state.player;
-      const spell = Game.data.spells.find(s => s.name.toLowerCase() === spellName || s.id === spellName || (s.aliases && s.aliases.includes(spellName)));
-      if (!spell) {
-        const partial = Game.data.spells.find(s => s.name.toLowerCase().includes(spellName));
-        Game.ui.print(partial ? 'Unknown spell. Did you mean: ' + partial.name + '?' : 'Unknown spell: "' + spellName + '".', 'output-error');
-        return;
-      }
-      if (spell.cost && spell.cost.mana && (player.resources.mana || 0) < spell.cost.mana) {
-        Game.ui.print('Not enough mana. (' + spell.cost.mana + ' required, you have ' + (player.resources.mana || 0) + ')', 'output-error');
-        return;
-      }
-      const check = spell.check;
-      const result = Game.checks.rollCheck(player, check.stat, check.skill, check.difficulty);
-      Game.ui.print('', '');
-      Game.ui.print('You cast ' + spell.name + '...', 'output-narrative');
-      Game.ui.print('  Roll: ' + result.die + ' + ' + check.stat + '(' + result.statValue + ') + ' + check.skill + '(' + result.skillValue + ') = ' + result.total + ' vs ' + check.difficulty, 'output-system');
-      Game.ui.print('  Result: ' + Game.checks.getProse(result.degree), 'output-highlight');
-      if (spell.cost && spell.cost.mana) player.resources.mana -= spell.cost.mana;
-      if (result.degree === 'critical_failure' || result.degree === 'bad_failure' || result.degree === 'failure') {
-        Game.ui.print(spell.failureText || 'The spell fails.', 'output-error');
-      } else {
-        Game.ui.print(spell.successText || 'The spell succeeds!', 'output-highlight');
-        if (spell.effects) {
-          for (const effect of spell.effects) {
-            if (effect.setFlag) {
-              Game.state.flags[effect.setFlag] = effect.value !== undefined ? effect.value : true;
-              if (effect.durationMinutes) Game.conditions.addCondition(player, effect.setFlag, 1, effect.durationMinutes);
-            }
-          }
-        }
-      }
-      Game.ui.updateSidebar();
-      Game.clock.advanceTime(3);
     };
 
     Game.engine.castSpell = function(spellName) {
