@@ -1289,6 +1289,7 @@
       this.print('╠══════════════════════════════════════╣', 'separator');
       this.print('║                                      ║', 'separator');
       this.print('║   Type "start" to begin your quest   ║', 'output-narrative');
+      this.print('║   Type "load" to continue a save     ║', 'output-narrative');
       this.print('║   Type "help" for available commands ║', 'output-narrative');
       this.print('║   Type "about" for game info         ║', 'output-narrative');
       this.print('║                                      ║', 'separator');
@@ -1312,7 +1313,19 @@
           Game.characterCreation.handleInput(trimmed);
           break;
         case GameModes.PLAYING:
-          if (Game.state.inDialogue) {
+          if (Game.state.awaitingImport) {
+            if (trimmed === 'cancel') {
+              Game.state.awaitingImport = false;
+              Game.ui.print('Import cancelled.', 'output-system');
+            } else {
+              if (Game.storage.importSave(input.trim())) {
+                Game.ui.print('', '');
+                Game.ui.print('Save imported successfully!', 'output-highlight');
+                Game.ui.print('', '');
+                Game.engine.look();
+              }
+            }
+          } else if (Game.state.inDialogue) {
             Game.dialogue.handleInput(trimmed);
           } else {
             Game.engine.handleCommand(trimmed);
@@ -1339,8 +1352,19 @@
         setTimeout(() => this.showTitle(), 100);
       } else if (input === 'about') {
         this.showAbout();
+      } else if (input === 'load' || input.startsWith('load ')) {
+        var slotStr = input.replace(/^load\s*/, '').trim() || null;
+        Game.engine.handleLoad(slotStr);
+      } else if (input === 'import save' || input === 'import' || input.startsWith('import ')) {
+        if (input === 'import save' || input === 'import') {
+          Game.state.awaitingImport = true;
+          Game.state.mode = GameModes.PLAYING;
+          this.print('', '');
+          this.print('Paste your save code below and press Enter:', 'output-system');
+          this.print('(Type "cancel" to abort.)', 'output-system');
+        }
       } else {
-        this.print('Please type "start" to begin your adventure.', 'output-system');
+        this.print('Type "start" to begin your adventure, or "load" to load a save.', 'output-system');
       }
     };
 
@@ -1396,6 +1420,7 @@
     Game.engine.availableCommands = {
       title: [
         { name: 'start', description: 'Begin a new adventure' },
+        { name: 'load', description: 'Load a saved game' },
         { name: 'help', description: 'Show available commands' },
         { name: 'clear', description: 'Clear the screen' },
         { name: 'about', description: 'Display game information' }
@@ -1417,7 +1442,12 @@
         { name: 'wait', description: 'Pass some time (wait, wait 1 hour)' },
         { name: 'sleep', description: 'Rest for several hours' },
         { name: 'save', description: 'Save your progress' },
+        { name: 'save [1-3]', description: 'Save to a specific slot' },
         { name: 'load', description: 'Load a saved game' },
+        { name: 'load [1-3]', description: 'Load from a specific slot' },
+        { name: 'export save', description: 'Export save as text code' },
+        { name: 'import save', description: 'Import a save from text code' },
+        { name: 'reset', description: 'Erase all saves and restart' },
         { name: 'help', description: 'Show available commands' },
         { name: 'clear', description: 'Clear the screen' },
         { name: 'about', description: 'Display game information' }
@@ -1767,8 +1797,139 @@
       } else if (normalized.startsWith('attack ') || normalized.startsWith('strike ') || normalized.startsWith('hit ') || normalized.startsWith('fight ') || normalized.startsWith('shoot ')) {
         const target = normalized.replace(/^(attack|strike|hit|fight|shoot)\s+/, '');
         Game.combat.attack(target);
+      } else if (normalized === 'save') {
+        this.handleSave(null);
+      } else if (normalized.startsWith('save ')) {
+        const slotStr = normalized.replace(/^save\s+/, '');
+        this.handleSave(slotStr);
+      } else if (normalized === 'load') {
+        this.handleLoad(null);
+      } else if (normalized.startsWith('load ')) {
+        const slotStr = normalized.replace(/^load\s+/, '');
+        this.handleLoad(slotStr);
+      } else if (normalized === 'export save' || normalized === 'export') {
+        Game.storage.exportSave();
+      } else if (normalized === 'import save' || normalized === 'import') {
+        Game.state.awaitingImport = true;
+        Game.ui.print('', '');
+        Game.ui.print('Paste your save code below and press Enter:', 'output-system');
+        Game.ui.print('(Type "cancel" to abort.)', 'output-system');
+      } else if (normalized === 'reset') {
+        Game.state.awaitingConfirm = 'reset';
+        Game.ui.print('', '');
+        Game.ui.print('Are you sure you want to reset? This will erase ALL saves.', 'output-error');
+        Game.ui.print('Type "yes" to confirm or "no" to cancel.', 'output-system');
+      } else if (normalized === 'yes' && Game.state.awaitingConfirm === 'reset') {
+        Game.state.awaitingConfirm = null;
+        for (let i = 1; i <= Game.storage.MAX_SLOTS; i++) {
+          Game.storage.deleteSlot(i);
+        }
+        Game.ui.print('All saves erased. Restarting...', 'output-system');
+        setTimeout(function() { location.reload(); }, 1000);
+      } else if (normalized === 'no' && Game.state.awaitingConfirm === 'reset') {
+        Game.state.awaitingConfirm = null;
+        Game.ui.print('Reset cancelled.', 'output-system');
+      } else if (normalized === 'yes' && Game.state.awaitingConfirm && Game.state.awaitingConfirm.startsWith('overwrite_')) {
+        var slot = parseInt(Game.state.awaitingConfirm.replace('overwrite_', ''), 10);
+        Game.state.awaitingConfirm = null;
+        if (Game.storage.save(slot)) {
+          Game.ui.print('Game saved to slot ' + slot + '.', 'output-highlight');
+        }
+      } else if (normalized === 'no' && Game.state.awaitingConfirm && Game.state.awaitingConfirm.startsWith('overwrite_')) {
+        Game.state.awaitingConfirm = null;
+        Game.ui.print('Save overwrite cancelled.', 'output-system');
       } else {
         Game.ui.print(`I don't understand that command. Try "help" for options.`, 'output-error');
+      }
+    };
+
+    Game.engine.handleSave = function(slotStr) {
+      if (!Game.state.player || Game.state.mode !== GameModes.PLAYING) {
+        Game.ui.print('You can only save during gameplay.', 'output-error');
+        return;
+      }
+      if (slotStr === null || slotStr === undefined) {
+        Game.storage.showSaveSlots('Save Slots');
+        Game.ui.print('Type "save 1", "save 2", or "save 3" to choose a slot.', 'output-system');
+        return;
+      }
+      const slot = parseInt(slotStr, 10);
+      if (isNaN(slot) || slot < 1 || slot > Game.storage.MAX_SLOTS) {
+        Game.ui.print('Invalid slot. Use 1, 2, or 3.', 'output-error');
+        return;
+      }
+      const info = Game.storage.getSlotInfo(slot);
+      if (info) {
+        Game.state.awaitingConfirm = 'overwrite_' + slot;
+        Game.ui.print('Slot ' + slot + ' already contains: ' + info.playerName + ' (' + info.savedAt + ')', 'output-narrative');
+        Game.ui.print('Type "yes" to overwrite or "no" to cancel.', 'output-system');
+        return;
+      }
+      if (Game.storage.save(slot)) {
+        Game.ui.print('Game saved to slot ' + slot + '.', 'output-highlight');
+      }
+    };
+
+    Game.engine.handleLoad = function(slotStr) {
+      if (slotStr === null || slotStr === undefined) {
+        Game.storage.showSaveSlots('Load Slots');
+        Game.ui.print('Type "load 1", "load 2", or "load 3" to choose a slot.', 'output-system');
+        return;
+      }
+      const slot = parseInt(slotStr, 10);
+      if (isNaN(slot) || slot < 1 || slot > Game.storage.MAX_SLOTS) {
+        Game.ui.print('Invalid slot. Use 1, 2, or 3.', 'output-error');
+        return;
+      }
+      if (Game.storage.load(slot)) {
+        Game.ui.print('Game loaded from slot ' + slot + '.', 'output-highlight');
+        Game.ui.print('', '');
+        this.look();
+      }
+    };
+
+    Game.engine.handleSave = function(slotStr) {
+      if (!Game.state.player || Game.state.mode !== GameModes.PLAYING) {
+        Game.ui.print('You can only save during gameplay.', 'output-error');
+        return;
+      }
+      if (slotStr === null || slotStr === undefined) {
+        Game.storage.showSaveSlots('Save Slots');
+        Game.ui.print('Type "save 1", "save 2", or "save 3" to choose a slot.', 'output-system');
+        return;
+      }
+      const slot = parseInt(slotStr, 10);
+      if (isNaN(slot) || slot < 1 || slot > Game.storage.MAX_SLOTS) {
+        Game.ui.print('Invalid slot. Use 1, 2, or 3.', 'output-error');
+        return;
+      }
+      const info = Game.storage.getSlotInfo(slot);
+      if (info) {
+        Game.state.awaitingConfirm = 'overwrite_' + slot;
+        Game.ui.print('Slot ' + slot + ' already contains: ' + info.playerName + ' (' + info.savedAt + ')', 'output-narrative');
+        Game.ui.print('Type "yes" to overwrite or "no" to cancel.', 'output-system');
+        return;
+      }
+      if (Game.storage.save(slot)) {
+        Game.ui.print('Game saved to slot ' + slot + '.', 'output-highlight');
+      }
+    };
+
+    Game.engine.handleLoad = function(slotStr) {
+      if (slotStr === null || slotStr === undefined) {
+        Game.storage.showSaveSlots('Load Slots');
+        Game.ui.print('Type "load 1", "load 2", or "load 3" to choose a slot.', 'output-system');
+        return;
+      }
+      const slot = parseInt(slotStr, 10);
+      if (isNaN(slot) || slot < 1 || slot > Game.storage.MAX_SLOTS) {
+        Game.ui.print('Invalid slot. Use 1, 2, or 3.', 'output-error');
+        return;
+      }
+      if (Game.storage.load(slot)) {
+        Game.ui.print('Game loaded from slot ' + slot + '.', 'output-highlight');
+        Game.ui.print('', '');
+        this.look();
       }
     };
 
@@ -1941,6 +2102,7 @@
         for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
         Game.ui.print('', '');
         this.look();
+        Game.storage.autoSave();
       }
     };
 
@@ -3131,6 +3293,7 @@
       Game.ui.print('', '');
       Game.ui.print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'output-highlight');
       Game.ui.print('', '');
+      Game.storage.autoSave();
     };
 
     Game.combat.generateLoot = function(monster) {
@@ -3316,8 +3479,283 @@
       return Game.data.difficulties.moderate;
     };
 
-    Game.storage.init = function() {
-      Game.state.saveSlots = 3;
+    Game.storage = {
+      SAVE_VERSION: '1.0.0',
+      KEY_PREFIX: 'fantasyAdventure.save.slot',
+      MAX_SLOTS: 3,
+
+      migrations: {
+        '1.0.0_to_1.1.0': function(save) { return save; }
+      },
+
+      init: function() {
+        Game.state.saveSlots = this.MAX_SLOTS;
+      },
+
+      _buildSaveData: function() {
+        return {
+          version: this.SAVE_VERSION,
+          savedAt: new Date().toISOString(),
+          mode: Game.state.mode,
+          player: JSON.parse(JSON.stringify(Game.state.player)),
+          clock: JSON.parse(JSON.stringify(Game.state.clock)),
+          flags: JSON.parse(JSON.stringify(Game.state.flags)),
+          variables: JSON.parse(JSON.stringify(Game.state.variables)),
+          world: JSON.parse(JSON.stringify(Game.state.world))
+        };
+      },
+
+      _slotKey: function(slotNumber) {
+        return this.KEY_PREFIX + slotNumber;
+      },
+
+      _validateSave: function(data) {
+        if (!data || typeof data !== 'object') return false;
+        if (!data.version) return false;
+        if (!data.player || !data.clock || !data.flags || !data.world) return false;
+        if (!data.player.name || !data.player.location) return false;
+        return true;
+      },
+
+      _migrate: function(data) {
+        const targetVersion = this.SAVE_VERSION;
+        if (data.version === targetVersion) return data;
+        const migrationKey = data.version + '_to_' + targetVersion;
+        if (this.migrations[migrationKey]) {
+          data = this.migrations[migrationKey](data);
+          data.version = targetVersion;
+        }
+        return data;
+      },
+
+      save: function(slotNumber) {
+        if (Game.state.inCombat) {
+          Game.ui.print('You cannot save during combat.', 'output-error');
+          return false;
+        }
+        if (!Game.state.player) {
+          Game.ui.print('Nothing to save yet.', 'output-error');
+          return false;
+        }
+        if (Game.state.mode !== GameModes.PLAYING) {
+          Game.ui.print('You can only save during gameplay.', 'output-error');
+          return false;
+        }
+        try {
+          const data = this._buildSaveData();
+          localStorage.setItem(this._slotKey(slotNumber), JSON.stringify(data));
+          return true;
+        } catch (e) {
+          Game.ui.print('Failed to save: ' + e.message, 'output-error');
+          return false;
+        }
+      },
+
+      load: function(slotNumber) {
+        try {
+          const raw = localStorage.getItem(this._slotKey(slotNumber));
+          if (!raw) {
+            Game.ui.print('Slot ' + slotNumber + ' is empty.', 'output-error');
+            return false;
+          }
+          let data;
+          try {
+            data = JSON.parse(raw);
+          } catch (e) {
+            Game.ui.print('Save data in slot ' + slotNumber + ' is corrupt.', 'output-error');
+            return false;
+          }
+          if (!this._validateSave(data)) {
+            Game.ui.print('Save data in slot ' + slotNumber + ' is invalid.', 'output-error');
+            return false;
+          }
+          data = this._migrate(data);
+          Game.state.player = data.player;
+          Game.state.clock = data.clock;
+          Game.state.flags = data.flags || {};
+          Game.state.variables = data.variables || {};
+          Game.state.world = data.world;
+          Game.state.mode = GameModes.PLAYING;
+          Game.state.inCombat = false;
+          Game.state.currentEnemy = null;
+          Game.state.inDialogue = false;
+          Game.state.currentDialogue = null;
+          Game.state.awaitingImport = false;
+          Game.state.awaitingConfirm = null;
+          return true;
+        } catch (e) {
+          Game.ui.print('Failed to load: ' + e.message, 'output-error');
+          return false;
+        }
+      },
+
+      loadSilent: function(slotNumber) {
+        try {
+          const raw = localStorage.getItem(this._slotKey(slotNumber));
+          if (!raw) return false;
+          let data = JSON.parse(raw);
+          if (!this._validateSave(data)) return false;
+          data = this._migrate(data);
+          Game.state.player = data.player;
+          Game.state.clock = data.clock;
+          Game.state.flags = data.flags || {};
+          Game.state.variables = data.variables || {};
+          Game.state.world = data.world;
+          Game.state.mode = GameModes.PLAYING;
+          Game.state.inCombat = false;
+          Game.state.currentEnemy = null;
+          Game.state.inDialogue = false;
+          Game.state.currentDialogue = null;
+          Game.state.awaitingImport = false;
+          Game.state.awaitingConfirm = null;
+          return true;
+        } catch (e) {
+          return false;
+        }
+      },
+
+      getSlotInfo: function(slotNumber) {
+        try {
+          const raw = localStorage.getItem(this._slotKey(slotNumber));
+          if (!raw) return null;
+          const data = JSON.parse(raw);
+          if (!this._validateSave(data)) return null;
+          const savedDate = new Date(data.savedAt);
+          const clock = data.clock;
+          const playTime = 'Day ' + clock.day + ', ' + clock.hour + ':' + String(clock.minute).padStart(2, '0') + ' ' + clock.month;
+          return {
+            playerName: data.player.name,
+            playTime: playTime,
+            savedAt: savedDate.toLocaleString(),
+            version: data.version
+          };
+        } catch (e) {
+          return null;
+        }
+      },
+
+      deleteSlot: function(slotNumber) {
+        try {
+          localStorage.removeItem(this._slotKey(slotNumber));
+          return true;
+        } catch (e) {
+          return false;
+        }
+      },
+
+      autoSave: function() {
+        if (!Game.state.player || Game.state.mode !== GameModes.PLAYING) return;
+        if (Game.state.inCombat) return;
+        try {
+          this.save(1);
+        } catch (e) {}
+      },
+
+      exportSave: function() {
+        if (!Game.state.player) {
+          Game.ui.print('Nothing to export yet.', 'output-error');
+          return;
+        }
+        try {
+          const data = this._buildSaveData();
+          const json = JSON.stringify(data);
+          const bytes = new TextEncoder().encode(json);
+          let binary = '';
+          for (let i = 0; i < bytes.length; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          const encoded = btoa(binary);
+          Game.ui.print('', '');
+          Game.ui.print('══════════════════════════════════════', 'separator');
+          Game.ui.print('  SAVE EXPORT CODE', 'output-highlight');
+          Game.ui.print('══════════════════════════════════════', 'separator');
+          Game.ui.print('', '');
+          Game.ui.print('Copy the text below to save your game:', 'output-system');
+          Game.ui.print('', '');
+          const textarea = document.createElement('textarea');
+          textarea.value = encoded;
+          textarea.readOnly = true;
+          textarea.rows = 4;
+          textarea.style.width = '100%';
+          textarea.style.background = 'transparent';
+          textarea.style.color = '#33ff33';
+          textarea.style.border = '1px solid #33ff33';
+          textarea.style.fontFamily = 'monospace';
+          textarea.style.fontSize = '10px';
+          textarea.style.padding = '8px';
+          textarea.style.resize = 'vertical';
+          const outputEl = document.getElementById('output');
+          if (outputEl) {
+            outputEl.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+          } else {
+            Game.ui.print(encoded, 'output-system');
+          }
+          Game.ui.print('', '');
+          Game.ui.print('Use "import save" to load this code later.', 'output-system');
+          Game.ui.print('══════════════════════════════════════', 'separator');
+        } catch (e) {
+          Game.ui.print('Failed to export: ' + e.message, 'output-error');
+        }
+      },
+
+      decodeImport: function(text) {
+        const cleaned = text.trim();
+        try {
+          const binary = atob(cleaned);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+          const json = new TextDecoder().decode(bytes);
+          const data = JSON.parse(json);
+          return data;
+        } catch (e) {
+          return null;
+        }
+      },
+
+      importSave: function(text) {
+        const data = this.decodeImport(text);
+        if (!data) {
+          Game.ui.print('Invalid save code. Could not decode the text.', 'output-error');
+          return false;
+        }
+        if (!this._validateSave(data)) {
+          Game.ui.print('Save code contains invalid data.', 'output-error');
+          return false;
+        }
+        const migrated = this._migrate(data);
+        Game.state.player = migrated.player;
+        Game.state.clock = migrated.clock;
+        Game.state.flags = migrated.flags || {};
+        Game.state.variables = migrated.variables || {};
+        Game.state.world = migrated.world;
+        Game.state.mode = GameModes.PLAYING;
+        Game.state.inCombat = false;
+        Game.state.currentEnemy = null;
+        Game.state.inDialogue = false;
+        Game.state.currentDialogue = null;
+        Game.state.awaitingImport = false;
+        Game.state.awaitingConfirm = null;
+        return true;
+      },
+
+      showSaveSlots: function(label) {
+        Game.ui.print('', '');
+        Game.ui.print('  ── ' + label + ' ──', 'output-highlight');
+        Game.ui.print('', '');
+        for (let i = 1; i <= this.MAX_SLOTS; i++) {
+          const info = this.getSlotInfo(i);
+          if (info) {
+            Game.ui.print('  Slot ' + i + ': ' + info.playerName + ' | ' + info.playTime + ' | ' + info.savedAt, 'output-narrative');
+          } else {
+            Game.ui.print('  Slot ' + i + ': (empty)', 'output-system');
+          }
+        }
+        Game.ui.print('', '');
+      }
     };
 
 
@@ -3483,6 +3921,8 @@
     Game.state.player = null;
     Game.state.flags = {};
     Game.state.variables = {};
+    Game.state.awaitingImport = false;
+    Game.state.awaitingConfirm = null;
     Game.state.world = {
       itemLocations: {},
       npcOverrides: {},
@@ -3600,10 +4040,12 @@
     Game.engine.applyEffects = function(effects) {
       if (!effects || !Array.isArray(effects)) return;
       const player = Game.state.player;
+      let flagChanged = false;
       for (const effect of effects) {
         if (effect.setFlag) {
           Game.state.flags[effect.setFlag] = effect.value !== undefined ? effect.value : true;
           Game.ui.print(`[Flag set: ${effect.setFlag}]`, 'output-system');
+          flagChanged = true;
         } else if (effect.addVariable) {
           const current = Game.state.variables[effect.addVariable] || 0;
           Game.state.variables[effect.addVariable] = current + (effect.amount || 1);
@@ -3630,6 +4072,9 @@
           player.reputation[faction] = current + (effect.changeReputation.amount || 1);
           Game.ui.print(`[Reputation with ${faction}: ${current} → ${player.reputation[faction]}]`, 'output-system');
         }
+      }
+      if (flagChanged) {
+        Game.storage.autoSave();
       }
     };
 
