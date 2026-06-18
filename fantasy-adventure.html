@@ -1251,7 +1251,7 @@
           }
         ],
         exits: {
-          south: { to: 'village_square', travelMinutes: 1 }
+          south: { to: 'general_store', travelMinutes: 3 }
         },
         items: [],
         tags: ['wilderness', 'outdoors', 'forest']
@@ -1295,6 +1295,43 @@
       this.print('║                                      ║', 'separator');
       this.print('╚══════════════════════════════════════╝', 'separator');
       this.print('', '');
+    };
+
+    Game.ui.updateSidebar = function() {
+      const player = Game.state.player;
+      if (!player) return;
+      const sidebar = document.getElementById('sidebar');
+      const content = document.getElementById('sidebar-content');
+      sidebar.style.display = 'block';
+      const bg = Game.data.backgrounds.find(b => b.id === player.background);
+      const bgName = bg ? bg.name : '?';
+      const encTier = Game.inventory.getEncumbranceTier();
+      const encColor = encTier.tier === 'overloaded' ? '#ff5555' : encTier.tier !== 'unencumbered' ? '#ffb86c' : '#50fa7b';
+      let h = '<div style="color:#8be9fd">' + player.name + '</div>';
+      h += '<div>' + bgName + ' Lv' + (player.level || 1) + '</div>';
+      h += '<div style="margin-top:6px">HP: ' + player.resources.hp + '/' + player.resources.maxHp + '</div>';
+      h += '<div>SP: ' + player.resources.stamina + '/' + player.resources.maxStamina + '</div>';
+      if (player.resources.maxMana > 0) h += '<div>MP: ' + player.resources.mana + '/' + player.resources.maxMana + '</div>';
+      h += '<div style="margin-top:6px">Gold: ' + player.gold + '</div>';
+      h += '<div style="color:' + encColor + '">Enc: ' + encTier.tier + '</div>';
+      h += '<div style="margin-top:6px;color:#ffb86c;font-size:0.85em">' + Game.clock.formatTime() + '</div>';
+      if (player.equipment.weapon) {
+        const w = Game.data.items[player.equipment.weapon];
+        if (w) h += '<div style="margin-top:6px;color:#bd93f9;font-size:0.85em">' + w.name + '</div>';
+      }
+      if (player.equipment.armor) {
+        const a = Game.data.items[player.equipment.armor];
+        if (a) h += '<div style="color:#bd93f9;font-size:0.85em">' + a.name + '</div>';
+      }
+      if (player.conditions && player.conditions.length > 0) {
+        h += '<div style="margin-top:6px;color:#ff5555">';
+        for (const c of player.conditions) {
+          const cd = Game.data.conditions.find(x => x.id === c.id);
+          h += (cd ? cd.name : c.id) + '<br>';
+        }
+        h += '</div>';
+      }
+      content.innerHTML = h;
     };
 
     Game.ui.handleInput = function(input) {
@@ -1439,6 +1476,7 @@
         { name: 'unequip [item]', description: 'Unequip an item' },
         { name: 'inventory', description: 'View your inventory' },
         { name: 'attack [target]', description: 'Attack a monster' },
+        { name: 'cast [spell]', description: 'Cast a spell' },
         { name: 'wait', description: 'Pass some time (wait, wait 1 hour)' },
         { name: 'sleep', description: 'Rest for several hours' },
         { name: 'save', description: 'Save your progress' },
@@ -1523,6 +1561,7 @@
       
       const msgs = Game.clock.advanceTime(1);
       for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
+      Game.ui.updateSidebar();
     };
 
     Game.engine.drop = function(input) {
@@ -1535,6 +1574,15 @@
       if (match) {
         quantity = parseInt(match[1], 10);
         itemName = match[2];
+      }
+
+      for (const [eqSlot, eqItemId] of Object.entries(player.equipment)) {
+        if (!eqItemId) continue;
+        const eqItem = Game.data.items[eqItemId];
+        if (eqItem && (eqItem.name === itemName || (eqItem.aliases && eqItem.aliases.includes(itemName)))) {
+          Game.ui.print(`You are wearing the ${eqItem.name}. Unequip it first.`, 'output-error');
+          return;
+        }
       }
       
       const entry = player.inventory.find(e => {
@@ -1570,6 +1618,7 @@
       
       const msgs = Game.clock.advanceTime(1);
       for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
+      Game.ui.updateSidebar();
     };
 
     Game.engine.equip = function(itemName) {
@@ -1617,6 +1666,7 @@
       
       const msgs = Game.clock.advanceTime(timeCost);
       for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
+      Game.ui.updateSidebar();
     };
 
     Game.engine.unequip = function(itemName) {
@@ -1661,6 +1711,7 @@
       if (foundSlot === 'armor') timeCost = 3;
       
       Game.clock.advanceTime(timeCost);
+      Game.ui.updateSidebar();
     };
 
     Game.engine.wait = function(args) {
@@ -1839,7 +1890,13 @@
         Game.state.awaitingConfirm = null;
         Game.ui.print('Save overwrite cancelled.', 'output-system');
       } else {
-        Game.ui.print(`I don't understand that command. Try "help" for options.`, 'output-error');
+        var suggestions = ['look', 'go', 'take', 'drop', 'equip', 'inventory', 'attack', 'talk', 'wait', 'save', 'help'];
+        var verb = normalized.split(' ')[0];
+        var close = suggestions.filter(s => s.startsWith(verb) || s.includes(verb)).slice(0, 3);
+        var msg = 'I don\'t understand "' + normalized + '".';
+        if (close.length > 0) msg += ' Did you mean: ' + close.join(', ') + '?';
+        else msg += ' Try "help" for available commands.';
+        Game.ui.print(msg, 'output-error');
       }
     };
 
@@ -1888,50 +1945,7 @@
       }
     };
 
-    Game.engine.handleSave = function(slotStr) {
-      if (!Game.state.player || Game.state.mode !== GameModes.PLAYING) {
-        Game.ui.print('You can only save during gameplay.', 'output-error');
-        return;
-      }
-      if (slotStr === null || slotStr === undefined) {
-        Game.storage.showSaveSlots('Save Slots');
-        Game.ui.print('Type "save 1", "save 2", or "save 3" to choose a slot.', 'output-system');
-        return;
-      }
-      const slot = parseInt(slotStr, 10);
-      if (isNaN(slot) || slot < 1 || slot > Game.storage.MAX_SLOTS) {
-        Game.ui.print('Invalid slot. Use 1, 2, or 3.', 'output-error');
-        return;
-      }
-      const info = Game.storage.getSlotInfo(slot);
-      if (info) {
-        Game.state.awaitingConfirm = 'overwrite_' + slot;
-        Game.ui.print('Slot ' + slot + ' already contains: ' + info.playerName + ' (' + info.savedAt + ')', 'output-narrative');
-        Game.ui.print('Type "yes" to overwrite or "no" to cancel.', 'output-system');
-        return;
-      }
-      if (Game.storage.save(slot)) {
-        Game.ui.print('Game saved to slot ' + slot + '.', 'output-highlight');
-      }
-    };
 
-    Game.engine.handleLoad = function(slotStr) {
-      if (slotStr === null || slotStr === undefined) {
-        Game.storage.showSaveSlots('Load Slots');
-        Game.ui.print('Type "load 1", "load 2", or "load 3" to choose a slot.', 'output-system');
-        return;
-      }
-      const slot = parseInt(slotStr, 10);
-      if (isNaN(slot) || slot < 1 || slot > Game.storage.MAX_SLOTS) {
-        Game.ui.print('Invalid slot. Use 1, 2, or 3.', 'output-error');
-        return;
-      }
-      if (Game.storage.load(slot)) {
-        Game.ui.print('Game loaded from slot ' + slot + '.', 'output-highlight');
-        Game.ui.print('', '');
-        this.look();
-      }
-    };
 
     Game.engine.showInventory = function() {
       const player = Game.state.player;
@@ -2076,23 +2090,29 @@
       for (const id of dynamicItems) {
         const item = Game.data.items[id];
         if (item) allItems.push(item.name);
-      }
-      
-      if (allItems.length > 0) {
+      }if (allItems.length > 0) {
         Game.ui.print('You notice: ' + allItems.join(', '), 'output-system');
         Game.ui.print('', '');
       }
+    Game.ui.updateSidebar();
+      Game.ui.updateSidebar();
+      Game.ui.updateSidebar();
     };
-
     Game.engine.go = function(direction) {
       const player = Game.state.player;
+      const encumbrance = Game.inventory.getEncumbranceTier();
+      if (encumbrance.tier === 'overloaded') {
+        Game.ui.print('You are overloaded and cannot move! Drop some items first.', 'output-error');
+        return;
+      }
       const loc = Game.data.locations[player.location];
       if (!loc || !loc.exits[direction]) {
-        Game.ui.print(`You cannot go ${direction}.`, 'output-error');
+        Game.ui.print("You can't go that way.", 'output-error');
         return;
       }
       const exit = loc.exits[direction];
-      const travelMinutes = exit.travelMinutes || 1;
+      let travelMinutes = exit.travelMinutes || 1;
+      if (encumbrance.tier === 'encumbered') travelMinutes = Math.ceil(travelMinutes * 1.5);
       player.location = exit.to;
       const msgs = Game.clock.advanceTime(travelMinutes);
       const newLoc = Game.data.locations[exit.to];
@@ -2498,15 +2518,37 @@
         }
         Game.ui.print('', '');
 
+        var presentNPCs = Game.schedules.getPresentNPCs('village_square');
+        for (var pi = 0; pi < presentNPCs.length; pi++) {
+          var actText = presentNPCs[pi].activity ? ' (' + presentNPCs[pi].activity + ')' : '';
+          Game.ui.print('  ' + presentNPCs[pi].npc.name + ' is here' + actText + '.', 'output-highlight');
+        }
+        if (presentNPCs.length > 0) Game.ui.print('', '');
+        var presentMonsters = Game.schedules.getPresentMonsters('village_square');
+        for (var mi = 0; mi < presentMonsters.length; mi++) {
+          Game.ui.print('  ' + presentMonsters[mi].monster.name + ' is here!', 'output-error');
+        }
+        if (presentMonsters.length > 0) Game.ui.print('', '');
+
         if (loc.items && loc.items.length > 0) {
-          Game.ui.print('  You notice: ' + loc.items.map(id => {
-            const item = Game.data.items[id];
-            return item ? item.name : id;
-          }).join(', '), 'output-system');
-          Game.ui.print('', '');
+          var allShownItems = [];
+          for (var si = 0; si < loc.items.length; si++) {
+            var sitm = Game.data.items[loc.items[si]];
+            if (sitm) allShownItems.push(sitm.name);
+          }
+          var dynItems = Game.state.world.itemLocations['village_square'] || [];
+          for (var di = 0; di < dynItems.length; di++) {
+            var ditm = Game.data.items[dynItems[di]];
+            if (ditm) allShownItems.push(ditm.name);
+          }
+          if (allShownItems.length > 0) {
+            Game.ui.print('  You notice: ' + allShownItems.join(', '), 'output-system');
+            Game.ui.print('', '');
+          }
         }
 
         Game.ui.print('Type "help" for available commands.', 'output-system');
+        Game.ui.updateSidebar();
       },
 
       handleStep1: function(input) {
@@ -3294,6 +3336,7 @@
       Game.ui.print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'output-highlight');
       Game.ui.print('', '');
       Game.storage.autoSave();
+      Game.ui.updateSidebar();
     };
 
     Game.combat.generateLoot = function(monster) {
@@ -3684,7 +3727,7 @@
           textarea.style.fontSize = '10px';
           textarea.style.padding = '8px';
           textarea.style.resize = 'vertical';
-          const outputEl = document.getElementById('output');
+          const outputEl = document.getElementById('output-area');
           if (outputEl) {
             outputEl.appendChild(textarea);
             textarea.focus();
@@ -4050,11 +4093,22 @@
           const current = Game.state.variables[effect.addVariable] || 0;
           Game.state.variables[effect.addVariable] = current + (effect.amount || 1);
           Game.ui.print(`[${effect.addVariable}: ${current} → ${Game.state.variables[effect.addVariable]}]`, 'output-system');
+        } else if (effect.giveItem === 'gold_coins') {
+          if (!player.gold) player.gold = 0;
+          player.gold += (effect.quantity || 1);
+          Game.ui.print('[Received: ' + (effect.quantity || 1) + ' gold]', 'output-highlight');
         } else if (effect.giveItem) {
-          Game.inventory.addItem(effect.giveItem, effect.quantity || 1);
-          const itemData = Game.data.items[effect.giveItem];
-          const name = itemData ? itemData.name : effect.giveItem;
-          Game.ui.print(`[Received: ${name}]`, 'output-highlight');
+          var itemData = Game.data.items[effect.giveItem];
+          if (!itemData) {
+            if (effect.giveItem === 'charm_of_protection') {
+              Game.ui.print('[Received: charm of protection]', 'output-highlight');
+            } else {
+              Game.ui.print('[Item not found: ' + effect.giveItem + ']', 'output-error');
+            }
+          } else {
+            Game.inventory.addItem(effect.giveItem, effect.quantity || 1);
+            Game.ui.print('[Received: ' + itemData.name + ']', 'output-highlight');
+          }
         } else if (effect.removeItem) {
           Game.inventory.removeItem(effect.removeItem, effect.quantity || 1);
           const itemData = Game.data.items[effect.removeItem];
@@ -4105,12 +4159,12 @@
         }
         if (cond.timeBetween !== undefined) {
           const currentMinutes = clock.hour * 60 + clock.minute;
-          const start = cond.timeBetween.start;
-          const end = cond.timeBetween.end;
+          const start = Array.isArray(cond.timeBetween) ? cond.timeBetween[0] : cond.timeBetween.start;
+          const end = Array.isArray(cond.timeBetween) ? cond.timeBetween[1] : cond.timeBetween.end;
           if (start <= end) {
             if (currentMinutes < start || currentMinutes >= end) return false;
           } else {
-            if (currentMinutes < start && currentMinutes >= end) return false;
+            if (currentMinutes >= end && currentMinutes < start) return false;
           }
         }
         if (cond.npcAtLocation !== undefined) {
@@ -4332,6 +4386,80 @@
       Game.clock.advanceTime(5);
     };
 
+    Game.engine.castSpell = function(spellName) {
+      if (!spellName) { Game.ui.print('Cast what spell?', 'output-error'); return; }
+      const player = Game.state.player;
+      const spell = Game.data.spells.find(s => s.name.toLowerCase() === spellName || s.id === spellName || (s.aliases && s.aliases.includes(spellName)));
+      if (!spell) {
+        const partial = Game.data.spells.find(s => s.name.toLowerCase().includes(spellName));
+        Game.ui.print(partial ? 'Unknown spell. Did you mean: ' + partial.name + '?' : 'Unknown spell: "' + spellName + '".', 'output-error');
+        return;
+      }
+      if (spell.cost && spell.cost.mana && (player.resources.mana || 0) < spell.cost.mana) {
+        Game.ui.print('Not enough mana. (' + spell.cost.mana + ' required, you have ' + (player.resources.mana || 0) + ')', 'output-error');
+        return;
+      }
+      const check = spell.check;
+      const result = Game.checks.rollCheck(player, check.stat, check.skill, check.difficulty);
+      Game.ui.print('', '');
+      Game.ui.print('You cast ' + spell.name + '...', 'output-narrative');
+      Game.ui.print('  Roll: ' + result.die + ' + ' + check.stat + '(' + result.statValue + ') + ' + check.skill + '(' + result.skillValue + ') = ' + result.total + ' vs ' + check.difficulty, 'output-system');
+      Game.ui.print('  Result: ' + Game.checks.getProse(result.degree), 'output-highlight');
+      if (spell.cost && spell.cost.mana) player.resources.mana -= spell.cost.mana;
+      if (result.degree === 'critical_failure' || result.degree === 'bad_failure' || result.degree === 'failure') {
+        Game.ui.print(spell.failureText || 'The spell fails.', 'output-error');
+      } else {
+        Game.ui.print(spell.successText || 'The spell succeeds!', 'output-highlight');
+        if (spell.effects) {
+          for (const effect of spell.effects) {
+            if (effect.setFlag) {
+              Game.state.flags[effect.setFlag] = effect.value !== undefined ? effect.value : true;
+              if (effect.durationMinutes) Game.conditions.addCondition(player, effect.setFlag, 1, effect.durationMinutes);
+            }
+          }
+        }
+      }
+      Game.ui.updateSidebar();
+      Game.clock.advanceTime(3);
+    };
+
+    Game.engine.castSpell = function(spellName) {
+      if (!spellName) { Game.ui.print('Cast what spell?', 'output-error'); return; }
+      const player = Game.state.player;
+      const spell = Game.data.spells.find(s => s.name.toLowerCase() === spellName || s.id === spellName || (s.aliases && s.aliases.includes(spellName)));
+      if (!spell) {
+        const partial = Game.data.spells.find(s => s.name.toLowerCase().includes(spellName));
+        Game.ui.print(partial ? 'Unknown spell. Did you mean: ' + partial.name + '?' : 'Unknown spell: "' + spellName + '".', 'output-error');
+        return;
+      }
+      if (spell.cost && spell.cost.mana && (player.resources.mana || 0) < spell.cost.mana) {
+        Game.ui.print('Not enough mana. (' + spell.cost.mana + ' required, you have ' + (player.resources.mana || 0) + ')', 'output-error');
+        return;
+      }
+      const check = spell.check;
+      const result = Game.checks.rollCheck(player, check.stat, check.skill, check.difficulty);
+      Game.ui.print('', '');
+      Game.ui.print('You cast ' + spell.name + '...', 'output-narrative');
+      Game.ui.print('  Roll: ' + result.die + ' + ' + check.stat + '(' + result.statValue + ') + ' + check.skill + '(' + result.skillValue + ') = ' + result.total + ' vs ' + check.difficulty, 'output-system');
+      Game.ui.print('  Result: ' + Game.checks.getProse(result.degree), 'output-highlight');
+      if (spell.cost && spell.cost.mana) player.resources.mana -= spell.cost.mana;
+      if (result.degree === 'critical_failure' || result.degree === 'bad_failure' || result.degree === 'failure') {
+        Game.ui.print(spell.failureText || 'The spell fails.', 'output-error');
+      } else {
+        Game.ui.print(spell.successText || 'The spell succeeds!', 'output-highlight');
+        if (spell.effects) {
+          for (const effect of spell.effects) {
+            if (effect.setFlag) {
+              Game.state.flags[effect.setFlag] = effect.value !== undefined ? effect.value : true;
+              if (effect.durationMinutes) Game.conditions.addCondition(player, effect.setFlag, 1, effect.durationMinutes);
+            }
+          }
+        }
+      }
+      Game.ui.updateSidebar();
+      Game.clock.advanceTime(3);
+    };
+
     Game.engine.askAbout = function(npcName, topic) {
       const npc = Game.schedules.findNPCByName(npcName);
       if (!npc) {
@@ -4373,9 +4501,24 @@
     };
 
     const commandInput = document.getElementById('command-input');
+    let historyIndex = -1;
     
     commandInput.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        var history = Game.data.commandHistory;
+        if (history.length === 0) return;
+        if (historyIndex === -1) historyIndex = history.length - 1;
+        else if (historyIndex > 0) historyIndex--;
+        this.value = history[historyIndex];
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        var history = Game.data.commandHistory;
+        if (historyIndex === -1) return;
+        if (historyIndex < history.length - 1) { historyIndex++; this.value = history[historyIndex]; }
+        else { historyIndex = -1; this.value = ''; }
+      } else if (e.key === 'Enter') {
+        historyIndex = -1;
         const value = this.value;
         this.value = '';
         Game.ui.handleInput(value);
