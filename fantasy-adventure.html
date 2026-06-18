@@ -1,0 +1,4373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fantasy Adventure</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #1a1a2e;
+      color: #eee;
+      font-family: 'Courier New', Courier, monospace;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #header {
+      background-color: #0f0f1e;
+      border-bottom: 2px solid #4a4a7a;
+      padding: 12px 20px;
+      text-align: center;
+      color: #8be9fd;
+      font-size: 1.2em;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(139, 233, 253, 0.5);
+    }
+
+    #main-container {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    #output-area {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background-color: #16213e;
+      border-right: 2px solid #4a4a7a;
+    }
+
+    #output-area::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #output-area::-webkit-scrollbar-track {
+      background: #0f0f1e;
+    }
+
+    #output-area::-webkit-scrollbar-thumb {
+      background: #4a4a7a;
+      border-radius: 4px;
+    }
+
+    #output-area::-webkit-scrollbar-thumb:hover {
+      background: #6c6ca0;
+    }
+
+    .output-line {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+
+    .output-command {
+      color: #50fa7b;
+      font-weight: bold;
+    }
+
+    .output-narrative {
+      color: #f8f8f2;
+    }
+
+    .output-system {
+      color: #bd93f9;
+      font-style: italic;
+    }
+
+    .output-error {
+      color: #ff5555;
+    }
+
+    .output-highlight {
+      color: #ffb86c;
+    }
+
+    #sidebar {
+      width: 280px;
+      background-color: #0f0f1e;
+      padding: 20px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .sidebar-title {
+      color: #ff79c6;
+      font-size: 1.1em;
+      font-weight: bold;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #4a4a7a;
+      padding-bottom: 5px;
+    }
+
+    .sidebar-content {
+      color: #ccc;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
+
+    #input-area {
+      background-color: #0f0f1e;
+      border-top: 2px solid #4a4a7a;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+    }
+
+    #prompt {
+      color: #8be9fd;
+      margin-right: 10px;
+      font-weight: bold;
+    }
+
+    #command-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #f8f8f2;
+      font-family: inherit;
+      font-size: 1em;
+      caret-color: #50fa7b;
+    }
+
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 1em;
+      background-color: #50fa7b;
+      animation: blink 1s infinite;
+    }
+
+    .separator {
+      color: #4a4a7a;
+      text-align: center;
+      margin: 15px 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="header">⚔ FANTASY ADVENTURE ⚔</div>
+  
+  <div id="main-container">
+    <div id="output-area"></div>
+    <div id="sidebar">
+      <div class="sidebar-title">Status</div>
+      <div class="sidebar-content" id="sidebar-content">
+        No active session
+      </div>
+    </div>
+  </div>
+  
+  <div id="input-area">
+    <span id="prompt">&gt;</span>
+    <input type="text" id="command-input" autocomplete="off" autofocus>
+    <span class="cursor"></span>
+  </div>
+
+  <script>
+    const Game = {
+      version: "1.0.0",
+      
+      data: {
+        locations: [
+          {
+            id: "village_square",
+            name: "Village Square",
+            descriptions: [
+              {
+                text: "You stand in the muddy square of a small frontier village. A stone well sits in the center, its rope frayed from years of use. Timber-framed buildings line the edges, their upper stories leaning over the square like eavesdroppers. The scent of woodsmoke hangs in the damp air.",
+                conditions: []
+              },
+              {
+                text: "The village square is quiet. The old well has collapsed into a dark pit, its stones scattered across the mud.",
+                conditions: [
+                  { flag: "well_collapsed", equals: true }
+                ]
+              },
+              {
+                text: "The village square is bathed in pale moonlight. The well stands silent, and the buildings loom as dark shapes against the starless sky.",
+                conditions: [
+                  { timeBetween: [0, 300] }
+                ]
+              }
+            ],
+            exits: {
+              north: {
+                to: "general_store",
+                travelMinutes: 2,
+                conditions: []
+              },
+              south: {
+                to: "silver_stag_tavern",
+                travelMinutes: 2,
+                conditions: []
+              },
+              east: {
+                to: "temple_yard",
+                travelMinutes: 3,
+                conditions: []
+              }
+            },
+            items: ["village_notice"],
+            tags: ["settlement", "outdoors"]
+          },
+          {
+            id: "general_store",
+            name: "Borin's General Store",
+            descriptions: [
+              {
+                text: "Crates and barrels crowd the narrow shop. Dried herbs hang from the low ceiling, and a battered ledger lies open on the counter. Shelves groan under the weight of rope, nails, lamps, and sundry goods. The smell of ink and sawdust fills the air.",
+                conditions: []
+              },
+              {
+                text: "The shop is closed. Wooden shutters cover the windows, and a sign reading 'BACK AT DAWN' hangs on the door.",
+                conditions: [
+                  { timeBetween: [1260, 480] }
+                ]
+              }
+            ],
+            exits: {
+              south: {
+                to: "village_square",
+                travelMinutes: 2,
+                conditions: []
+              }
+            },
+            items: [],
+            tags: ["settlement", "indoors", "shop"]
+          },
+          {
+            id: "silver_stag_tavern",
+            name: "The Silver Stag Tavern",
+            descriptions: [
+              {
+                text: "A warm fire crackles in the stone hearth. Rough-hewn tables surround a bar of dark oak, behind which rows of bottles catch the firelight. A mounted stag's head watches from above the mantle, its antlers draped with dried hops. The hum of quiet conversation fills the room.",
+                conditions: []
+              },
+              {
+                text: "The tavern is deserted. Chairs are stacked on tables, and the fire has burned low to embers. A single candle gutters on the bar.",
+                conditions: [
+                  { timeBetween: [0, 360] }
+                ]
+              },
+              {
+                text: "The tavern is lively. A bard strums a lute in the corner, and the smell of roasting meat drifts from the kitchen.",
+                conditions: [
+                  { timeBetween: [1020, 1320] }
+                ]
+              }
+            ],
+            exits: {
+              north: {
+                to: "village_square",
+                travelMinutes: 2,
+                conditions: []
+              }
+            },
+            items: [],
+            tags: ["settlement", "indoors", "tavern"]
+          },
+          {
+            id: "temple_yard",
+            name: "Temple Yard",
+            descriptions: [
+              {
+                text: "A small stone temple stands at the edge of a weed-choked yard. Weathered statues of forgotten saints line a cracked flagstone path. A simple altar is visible through the open doorway, candles flickering within. The air here feels still and watchful.",
+                conditions: []
+              }
+            ],
+            exits: {
+              west: {
+                to: "village_square",
+                travelMinutes: 3,
+                conditions: []
+              }
+            },
+            items: [],
+            tags: ["settlement", "outdoors", "sacred"]
+          },
+          {
+            id: "north_wood",
+            name: "North Wood",
+            descriptions: [
+              {
+                text: "The village gives way to a curtain of ancient oaks. The canopy is thick overhead, filtering the light into a dim green haze. A narrow trail winds between gnarled roots and fallen logs. Birdsong seems distant here, replaced by the creak of branches and the occasional snap of a twig.",
+                conditions: []
+              },
+              {
+                text: "The forest is eerily silent. Even the wind has died. Something watches from the shadows between the trunks.",
+                conditions: [
+                  { flag: "goblins_in_woods", equals: true }
+                ]
+              },
+              {
+                text: "Moonlight filters through the bare branches, casting long silver shadows on the forest floor. The trail is hard to follow in the dark.",
+                conditions: [
+                  { timeBetween: [1200, 360] }
+                ]
+              }
+            ],
+            exits: {
+              south: {
+                to: "village_square",
+                travelMinutes: 3,
+                conditions: []
+              }
+            },
+            items: [],
+            tags: ["wilderness", "outdoors", "forest"]
+          }
+        ],
+
+        items: [
+          {
+            id: "hunting_bow",
+            name: "hunting bow",
+            type: "weapon",
+            aliases: ["bow", "yew bow"],
+            description: "A simple but well-kept bow of yew wood. The string is taut and oiled.",
+            weight: 2,
+            stackable: false,
+            portable: true,
+            slot: "weapon",
+            stat: "agility",
+            skill: "ranged",
+            damage: "1d6",
+            attackBonus: 0,
+            value: 15
+          },
+          {
+            id: "rusty_sword",
+            name: "rusty sword",
+            type: "weapon",
+            aliases: ["sword", "blade", "rusty blade"],
+            description: "A pitted iron sword. It has seen better days, but the edge still bites.",
+            weight: 3,
+            stackable: false,
+            portable: true,
+            slot: "weapon",
+            stat: "might",
+            skill: "melee",
+            damage: "1d6",
+            attackBonus: 0,
+            value: 5
+          },
+          {
+            id: "iron_sword",
+            name: "iron sword",
+            type: "weapon",
+            aliases: ["sword", "blade"],
+            description: "A plain but reliable iron sword. The grip is wrapped in worn leather.",
+            weight: 3,
+            stackable: false,
+            portable: true,
+            slot: "weapon",
+            stat: "might",
+            skill: "melee",
+            damage: "1d8",
+            attackBonus: 0,
+            value: 20
+          },
+          {
+            id: "travel_rations",
+            name: "travel rations",
+            type: "consumable",
+            aliases: ["rations", "food", "ration"],
+            description: "Dried meat, hard bread, and a little cheese wrapped in cloth.",
+            weight: 1,
+            stackable: true,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 1
+          },
+          {
+            id: "old_iron_key",
+            name: "old iron key",
+            type: "key",
+            aliases: ["key", "iron key"],
+            description: "An old key with a dark red stain near the teeth. It feels heavier than it should.",
+            weight: 0,
+            stackable: false,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 0
+          },
+          {
+            id: "chainmail",
+            name: "chainmail",
+            type: "armor",
+            aliases: ["mail", "chain", "chain mail"],
+            description: "A shirt of interlocking iron rings. It offers solid protection at the cost of noise and weight.",
+            weight: 35,
+            stackable: false,
+            portable: true,
+            slot: "armor",
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 75,
+            defenseBonus: 3,
+            stealthPenalty: -2,
+            agilityPenalty: -1
+          },
+          {
+            id: "travel_cloak",
+            name: "travel cloak",
+            type: "armor",
+            aliases: ["cloak"],
+            description: "A rough wool cloak, dark green and travel-stained. It keeps the rain off well enough.",
+            weight: 2,
+            stackable: false,
+            portable: true,
+            slot: "cloak",
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 5,
+            defenseBonus: 1,
+            stealthPenalty: 0,
+            agilityPenalty: 0
+          },
+          {
+            id: "torch",
+            name: "torch",
+            type: "light",
+            aliases: ["torches"],
+            description: "A length of pitch-soaked wood wrapped in oily rags. It will burn for a few hours.",
+            weight: 1,
+            stackable: true,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 1
+          },
+          {
+            id: "skinning_knife",
+            name: "skinning knife",
+            type: "tool",
+            aliases: ["knife"],
+            description: "A short, curved blade with a bone handle. Useful for dressing game, and sharp enough in a pinch.",
+            weight: 1,
+            stackable: false,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 3
+          },
+          {
+            id: "flint_and_steel",
+            name: "flint and steel",
+            type: "tool",
+            aliases: ["flint", "steel", "flint and steel"],
+            description: "A piece of flint and a small steel striker. Enough to start a fire in dry conditions.",
+            weight: 1,
+            stackable: false,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 2
+          },
+          {
+            id: "coil_of_rope",
+            name: "coil of rope",
+            type: "tool",
+            aliases: ["rope"],
+            description: "About fifty feet of sturdy hemp rope, coiled and tied.",
+            weight: 10,
+            stackable: false,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 5
+          },
+          {
+            id: "arrows",
+            name: "arrows",
+            type: "ammunition",
+            aliases: ["arrow", "arrows"],
+            description: "Iron-tipped arrows with goose-feather fletching.",
+            weight: 1,
+            stackable: true,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 1
+          },
+          {
+            id: "copper_coin",
+            name: "copper coin",
+            type: "treasure",
+            aliases: ["coin", "copper", "coins"],
+            description: "A worn copper coin stamped with the profile of a forgotten king.",
+            weight: 0,
+            stackable: true,
+            portable: true,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 1
+          },
+          {
+            id: "goblin_knife",
+            name: "goblin knife",
+            type: "weapon",
+            aliases: ["knife", "jagged knife"],
+            description: "A crude, jagged blade crusted with old blood. It smells of rust and rot.",
+            weight: 1,
+            stackable: false,
+            portable: true,
+            slot: "weapon",
+            stat: "agility",
+            skill: "melee",
+            damage: "1d4+1",
+            attackBonus: 0,
+            value: 2
+          },
+          {
+            id: "village_notice",
+            name: "village notice",
+            type: "quest",
+            aliases: ["notice", "posted notice", "sign"],
+            description: "A notice nailed to a post. It reads: 'GOBLIN SIGHTINGS IN THE NORTH WOOD. BOUNTY OFFERED FOR THEIR REMOVAL. SEE BORIN AT THE GENERAL STORE.'",
+            weight: 0,
+            stackable: false,
+            portable: false,
+            slot: null,
+            stat: null,
+            skill: null,
+            damage: null,
+            attackBonus: 0,
+            value: 0
+          }
+        ],
+
+        backgrounds: [
+          {
+            id: "mercenary",
+            name: "Mercenary",
+            description: "You have fought in a dozen skirmishes for coin. You know the weight of steel and the smell of blood.",
+            statBonuses: { might: 1, endurance: 1 },
+            skillBonuses: { melee: 2, defense: 1, intimidation: 1 },
+            startingItems: [
+              { itemId: "iron_sword", quantity: 1 },
+              { itemId: "travel_cloak", quantity: 1 },
+              { itemId: "travel_rations", quantity: 2 },
+              { itemId: "flint_and_steel", quantity: 1 }
+            ],
+            startingEquipment: {
+              weapon: "iron_sword",
+              cloak: "travel_cloak"
+            },
+            startingGold: 15,
+            flags: { veteran_fighter: true },
+            reputation: { village: 0, goblins: -1 }
+          },
+          {
+            id: "village_hunter",
+            name: "Village Hunter",
+            description: "You know the old tracks, the deer paths, and the silence before danger.",
+            statBonuses: { agility: 1, endurance: 1 },
+            skillBonuses: { survival: 2, ranged: 1, stealth: 1 },
+            startingItems: [
+              { itemId: "hunting_bow", quantity: 1 },
+              { itemId: "skinning_knife", quantity: 1 },
+              { itemId: "travel_cloak", quantity: 1 },
+              { itemId: "travel_rations", quantity: 3 },
+              { itemId: "flint_and_steel", quantity: 1 },
+              { itemId: "arrows", quantity: 10 }
+            ],
+            startingEquipment: {
+              weapon: "hunting_bow",
+              cloak: "travel_cloak"
+            },
+            startingGold: 8,
+            flags: { knows_forest_paths: true },
+            reputation: { village: 1, goblins: -1 }
+          },
+          {
+            id: "hedge_wizard",
+            name: "Hedge Wizard",
+            description: "You learned a few tricks from a traveling mystic. Not true magic, perhaps, but close enough.",
+            statBonuses: { will: 1, intellect: 1 },
+            skillBonuses: { magic: 2, lore: 1, investigation: 1 },
+            startingItems: [
+              { itemId: "skinning_knife", quantity: 1 },
+              { itemId: "travel_cloak", quantity: 1 },
+              { itemId: "travel_rations", quantity: 2 },
+              { itemId: "torch", quantity: 2 }
+            ],
+            startingEquipment: {
+              weapon: "skinning_knife",
+              cloak: "travel_cloak"
+            },
+            startingGold: 5,
+            flags: { knows_witchlight: true },
+            reputation: { village: 0, church: 1 }
+          },
+          {
+            id: "temple_acolyte",
+            name: "Temple Acolyte",
+            description: "You served in a small temple, learning the old rites and the patience of stone walls.",
+            statBonuses: { will: 1, presence: 1 },
+            skillBonuses: { lore: 2, persuasion: 1, magic: 1 },
+            startingItems: [
+              { itemId: "travel_cloak", quantity: 1 },
+              { itemId: "torch", quantity: 2 },
+              { itemId: "travel_rations", quantity: 2 },
+              { itemId: "flint_and_steel", quantity: 1 }
+            ],
+            startingEquipment: {
+              cloak: "travel_cloak"
+            },
+            startingGold: 6,
+            flags: { temple_training: true },
+            reputation: { village: 0, church: 2 }
+          },
+          {
+            id: "street_urchin",
+            name: "Street Urchin",
+            description: "You grew up in the gutters, learning to survive by your wits and nimble fingers.",
+            statBonuses: { agility: 2 },
+            skillBonuses: { stealth: 2, thievery: 1, deception: 1 },
+            startingItems: [
+              { itemId: "skinning_knife", quantity: 1 },
+              { itemId: "travel_cloak", quantity: 1 },
+              { itemId: "travel_rations", quantity: 1 },
+              { itemId: "torch", quantity: 1 }
+            ],
+            startingEquipment: {
+              weapon: "skinning_knife",
+              cloak: "travel_cloak"
+            },
+            startingGold: 12,
+            flags: { streetwise: true },
+            reputation: { village: -1, thieves_guild: 1 }
+          },
+          {
+            id: "disgraced_noble",
+            name: "Disgraced Noble",
+            description: "Your family name opened doors, once. Now you carry only the memory of better days and the skills of your upbringing.",
+            statBonuses: { presence: 2 },
+            skillBonuses: { persuasion: 2, deception: 1, lore: 1 },
+            startingItems: [
+              { itemId: "iron_sword", quantity: 1 },
+              { itemId: "travel_cloak", quantity: 1 },
+              { itemId: "travel_rations", quantity: 2 },
+              { itemId: "torch", quantity: 1 }
+            ],
+            startingEquipment: {
+              weapon: "iron_sword",
+              cloak: "travel_cloak"
+            },
+            startingGold: 20,
+            flags: { noble_bearing: true },
+            reputation: { village: 1, church: 0 }
+          },
+          {
+            id: "grave_robber",
+            name: "Grave Robber",
+            description: "You know the weight of silence and the sound of a lock giving way. The dead do not argue.",
+            statBonuses: { agility: 1, intellect: 1 },
+            skillBonuses: { thievery: 2, stealth: 1, investigation: 1 },
+            startingItems: [
+              { itemId: "skinning_knife", quantity: 1 },
+              { itemId: "travel_cloak", quantity: 1 },
+              { itemId: "torch", quantity: 3 },
+              { itemId: "old_iron_key", quantity: 1 },
+              { itemId: "flint_and_steel", quantity: 1 }
+            ],
+            startingEquipment: {
+              weapon: "skinning_knife",
+              cloak: "travel_cloak"
+            },
+            startingGold: 10,
+            flags: { unclean_hands: true },
+            reputation: { village: -1, church: -1, thieves_guild: 1 }
+          }
+        ],
+
+        npcs: [
+          {
+            id: "borin_shopkeeper",
+            name: "Borin the Shopkeeper",
+            aliases: ["borin", "shopkeeper", "merchant"],
+            type: "npc",
+            description: "Borin is a broad man with careful eyes and ink-stained fingers. He moves behind his counter with the unhurried precision of someone who has weighed every transaction in this village.",
+            stats: {
+              might: 1,
+              agility: 0,
+              endurance: 1,
+              intellect: 1,
+              will: 1,
+              presence: 2
+            },
+            skills: {
+              persuasion: 2,
+              lore: 1,
+              melee: 0,
+              defense: 0
+            },
+            resources: {
+              hp: 12,
+              maxHp: 12
+            },
+            defense: 10,
+            disposition: {
+              baseAttitude: 0,
+              faction: "village"
+            },
+            dialogueId: "borin_dialogue",
+            scheduleId: "borin_daily",
+            defaultLocation: "general_store"
+          }
+        ],
+
+        monsters: [
+          {
+            id: "goblin_scout",
+            name: "goblin scout",
+            aliases: ["goblin", "scout"],
+            type: "monster",
+            description: "A wiry goblin with yellow eyes and a jagged knife. It moves with a twitchy, nervous energy, its gaze darting between shadows.",
+            stats: {
+              might: 0,
+              agility: 2,
+              endurance: 0,
+              intellect: -1,
+              will: 0,
+              presence: -1
+            },
+            skills: {
+              stealth: 2,
+              melee: 1,
+              ranged: 1,
+              defense: 1
+            },
+            resources: {
+              hp: 8,
+              maxHp: 8
+            },
+            defense: 13,
+            attacks: [
+              {
+                id: "jagged_knife",
+                name: "jagged knife",
+                skill: "melee",
+                stat: "agility",
+                damage: "1d4+1"
+              }
+            ],
+            behavior: {
+              hostile: true,
+              morale: 8,
+              fleesAtHpPercent: 25
+            },
+            loot: [
+              { itemId: "goblin_knife", chance: 60 },
+              { itemId: "copper_coin", quantity: "1d6", chance: 80 }
+            ],
+            scheduleId: "goblin_patrol",
+            defaultLocation: "north_wood"
+          }
+        ],
+
+        schedules: [
+          {
+            id: "borin_daily",
+            entries: [
+              { start: 360, end: 480, location: "general_store", activity: "eating breakfast" },
+              { start: 480, end: 1080, location: "general_store", activity: "working behind the counter" },
+              { start: 1080, end: 1260, location: "silver_stag_tavern", activity: "drinking ale" },
+              { start: 1260, end: 360, location: "general_store", activity: "sleeping" }
+            ]
+          },
+          {
+            id: "goblin_patrol",
+            entries: [
+              { start: 300, end: 720, location: "north_wood", activity: "scouting the tree line" },
+              { start: 720, end: 900, location: "north_wood", activity: "resting in a thicket" },
+              { start: 900, end: 1200, location: "north_wood", activity: "prowling the southern edge" },
+              { start: 1200, end: 1440, location: "north_wood", activity: "lurking in the shadows" },
+              { start: 0, end: 300, location: "north_wood", activity: "sleeping in a hollow" }
+            ]
+          }
+        ],
+
+        conditions: [
+          {
+            id: "poisoned",
+            name: "Poisoned",
+            description: "Your body aches and your hands tremble.",
+            modifiers: { endurance: -1, agility: -1 }
+          },
+          {
+            id: "bleeding",
+            name: "Bleeding",
+            description: "A wound refuses to close. You feel your strength draining.",
+            modifiers: { endurance: -1, might: -1 }
+          },
+          {
+            id: "wounded",
+            name: "Wounded",
+            description: "You bear a serious wound that slows your every movement.",
+            modifiers: { agility: -1, might: -1 }
+          },
+          {
+            id: "tired",
+            name: "Tired",
+            description: "You need sleep. Your stamina recovery is reduced.",
+            modifiers: { might: -1, will: -1 }
+          },
+          {
+            id: "exhausted",
+            name: "Exhausted",
+            description: "Prolonged exertion has drained you. Every action feels like wading through mud.",
+            modifiers: { might: -2, agility: -1, will: -1 }
+          },
+          {
+            id: "hungry",
+            name: "Hungry",
+            description: "Your stomach gnaws at you. You cannot think clearly.",
+            modifiers: { endurance: -1, will: -1 }
+          },
+          {
+            id: "afraid",
+            name: "Afraid",
+            description: "Fear grips your heart. Your hands shake and your resolve falters.",
+            modifiers: { will: -2, might: -1 }
+          },
+          {
+            id: "blessed",
+            name: "Blessed",
+            description: "A divine warmth surrounds you. You feel fortified against harm.",
+            modifiers: { will: 1, endurance: 1 }
+          },
+          {
+            id: "cursed",
+            name: "Cursed",
+            description: "A dark mark clings to your spirit. Misfortune follows in your wake.",
+            modifiers: { will: -1, presence: -1 }
+          },
+          {
+            id: "drunk",
+            name: "Drunk",
+            description: "The ale has loosened your tongue and dulled your reflexes.",
+            modifiers: { agility: -1, presence: 1, intellect: -1 }
+          },
+          {
+            id: "invisible",
+            name: "Invisible",
+            description: "You shimmer and fade from sight. Hard to target, but harder to hide completely.",
+            modifiers: { stealth: 3 }
+          },
+          {
+            id: "diseased",
+            name: "Diseased",
+            description: "A fever burns beneath your skin. Your body fights an unseen enemy.",
+            modifiers: { endurance: -2, might: -1 }
+          },
+          {
+            id: "encumbered",
+            name: "Encumbered",
+            description: "You carry too much. Your movements are labored and clumsy.",
+            modifiers: { agility: -2, stealth: -2 }
+          },
+          {
+            id: "chilled",
+            name: "Chilled",
+            description: "The cold seeps into your bones. Your fingers fumble and your thoughts slow.",
+            modifiers: { agility: -1, intellect: -1 }
+          }
+        ],
+
+        spells: [
+          {
+            id: "witchlight",
+            name: "Witchlight",
+            aliases: ["light", "witch light"],
+            cost: {
+              mana: 1
+            },
+            check: {
+              stat: "will",
+              skill: "magic",
+              difficulty: 8
+            },
+            effects: [
+              {
+                setFlag: "player_has_light",
+                value: true,
+                durationMinutes: 180
+              }
+            ],
+            successText: "A pale blue flame blossoms above your palm, casting steady light in a wide circle.",
+            failureText: "The air chills, but the spell slips from your grasp like smoke."
+          }
+        ],
+
+        skills: [
+          { id: "athletics", name: "Athletics", mainStat: "might" },
+          { id: "stealth", name: "Stealth", mainStat: "agility" },
+          { id: "thievery", name: "Thievery", mainStat: "agility" },
+          { id: "survival", name: "Survival", mainStat: "endurance" },
+          { id: "lore", name: "Lore", mainStat: "intellect" },
+          { id: "investigation", name: "Investigation", mainStat: "intellect" },
+          { id: "persuasion", name: "Persuasion", mainStat: "presence" },
+          { id: "deception", name: "Deception", mainStat: "presence" },
+          { id: "intimidation", name: "Intimidation", mainStat: "presence" },
+          { id: "melee", name: "Melee", mainStat: "might" },
+          { id: "ranged", name: "Ranged", mainStat: "agility" },
+          { id: "defense", name: "Defense", mainStat: "agility" },
+          { id: "magic", name: "Magic", mainStat: "will" }
+        ],
+
+        difficulties: {
+          trivial: 5,
+          easy: 8,
+          moderate: 12,
+          hard: 16,
+          veryHard: 20,
+          heroic: 24,
+          legendary: 28
+        },
+
+        verbAliases: {
+          n: "go", north: "go", s: "go", south: "go", e: "go", east: "go",
+          w: "go", west: "go", u: "go", up: "go", d: "go", down: "go",
+          i: "inventory", inv: "inventory", inventory: "inventory",
+          equipment: "inventory", status: "inventory", gear: "inventory",
+          get: "take", grab: "take", pickup: "take", "pick up": "take",
+          examine: "look", inspect: "look", x: "look",
+          wield: "equip", wear: "equip", "put on": "equip",
+          remove: "unequip", "take off": "unequip",
+          strike: "attack", hit: "attack", fight: "attack",
+          shoot: "attack"
+        }
+      },
+      state: {},
+      
+      ui: {},
+      parser: {},
+      engine: {},
+      checks: {},
+      inventory: {},
+      characterCreation: {},
+      clock: {},
+      schedules: {},
+      storage: {},
+      conditions: {},
+      combat: {},
+      dialogue: {},
+      utilities: {}
+    };
+
+    const GameModes = {
+      TITLE: "title",
+      CHARACTER_CREATION: "character_creation",
+      PLAYING: "playing",
+      GAME_OVER: "game_over"
+    };
+
+    Game.data.commandHistory = [];
+    Game.state.mode = GameModes.TITLE;
+
+    const STAT_NAMES = ['might', 'agility', 'endurance', 'intellect', 'will', 'presence'];
+
+    Game.data.skills = [
+      { id: 'athletics', name: 'Athletics', stat: 'might', description: 'Climbing, jumping, forcing, grappling' },
+      { id: 'stealth', name: 'Stealth', stat: 'agility', description: 'Sneaking, hiding, ambushes' },
+      { id: 'thievery', name: 'Thievery', stat: 'agility', description: 'Lockpicking, traps, sleight of hand' },
+      { id: 'survival', name: 'Survival', stat: 'endurance', description: 'Tracking, foraging, wilderness travel' },
+      { id: 'lore', name: 'Lore', stat: 'intellect', description: 'History, magic, religion, monsters' },
+      { id: 'investigation', name: 'Investigation', stat: 'intellect', description: 'Searching, clues, hidden details' },
+      { id: 'persuasion', name: 'Persuasion', stat: 'presence', description: 'Friendly social influence' },
+      { id: 'deception', name: 'Deception', stat: 'presence', description: 'Lying, disguise, misdirection' },
+      { id: 'intimidation', name: 'Intimidation', stat: 'presence', description: 'Threats and coercion' },
+      { id: 'melee', name: 'Melee', stat: 'might', description: 'Swords, axes, clubs, brawling' },
+      { id: 'ranged', name: 'Ranged', stat: 'agility', description: 'Bows, thrown weapons' },
+      { id: 'defense', name: 'Defense', stat: 'agility', description: 'Avoiding or absorbing harm' },
+      { id: 'magic', name: 'Magic', stat: 'will', description: 'Spellcasting and rituals' }
+    ];
+
+    Game.data.backgrounds = [
+      {
+        id: 'mercenary',
+        name: 'Mercenary',
+        description: 'You have fought in border skirmishes and tavern brawls alike. Steel is your oldest companion.',
+        magical: false,
+        statBonuses: { might: 1, endurance: 1 },
+        skillBonuses: { melee: 2, defense: 1, intimidation: 1 },
+        startingItems: [
+          { itemId: 'iron_sword', slot: 'weapon', quantity: 1 },
+          { itemId: 'leather_armor', slot: 'armor', quantity: 1 },
+          { itemId: 'travel_rations', quantity: 2 }
+        ],
+        startingGold: 12,
+        flags: { soldier_background: true },
+        reputation: { village: 0, goblins: -1 }
+      },
+      {
+        id: 'village_hunter',
+        name: 'Village Hunter',
+        description: 'You know the old tracks, the deer paths, and the silence before danger.',
+        magical: false,
+        statBonuses: { agility: 1, endurance: 1 },
+        skillBonuses: { survival: 2, ranged: 1, stealth: 1 },
+        startingItems: [
+          { itemId: 'hunting_bow', slot: 'weapon', quantity: 1 },
+          { itemId: 'skinning_knife', quantity: 1 },
+          { itemId: 'travel_cloak', slot: 'cloak', quantity: 1 },
+          { itemId: 'travel_rations', quantity: 3 },
+          { itemId: 'flint_and_steel', quantity: 1 }
+        ],
+        startingGold: 8,
+        flags: { knows_forest_paths: true },
+        reputation: { village: 1, goblins: -1 }
+      },
+      {
+        id: 'hedge_wizard',
+        name: 'Hedge Wizard',
+        description: 'You learned scraps of the arcane arts from a wandering sage. The village folk call you clever — or strange.',
+        magical: true,
+        statBonuses: { intellect: 1, will: 1 },
+        skillBonuses: { magic: 2, lore: 1, investigation: 1 },
+        startingItems: [
+          { itemId: 'gnarled_staff', slot: 'weapon', quantity: 1 },
+          { itemId: 'traveling_robes', slot: 'armor', quantity: 1 },
+          { itemId: 'spell_pouch', quantity: 1 },
+          { itemId: 'travel_rations', quantity: 2 }
+        ],
+        startingGold: 5,
+        flags: { magical_training: true },
+        reputation: { village: 0, church: 1 }
+      },
+      {
+        id: 'temple_acolyte',
+        name: 'Temple Acolyte',
+        description: 'You served the old shrine since childhood. Your faith is quiet but unshakable.',
+        magical: false,
+        statBonuses: { will: 1, presence: 1 },
+        skillBonuses: { lore: 2, persuasion: 1, defense: 1 },
+        startingItems: [
+          { itemId: 'wooden_shield', slot: 'offhand', quantity: 1 },
+          { itemId: 'traveling_robes', slot: 'armor', quantity: 1 },
+          { itemId: 'holy_symbol', quantity: 1 },
+          { itemId: 'travel_rations', quantity: 2 }
+        ],
+        startingGold: 6,
+        flags: { temple_background: true },
+        reputation: { village: 1, church: 2 }
+      },
+      {
+        id: 'street_urchin',
+        name: 'Street Urchin',
+        description: 'You grew up in the gutters of a larger town. You learned to fight, lie, and run — in that order.',
+        magical: false,
+        statBonuses: { agility: 1, presence: 1 },
+        skillBonuses: { stealth: 2, deception: 1, thievery: 1 },
+        startingItems: [
+          { itemId: 'rusty_dagger', slot: 'weapon', quantity: 1 },
+          { itemId: 'ragged_cloak', slot: 'cloak', quantity: 1 },
+          { itemId: 'lockpicks', quantity: 1 }
+        ],
+        startingGold: 15,
+        flags: { streetwise: true },
+        reputation: { village: -1, thieves_guild: 1 }
+      },
+      {
+        id: 'disgraced_noble',
+        name: 'Disgraced Noble',
+        description: 'Your family name once opened doors. Now it closes them — but your bearing still commands a room.',
+        magical: false,
+        statBonuses: { presence: 2 },
+        skillBonuses: { persuasion: 2, deception: 1, lore: 1 },
+        startingItems: [
+          { itemId: 'fine_sword', slot: 'weapon', quantity: 1 },
+          { itemId: 'noble_clothes', slot: 'armor', quantity: 1 },
+          { itemId: 'signet_ring', slot: 'accessory1', quantity: 1 }
+        ],
+        startingGold: 20,
+        flags: { noble_background: true },
+        reputation: { village: 0, church: 0 }
+      },
+      {
+        id: 'grave_robber',
+        name: 'Grave Robber',
+        description: 'You have looted the dead for coin. The church does not forgive; the dead do not forget.',
+        magical: false,
+        statBonuses: { agility: 1, intellect: 1 },
+        skillBonuses: { thievery: 2, investigation: 1, stealth: 1 },
+        startingItems: [
+          { itemId: 'rusty_dagger', slot: 'weapon', quantity: 1 },
+          { itemId: 'dark_cloak', slot: 'cloak', quantity: 1 },
+          { itemId: 'lockpicks', quantity: 1 },
+          { itemId: 'torch', quantity: 2 }
+        ],
+        startingGold: 10,
+        flags: { grave_robber_background: true },
+        reputation: { village: -1, church: -2 }
+      }
+    ];
+
+    Game.data.items = {
+      iron_sword: { id: 'iron_sword', name: 'iron sword', aliases: ['sword', 'blade'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 20, damage: '1d8', stat: 'might', skill: 'melee', attackBonus: 0 },
+      hunting_bow: { id: 'hunting_bow', name: 'hunting bow', aliases: ['bow', 'yew bow'], weight: 2, slot: 'weapon', type: 'weapon', portable: true, value: 15, damage: '1d6', stat: 'agility', skill: 'ranged', attackBonus: 0 },
+      skinning_knife: { id: 'skinning_knife', name: 'skinning knife', aliases: ['knife'], weight: 1, type: 'tool', portable: true, value: 3, damage: '1d4', stat: 'agility', skill: 'melee', attackBonus: 0 },
+      travel_cloak: { id: 'travel_cloak', name: 'travel cloak', aliases: ['cloak'], weight: 2, slot: 'cloak', type: 'clothing', portable: true, value: 5, defenseBonus: 1 },
+      travel_rations: { id: 'travel_rations', name: 'travel rations', aliases: ['rations', 'food', 'ration'], weight: 1, type: 'consumable', stackable: true, portable: true, value: 1 },
+      flint_and_steel: { id: 'flint_and_steel', name: 'flint and steel', aliases: ['flint', 'steel'], weight: 1, type: 'tool', portable: true, value: 2 },
+      leather_armor: { id: 'leather_armor', name: 'leather armor', aliases: ['armor', 'leather'], weight: 15, slot: 'armor', type: 'armor', portable: true, defenseBonus: 2, value: 30 },
+      gnarled_staff: { id: 'gnarled_staff', name: 'gnarled staff', aliases: ['staff'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 5, damage: '1d6', stat: 'might', skill: 'melee', attackBonus: 0 },
+      traveling_robes: { id: 'traveling_robes', name: 'traveling robes', aliases: ['robes'], weight: 3, slot: 'armor', type: 'clothing', portable: true, value: 5 },
+      spell_pouch: { id: 'spell_pouch', name: 'spell pouch', aliases: ['spell pouch'], weight: 1, type: 'tool', portable: true, value: 10 },
+      wooden_shield: { id: 'wooden_shield', name: 'wooden shield', aliases: ['shield'], weight: 6, slot: 'offhand', type: 'shield', portable: true, shieldBonus: 1, value: 8 },
+      holy_symbol: { id: 'holy_symbol', name: 'holy symbol', aliases: ['symbol', 'holy symbol'], weight: 0, type: 'misc', portable: true, value: 0 },
+      rusty_dagger: { id: 'rusty_dagger', name: 'rusty dagger', aliases: ['dagger', 'rusty dagger'], weight: 1, slot: 'weapon', type: 'weapon', portable: true, value: 2, damage: '1d4', stat: 'agility', skill: 'melee', attackBonus: 0 },
+      ragged_cloak: { id: 'ragged_cloak', name: 'ragged cloak', aliases: ['cloak', 'ragged cloak'], weight: 1, slot: 'cloak', type: 'clothing', portable: true, value: 1 },
+      lockpicks: { id: 'lockpicks', name: 'lockpicks', aliases: ['lockpicks', 'picks'], weight: 0, type: 'tool', portable: true, value: 5 },
+      fine_sword: { id: 'fine_sword', name: 'fine sword', aliases: ['sword', 'blade', 'fine blade'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 40, damage: '1d8', stat: 'might', skill: 'melee', attackBonus: 1 },
+      noble_clothes: { id: 'noble_clothes', name: 'noble clothes', aliases: ['clothes', 'noble clothes'], weight: 3, slot: 'armor', type: 'clothing', portable: true, value: 25 },
+      signet_ring: { id: 'signet_ring', name: 'signet ring', aliases: ['ring', 'signet'], weight: 0, slot: 'accessory1', type: 'misc', portable: true, value: 15 },
+      dark_cloak: { id: 'dark_cloak', name: 'dark cloak', aliases: ['cloak', 'dark cloak'], weight: 2, slot: 'cloak', type: 'clothing', portable: true, value: 5 },
+      torch: { id: 'torch', name: 'torch', aliases: ['torches'], weight: 1, type: 'light', stackable: true, portable: true, value: 1 },
+      village_notice: { id: 'village_notice', name: 'notice board posting', aliases: ['notice', 'posting', 'notice board', 'sign'], weight: 0, type: 'misc', portable: false, value: 0 },
+      goblin_knife: { id: 'goblin_knife', name: 'goblin knife', aliases: ['knife', 'jagged knife'], weight: 1, slot: 'weapon', type: 'weapon', portable: true, value: 2, damage: '1d4+1', stat: 'agility', skill: 'melee', attackBonus: 0 },
+      copper_coin: { id: 'copper_coin', name: 'copper coin', aliases: ['coin', 'copper', 'coins'], weight: 0, type: 'treasure', stackable: true, portable: true, value: 1 },
+      arrows: { id: 'arrows', name: 'arrows', aliases: ['arrow'], weight: 1, type: 'ammunition', stackable: true, portable: true, value: 1 }
+    };
+
+    Game.data.locations = {
+      village_square: {
+        id: 'village_square',
+        name: 'Village Square',
+        descriptions: [
+          {
+            text: 'You stand in the muddy square of a small frontier village. A stone well sits at the center, its rope darkened by years of use. Timber-framed buildings crowd the edges — the general store to the north, the Silver Stag tavern to the south, and the temple yard to the east. A notice board stands near the well, plastered with faded parchments.',
+            conditions: []
+          }
+        ],
+        exits: {
+          north: { to: 'general_store', travelMinutes: 1 },
+          south: { to: 'silver_stag_tavern', travelMinutes: 1 },
+          east: { to: 'temple_yard', travelMinutes: 1 }
+        },
+        items: ['village_notice'],
+        tags: ['settlement', 'outdoors']
+      },
+      general_store: {
+        id: 'general_store',
+        name: "Borin's General Store",
+        descriptions: [
+          {
+            text: 'Crates and barrels crowd the narrow shop. Dried herbs hang from the low ceiling, and a battered ledger lies open on the counter. Shelves groan under the weight of rope, nails, lamps, and sundry goods. The smell of ink and sawdust fills the air.',
+            conditions: []
+          }
+        ],
+        exits: {
+          south: { to: 'village_square', travelMinutes: 1 },
+          north: { to: 'north_wood', travelMinutes: 3 }
+        },
+        items: [],
+        tags: ['settlement', 'indoors', 'shop']
+      },
+      silver_stag_tavern: {
+        id: 'silver_stag_tavern',
+        name: 'The Silver Stag Tavern',
+        descriptions: [
+          {
+            text: 'A warm fire crackles in the stone hearth. Rough-hewn tables surround a bar of dark oak, behind which rows of bottles catch the firelight. A mounted stag head watches from above the mantle, its antlers draped with dried hops.',
+            conditions: []
+          }
+        ],
+        exits: {
+          north: { to: 'village_square', travelMinutes: 1 }
+        },
+        items: [],
+        tags: ['settlement', 'indoors', 'tavern']
+      },
+      temple_yard: {
+        id: 'temple_yard',
+        name: 'Temple Yard',
+        descriptions: [
+          {
+            text: 'A small stone temple stands at the edge of a weed-choked yard. Weathered statues of forgotten saints line a cracked flagstone path. A simple altar is visible through the open doorway, candles flickering within. The air here feels still and watchful.',
+            conditions: []
+          }
+        ],
+        exits: {
+          west: { to: 'village_square', travelMinutes: 1 }
+        },
+        items: [],
+        tags: ['settlement', 'outdoors', 'sacred']
+      },
+      north_wood: {
+        id: 'north_wood',
+        name: 'North Wood',
+        descriptions: [
+          {
+            text: 'The village gives way to a curtain of ancient oaks. The canopy is thick overhead, filtering the light into a dim green haze. A narrow trail winds between gnarled roots and fallen logs. Birdsong seems distant here, replaced by the creak of branches and the occasional snap of a twig.',
+            conditions: []
+          }
+        ],
+        exits: {
+          south: { to: 'village_square', travelMinutes: 1 }
+        },
+        items: [],
+        tags: ['wilderness', 'outdoors', 'forest']
+      }
+    };
+
+    Game.ui.print = function(text, className = 'output-narrative') {
+      const outputArea = document.getElementById('output-area');
+      const div = document.createElement('div');
+      div.className = `output-line ${className}`;
+      div.textContent = text;
+      outputArea.appendChild(div);
+      outputArea.scrollTop = outputArea.scrollHeight;
+    };
+
+    Game.ui.clearOutput = function() {
+      const outputArea = document.getElementById('output-area');
+      outputArea.innerHTML = '';
+      this.print('═══════════════════════════════════════', 'separator');
+      this.print('Screen cleared.', 'output-system');
+      this.print('═══════════════════════════════════════', 'separator');
+    };
+
+    Game.ui.echoCommand = function(command) {
+      this.print(`> ${command}`, 'output-command');
+    };
+
+    Game.ui.showTitle = function() {
+      this.print('', '');
+      this.print('╔══════════════════════════════════════╗', 'separator');
+      this.print('║                                      ║', 'separator');
+      this.print('║     FANTASY TEXT ADVENTURE           ║', 'output-highlight');
+      this.print('║     A Classic RPG Experience         ║', 'output-system');
+      this.print('║                                      ║', 'separator');
+      this.print('╠══════════════════════════════════════╣', 'separator');
+      this.print('║                                      ║', 'separator');
+      this.print('║   Type "start" to begin your quest   ║', 'output-narrative');
+      this.print('║   Type "help" for available commands ║', 'output-narrative');
+      this.print('║   Type "about" for game info         ║', 'output-narrative');
+      this.print('║                                      ║', 'separator');
+      this.print('╚══════════════════════════════════════╝', 'separator');
+      this.print('', '');
+    };
+
+    Game.ui.handleInput = function(input) {
+      if (!input.trim()) return;
+      
+      this.echoCommand(input);
+      Game.data.commandHistory.push(input);
+      
+      const trimmed = input.trim().toLowerCase();
+      
+      switch (Game.state.mode) {
+        case GameModes.TITLE:
+          this.handleTitleInput(trimmed);
+          break;
+        case GameModes.CHARACTER_CREATION:
+          Game.characterCreation.handleInput(trimmed);
+          break;
+        case GameModes.PLAYING:
+          if (Game.state.inDialogue) {
+            Game.dialogue.handleInput(trimmed);
+          } else {
+            Game.engine.handleCommand(trimmed);
+          }
+          break;
+        case GameModes.GAME_OVER:
+          this.handleGameOverInput(trimmed);
+          break;
+      }
+    };
+
+    Game.ui.handleTitleInput = function(input) {
+      if (input === 'start' || input === 'begin' || input === 'play') {
+        this.print('', '');
+        this.print('Starting new adventure...', 'output-system');
+        this.print('', '');
+        
+        Game.characterCreation.start();
+        Game.state.mode = GameModes.CHARACTER_CREATION;
+      } else if (input === 'help') {
+        this.showHelp(Game.engine.availableCommands.title);
+      } else if (input === 'clear') {
+        this.clearOutput();
+        setTimeout(() => this.showTitle(), 100);
+      } else if (input === 'about') {
+        this.showAbout();
+      } else {
+        this.print('Please type "start" to begin your adventure.', 'output-system');
+      }
+    };
+
+    Game.ui.handleGameOverInput = function(input) {
+      if (input === 'restart' || input === 'start' || input === 'new') {
+        location.reload();
+      } else if (input === 'quit' || input === 'exit') {
+        this.print('Thank you for playing!', 'output-system');
+        setTimeout(() => window.close(), 2000);
+      } else {
+        this.print('Type "restart" for a new game or "quit" to exit.', 'output-system');
+      }
+    };
+
+    Game.ui.showHelp = function(commands) {
+      this.print('', '');
+      this.print('━━━━━━━━━━ AVAILABLE COMMANDS ━━━━━━━━━━', 'output-highlight');
+      this.print('', '');
+      
+      if (commands) {
+        commands.forEach(cmd => {
+          this.print(`  ${cmd.name.padEnd(20)} - ${cmd.description}`, 'output-narrative');
+        });
+      }
+      
+      this.print('', '');
+      this.print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'output-highlight');
+      this.print('', '');
+    };
+
+    Game.ui.showAbout = function() {
+      this.print('', '');
+      this.print('━━━━━━━━━━ ABOUT THIS GAME ━━━━━━━━━━━━', 'output-highlight');
+      this.print('', '');
+      this.print('Fantasy Text Adventure v' + Game.version, 'output-system');
+      this.print('A classic text-based RPG engine', 'output-narrative');
+      this.print('', '');
+      this.print('Features:', 'output-highlight');
+      this.print('  • Character creation with stats and skills', 'output-narrative');
+      this.print('  • Inventory and equipment management', 'output-narrative');
+      this.print('  • Turn-based time progression', 'output-narrative');
+      this.print('  • NPCs, monsters, and combat', 'output-narrative');
+      this.print('  • Save/load and export/import support', 'output-narrative');
+      this.print('', '');
+      this.print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'output-highlight');
+      this.print('', '');
+    };
+
+    Game.parser.normalize = function(input) {
+      return input.toLowerCase().trim().replace(/\s+/g, ' ');
+    };
+
+    Game.engine.availableCommands = {
+      title: [
+        { name: 'start', description: 'Begin a new adventure' },
+        { name: 'help', description: 'Show available commands' },
+        { name: 'clear', description: 'Clear the screen' },
+        { name: 'about', description: 'Display game information' }
+      ],
+      playing: [
+        { name: 'look', description: 'Examine your surroundings' },
+        { name: 'look at [target]', description: 'Examine an NPC, monster, or item' },
+        { name: 'go [direction]', description: 'Travel to a new area' },
+        { name: 'talk to [npc]', description: 'Speak with an NPC' },
+        { name: 'ask [npc] about [topic]', description: 'Ask an NPC about something specific' },
+        { name: 'persuade [npc]', description: 'Attempt to persuade an NPC' },
+        { name: 'intimidate [npc]', description: 'Attempt to intimidate an NPC' },
+        { name: 'take [item]', description: 'Pick up an item' },
+        { name: 'drop [item]', description: 'Drop an item from inventory' },
+        { name: 'equip [item]', description: 'Equip an item' },
+        { name: 'unequip [item]', description: 'Unequip an item' },
+        { name: 'inventory', description: 'View your inventory' },
+        { name: 'attack [target]', description: 'Attack a monster' },
+        { name: 'wait', description: 'Pass some time (wait, wait 1 hour)' },
+        { name: 'sleep', description: 'Rest for several hours' },
+        { name: 'save', description: 'Save your progress' },
+        { name: 'load', description: 'Load a saved game' },
+        { name: 'help', description: 'Show available commands' },
+        { name: 'clear', description: 'Clear the screen' },
+        { name: 'about', description: 'Display game information' }
+      ]
+    };
+
+    Game.engine.take = function(itemName) {
+      const player = Game.state.player;
+      const loc = Game.data.locations[player.location];
+      if (!loc) {
+        Game.ui.print('You are nowhere in particular.', 'output-error');
+        return;
+      }
+      
+      if (!itemName) {
+        Game.ui.print('Take what?', 'output-error');
+        return;
+      }
+      
+      const staticIdx = loc.items.findIndex(id => {
+        const item = Game.data.items[id];
+        if (!item) return false;
+        return item.name === itemName || (item.aliases && item.aliases.includes(itemName));
+      });
+      
+      const locItems = Game.state.world.itemLocations[player.location] || [];
+      const dynamicIdx = locItems.findIndex(id => {
+        const item = Game.data.items[id];
+        if (!item) return false;
+        return item.name === itemName || (item.aliases && item.aliases.includes(itemName));
+      });
+      
+      let foundId = null;
+      let source = null;
+      
+      if (staticIdx !== -1) {
+        foundId = loc.items[staticIdx];
+        source = 'static';
+      } else if (dynamicIdx !== -1) {
+        foundId = locItems[dynamicIdx];
+        source = 'dynamic';
+      }
+      
+      if (!foundId) {
+        Game.ui.print(`You don't see "${itemName}" here.`, 'output-error');
+        return;
+      }
+      
+      const itemData = Game.data.items[foundId];
+      if (!itemData.portable) {
+        Game.ui.print(`You can't take the ${itemData.name}.`, 'output-error');
+        return;
+      }
+      
+      const oldTier = Game.inventory.getEncumbranceTier().tier;
+      
+      if (source === 'static') {
+        loc.items.splice(staticIdx, 1);
+      } else {
+        locItems.splice(dynamicIdx, 1);
+        Game.state.world.itemLocations[player.location] = locItems;
+      }
+      
+      Game.inventory.addItem(foundId, 1);
+      
+      const newTier = Game.inventory.getEncumbranceTier().tier;
+      
+      Game.ui.print(`You pick up the ${itemData.name}.`, 'output-narrative');
+      
+      if (oldTier !== newTier && newTier !== 'unencumbered') {
+        Game.ui.print(`You are now ${newTier}!`, 'output-highlight');
+      }
+      
+      const msgs = Game.clock.advanceTime(1);
+      for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
+    };
+
+    Game.engine.drop = function(input) {
+      const player = Game.state.player;
+      
+      let quantity = 1;
+      let itemName = input;
+      
+      const match = input.match(/^(\d+)\s+(.+)$/);
+      if (match) {
+        quantity = parseInt(match[1], 10);
+        itemName = match[2];
+      }
+      
+      const entry = player.inventory.find(e => {
+        const item = Game.data.items[e.itemId];
+        if (!item) return false;
+        return item.name === itemName || (item.aliases && item.aliases.includes(itemName));
+      });
+      
+      if (!entry) {
+        Game.ui.print(`You don't have "${itemName}".`, 'output-error');
+        return;
+      }
+      
+      if (entry.quantity < quantity) {
+        Game.ui.print(`You only have ${entry.quantity} ${Game.data.items[entry.itemId].name}.`, 'output-error');
+        return;
+      }
+      
+      const itemData = Game.data.items[entry.itemId];
+      
+      Game.inventory.removeItem(entry.itemId, quantity);
+      
+      const locId = player.location;
+      if (!Game.state.world.itemLocations[locId]) {
+        Game.state.world.itemLocations[locId] = [];
+      }
+      for (let i = 0; i < quantity; i++) {
+        Game.state.world.itemLocations[locId].push(entry.itemId);
+      }
+      
+      const qtyText = quantity > 1 ? `${quantity} ${itemData.name}` : `the ${itemData.name}`;
+      Game.ui.print(`You drop ${qtyText}.`, 'output-narrative');
+      
+      const msgs = Game.clock.advanceTime(1);
+      for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
+    };
+
+    Game.engine.equip = function(itemName) {
+      const player = Game.state.player;
+      
+      if (!itemName) {
+        Game.ui.print('Equip what?', 'output-error');
+        return;
+      }
+      
+      const entry = player.inventory.find(e => {
+        const item = Game.data.items[e.itemId];
+        if (!item) return false;
+        return item.name === itemName || (item.aliases && item.aliases.includes(itemName));
+      });
+      
+      if (!entry) {
+        Game.ui.print(`You don't have "${itemName}".`, 'output-error');
+        return;
+      }
+      
+      const itemData = Game.data.items[entry.itemId];
+      if (!itemData.slot) {
+        Game.ui.print(`You can't equip the ${itemData.name}.`, 'output-error');
+        return;
+      }
+      
+      const slot = itemData.slot;
+      
+      if (player.equipment[slot]) {
+        const currentItemId = player.equipment[slot];
+        const currentItem = Game.data.items[currentItemId];
+        Game.inventory.addItem(currentItemId, 1);
+        Game.ui.print(`You remove the ${currentItem ? currentItem.name : currentItemId}.`, 'output-narrative');
+      }
+      
+      Game.inventory.removeItem(entry.itemId, 1);
+      
+      player.equipment[slot] = entry.itemId;
+      
+      Game.ui.print(`You equip the ${itemData.name}.`, 'output-narrative');
+      
+      let timeCost = 1;
+      if (slot === 'armor') timeCost = 5;
+      
+      const msgs = Game.clock.advanceTime(timeCost);
+      for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
+    };
+
+    Game.engine.unequip = function(itemName) {
+      const player = Game.state.player;
+      
+      if (!itemName) {
+        Game.ui.print('Unequip what?', 'output-error');
+        return;
+      }
+      
+      let foundSlot = null;
+      let foundItemId = null;
+      
+      for (const [slot, itemId] of Object.entries(player.equipment)) {
+        if (!itemId) continue;
+        const item = Game.data.items[itemId];
+        if (item && (item.name === itemName || (item.aliases && item.aliases.includes(itemName)))) {
+          foundSlot = slot;
+          foundItemId = itemId;
+          break;
+        }
+        if (slot === itemName) {
+          foundSlot = slot;
+          foundItemId = itemId;
+          break;
+        }
+      }
+      
+      if (!foundSlot || !foundItemId) {
+        Game.ui.print(`You aren't wearing/holding "${itemName}".`, 'output-error');
+        return;
+      }
+      
+      const itemData = Game.data.items[foundItemId];
+      
+      Game.inventory.addItem(foundItemId, 1);
+      player.equipment[foundSlot] = null;
+      
+      Game.ui.print(`You remove the ${itemData ? itemData.name : foundItemId}.`, 'output-narrative');
+      
+      let timeCost = 1;
+      if (foundSlot === 'armor') timeCost = 3;
+      
+      Game.clock.advanceTime(timeCost);
+    };
+
+    Game.engine.wait = function(args) {
+      let minutes = 15;
+      if (args) {
+        const restParts = args.trim().toLowerCase();
+        if (restParts === '' || restParts === 'a' || restParts === 'awhile' || restParts === 'a while') {
+          minutes = 15;
+        } else if (restParts === '1 hour' || restParts === 'hour' || restParts === 'an hour') {
+          minutes = 60;
+        } else {
+          const hourMatch = restParts.match(/^(\d+)\s*(?:hour|hr|hours|hrs|h)$/);
+          const minMatch = restParts.match(/^(\d+)\s*(?:minute|minutes|min|mins|m)$/);
+          if (hourMatch) {
+            minutes = parseInt(hourMatch[1], 10) * 60;
+          } else if (minMatch) {
+            minutes = parseInt(minMatch[1], 10);
+          } else {
+            const pureNum = parseInt(restParts, 10);
+            if (!isNaN(pureNum) && pureNum > 0) {
+              minutes = pureNum;
+            }
+          }
+        }
+      }
+      if (minutes <= 0) minutes = 15;
+      Game.ui.print('You wait for a while...', 'output-narrative');
+      const msgs = Game.clock.advanceTime(minutes);
+      for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
+      Game.ui.print('  (' + minutes + ' minutes passed)', 'output-system');
+    };
+
+    Game.engine.sleep = function(args) {
+      let hours = 8;
+      if (args) {
+        const restParts = args.trim().toLowerCase();
+        const hourMatch = restParts.match(/^(\d+)\s*(?:hour|hr|hours|hrs|h)?$/);
+        if (hourMatch) {
+          hours = parseInt(hourMatch[1], 10);
+        }
+      }
+      if (hours <= 0) hours = 1;
+      if (hours > 12) hours = 12;
+      Game.ui.print('You find a comfortable spot and settle down to rest...', 'output-narrative');
+      const sleepMsgs = Game.clock.advanceTime(hours * 60);
+      for (const msg of sleepMsgs) { Game.ui.print(msg, 'output-system'); }
+      const player = Game.state.player;
+      if (player && player.resources) {
+        const staminaRecovery = Math.floor(player.resources.maxStamina * 0.5);
+        player.resources.stamina = Math.min(player.resources.maxStamina, player.resources.stamina + staminaRecovery);
+        if (player.resources.maxHp === 0 || player.resources.hp < player.resources.maxHp) {
+          Game.ui.print('You feel somewhat rested.', 'output-narrative');
+        }
+      }
+      Game.ui.print('  (' + hours + ' hours passed — ' + Game.clock.formatTime() + ')', 'output-system');
+    };
+
+    Game.engine.handleCommand = function(input) {
+      const normalized = Game.parser.normalize(input);
+      
+      if (normalized === 'help') {
+        Game.ui.showHelp(this.availableCommands.playing);
+      } else if (normalized === 'clear') {
+        Game.ui.clearOutput();
+      } else if (normalized === 'about') {
+        Game.ui.showAbout();
+      } else if (normalized === 'look' || normalized === 'l') {
+        this.look();
+      } else if (normalized === 'north' || normalized === 'n') {
+        this.go('north');
+      } else if (normalized === 'south' || normalized === 's') {
+        this.go('south');
+      } else if (normalized === 'east' || normalized === 'e') {
+        this.go('east');
+      } else if (normalized === 'west' || normalized === 'w') {
+        this.go('west');
+      } else if (normalized === 'go north') {
+        this.go('north');
+      } else if (normalized === 'go south') {
+        this.go('south');
+      } else if (normalized === 'go east') {
+        this.go('east');
+      } else if (normalized === 'go west') {
+        this.go('west');
+      } else if (normalized === 'quit' || normalized === 'exit') {
+        Game.ui.print('Saving before quit is recommended!', 'output-system');
+        Game.ui.print('Type "quit" again to confirm, or use a different command.', 'output-system');
+      } else if (normalized === 'inventory' || normalized === 'i' || normalized === 'inv' || normalized === 'status' || normalized === 'equipment' || normalized === 'gear') {
+        this.showInventory();
+      } else if (normalized.startsWith('take ') || normalized.startsWith('get ') || normalized.startsWith('grab ') || normalized.startsWith('pickup ') || normalized.startsWith('pick up ')) {
+        const itemName = normalized.replace(/^(take|get|grab|pickup|pick up)\s+/, '');
+        this.take(itemName);
+      } else if (normalized.startsWith('drop ')) {
+        const itemName = normalized.replace(/^drop\s+/, '');
+        this.drop(itemName);
+      } else if (normalized.startsWith('equip ') || normalized.startsWith('wield ') || normalized.startsWith('wear ') || normalized.startsWith('put on ')) {
+        const itemName = normalized.replace(/^(equip|wield|wear|put on)\s+/, '');
+        this.equip(itemName);
+      } else if (normalized.startsWith('unequip ') || normalized.startsWith('remove ') || normalized.startsWith('take off ')) {
+        const itemName = normalized.replace(/^(unequip|remove|take off)\s+/, '');
+        this.unequip(itemName);
+      } else if (normalized === 'wait') {
+        this.wait(null);
+      } else if (normalized.startsWith('wait ')) {
+        const args = normalized.replace(/^wait\s+/, '');
+        this.wait(args);
+      } else if (normalized === 'sleep' || normalized === 'rest') {
+        this.sleep(null);
+      } else if (normalized.startsWith('sleep ') || normalized.startsWith('rest ')) {
+        const args = normalized.replace(/^(sleep|rest)\s+/, '');
+        this.sleep(args);
+      } else if (normalized.startsWith('talk to ') || normalized.startsWith('talk ') || normalized.startsWith('speak to ') || normalized.startsWith('speak with ')) {
+        const target = normalized.replace(/^(talk to|talk|speak to|speak with)\s+/, '');
+        this.talk(target);
+      } else if (normalized.startsWith('ask ') && normalized.includes(' about ')) {
+        const match = normalized.match(/^ask\s+(.+?)\s+about\s+(.+)$/);
+        if (match) {
+          this.askAbout(match[1], match[2]);
+        } else {
+          const target = normalized.replace(/^ask\s+/, '');
+          this.talk(target);
+        }
+      } else if (normalized.startsWith('persuade ')) {
+        const target = normalized.replace(/^persuade\s+/, '');
+        this.persuade(target);
+      } else if (normalized.startsWith('intimidate ')) {
+        const target = normalized.replace(/^intimidate\s+/, '');
+        this.intimidate(target);
+      } else if (normalized.startsWith('look at ') || normalized.startsWith('examine ') || normalized.startsWith('inspect ') || normalized.startsWith('x ')) {
+        const target = normalized.replace(/^(look at|examine|inspect|x)\s+/, '');
+        this.lookAt(target);
+      } else if (normalized === 'attack' || normalized === 'strike' || normalized === 'hit' || normalized === 'fight') {
+        Game.combat.attack(null);
+      } else if (normalized.startsWith('attack ') || normalized.startsWith('strike ') || normalized.startsWith('hit ') || normalized.startsWith('fight ') || normalized.startsWith('shoot ')) {
+        const target = normalized.replace(/^(attack|strike|hit|fight|shoot)\s+/, '');
+        Game.combat.attack(target);
+      } else {
+        Game.ui.print(`I don't understand that command. Try "help" for options.`, 'output-error');
+      }
+    };
+
+    Game.engine.showInventory = function() {
+      const player = Game.state.player;
+      if (!player) {
+        Game.ui.print('No active character.', 'output-error');
+        return;
+      }
+      const bg = Game.data.backgrounds.find(b => b.id === player.background);
+      const bgName = bg ? bg.name : 'Unknown';
+      Game.ui.print('', '');
+      Game.ui.print('══════════════════════════════════════', 'separator');
+      Game.ui.print('  CHARACTER STATUS', 'output-highlight');
+      Game.ui.print('══════════════════════════════════════', 'separator');
+      Game.ui.print('', '');
+      Game.ui.print(`  Name:       ${player.name}`, 'output-narrative');
+      Game.ui.print(`  Background: ${bgName}`, 'output-narrative');
+      Game.ui.print(`  Level:      ${player.level}  XP: ${player.xp || 0}`, 'output-narrative');
+      Game.ui.print('', '');
+      Game.ui.print(`  Time: ${Game.clock.formatTime()}`, 'output-system');
+      Game.ui.print('', '');
+      Game.ui.print(`  Health:   ${player.resources.hp} / ${player.resources.maxHp}`, 'output-narrative');
+      Game.ui.print(`  Stamina:  ${player.resources.stamina} / ${player.resources.maxStamina}`, 'output-narrative');
+      Game.ui.print(`  Mana:     ${player.resources.mana} / ${player.resources.maxMana}`, 'output-narrative');
+      Game.ui.print('', '');
+      Game.ui.print('  Equipment:', 'output-narrative');
+      for (const [slot, itemId] of Object.entries(player.equipment)) {
+        const label = slot.padEnd(12);
+        if (itemId) {
+          const item = Game.data.items[itemId];
+          Game.ui.print(`    ${label}${item ? item.name : itemId}`, 'output-narrative');
+        } else {
+          Game.ui.print(`    ${label}None`, 'output-system');
+        }
+      }
+      Game.ui.print('', '');
+      if (player.conditions && player.conditions.length > 0) {
+        Game.ui.print('  Status Effects:', 'output-narrative');
+        for (const cond of player.conditions) {
+          const condData = Game.data.conditions.find(c => c.id === cond.id);
+          const condName = condData ? condData.name : cond.id;
+          const remaining = cond.remainingMinutes > 0 ? ` (${cond.remainingMinutes} min remaining)` : '';
+          Game.ui.print(`    - ${condName}${remaining}`, 'output-highlight');
+          if (condData && condData.description) {
+            Game.ui.print(`      ${condData.description}`, 'output-system');
+          }
+          if (condData && condData.modifiers) {
+            const mods = Object.entries(condData.modifiers).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ');
+            if (mods) Game.ui.print(`      Modifiers: ${mods}`, 'output-system');
+          }
+        }
+        Game.ui.print('', '');
+      }
+      Game.ui.print(`  Gold: ${player.gold}`, 'output-narrative');
+      Game.ui.print('', '');
+      const carriedWeight = Game.inventory.getCarriedWeight();
+      const carryCapacity = Game.inventory.getCarryCapacity();
+      const encumbrance = Game.inventory.getEncumbranceTier();
+      Game.ui.print(`  Weight: ${carriedWeight} / ${carryCapacity} lb`, 'output-narrative');
+      Game.ui.print(`  Encumbrance: ${encumbrance.tier}`, 'output-narrative');
+      if (encumbrance.tier === 'burdened') {
+        Game.ui.print('    (Stealth -1, Agility -1)', 'output-system');
+      } else if (encumbrance.tier === 'encumbered') {
+        Game.ui.print('    (Stealth -2, Agility -2, Travel time ×1.5)', 'output-system');
+      } else if (encumbrance.tier === 'overloaded') {
+        Game.ui.print('    (Cannot travel!)', 'output-error');
+      }
+      Game.ui.print('', '');
+      if (player.inventory.length === 0) {
+        Game.ui.print('  Carried Items: None', 'output-system');
+      } else {
+        Game.ui.print('  Carried Items:', 'output-narrative');
+        for (const entry of player.inventory) {
+          const item = Game.data.items[entry.itemId];
+          const name = item ? item.name : entry.itemId;
+          const weight = item ? (item.weight || 0) * entry.quantity : 0;
+          const qty = entry.quantity > 1 ? ` x${entry.quantity}` : '';
+          Game.ui.print(`    - ${name}${qty}   ${weight} lb`, 'output-narrative');
+        }
+      }
+      Game.ui.print('', '');
+      Game.ui.print('══════════════════════════════════════', 'separator');
+    };
+
+    Game.engine.look = function() {
+      if (!Game.state.player || !Game.state.player.location) {
+        Game.ui.print('You are nowhere in particular.', 'output-narrative');
+        return;
+      }
+      const locId = Game.state.player.location;
+      const loc = Game.data.locations[locId];
+      if (!loc) {
+        Game.ui.print('This location does not exist.', 'output-error');
+        return;
+      }
+      Game.ui.print(`  --- ${loc.name} ---`, 'output-highlight');
+      Game.ui.print('', '');
+      let defaultDesc = null;
+      for (const desc of loc.descriptions) {
+        if (desc.conditions && desc.conditions.length > 0) {
+          if (Game.engine.evaluateConditions(desc.conditions)) {
+            Game.ui.print(`${desc.text}`, 'output-narrative');
+            defaultDesc = null;
+            break;
+          }
+        } else {
+          defaultDesc = desc;
+        }
+      }
+      if (defaultDesc) {
+        Game.ui.print(`${defaultDesc.text}`, 'output-narrative');
+      }
+      Game.ui.print('', '');
+      Game.ui.print('Exits:', 'output-system');
+      for (const [dir, exit] of Object.entries(loc.exits)) {
+        const exitLoc = Game.data.locations[exit.to];
+        const exitName = exitLoc ? exitLoc.name : dir;
+        Game.ui.print(`  ${dir.padEnd(8)} - ${exitName}`, 'output-narrative');
+      }
+      Game.ui.print('', '');
+      
+      const presentNPCs = Game.schedules.getPresentNPCs(locId);
+      for (const entry of presentNPCs) {
+        const activityText = entry.activity ? ` (${entry.activity})` : '';
+        Game.ui.print(`  ${entry.npc.name} is here${activityText}.`, 'output-highlight');
+      }
+      if (presentNPCs.length > 0) Game.ui.print('', '');
+
+      const presentMonsters = Game.schedules.getPresentMonsters(locId);
+      for (const entry of presentMonsters) {
+        Game.ui.print(`  ${entry.monster.name} is here!`, 'output-error');
+      }
+      if (presentMonsters.length > 0) Game.ui.print('', '');
+      
+      const allItems = [];
+      if (loc.items && loc.items.length > 0) {
+        for (const id of loc.items) {
+          const item = Game.data.items[id];
+          if (item) allItems.push(item.name);
+        }
+      }
+      const dynamicItems = Game.state.world.itemLocations[locId] || [];
+      for (const id of dynamicItems) {
+        const item = Game.data.items[id];
+        if (item) allItems.push(item.name);
+      }
+      
+      if (allItems.length > 0) {
+        Game.ui.print('You notice: ' + allItems.join(', '), 'output-system');
+        Game.ui.print('', '');
+      }
+    };
+
+    Game.engine.go = function(direction) {
+      const player = Game.state.player;
+      const loc = Game.data.locations[player.location];
+      if (!loc || !loc.exits[direction]) {
+        Game.ui.print(`You cannot go ${direction}.`, 'output-error');
+        return;
+      }
+      const exit = loc.exits[direction];
+      const travelMinutes = exit.travelMinutes || 1;
+      player.location = exit.to;
+      const msgs = Game.clock.advanceTime(travelMinutes);
+      const newLoc = Game.data.locations[exit.to];
+      if (newLoc) {
+        Game.ui.print('', '');
+        Game.ui.print(`You head ${direction}...`, 'output-narrative');
+        for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
+        Game.ui.print('', '');
+        this.look();
+      }
+    };
+
+    Game.engine.talk = function(target) {
+      if (!target) {
+        Game.ui.print('Talk to whom?', 'output-error');
+        return;
+      }
+      const npc = Game.schedules.findNPCByName(target);
+      if (!npc) {
+        const monster = Game.schedules.findMonsterByName(target);
+        if (monster) {
+          const present = Game.schedules.isMonsterPresent(monster, Game.state.player.location);
+          if (!present) {
+            Game.ui.print(`You don't see ${monster.name} here.`, 'output-error');
+            return;
+          }
+          Game.ui.print(monster.description, 'output-narrative');
+          return;
+        }
+        Game.ui.print(`You don't see anyone by that name here.`, 'output-error');
+        return;
+      }
+      const playerLoc = Game.state.player.location;
+      const present = Game.schedules.isNPCPresent(npc, playerLoc);
+      if (!present) {
+        Game.ui.print(`${npc.name} is not here.`, 'output-error');
+        return;
+      }
+      const activity = Game.schedules.getActivity(npc, Game.state.clock);
+      if (activity) {
+        Game.ui.print(`You approach ${npc.name} (${activity}).`, 'output-narrative');
+      } else {
+        Game.ui.print(`You approach ${npc.name}.`, 'output-narrative');
+      }
+      const dialogue = Game.dialogue.findDialogueForNPC(npc);
+      if (dialogue) {
+        Game.dialogue.startDialogue(dialogue.id);
+        return;
+      }
+      Game.ui.print('', '');
+      Game.ui.print(npc.description, 'output-narrative');
+      const msgs = Game.clock.advanceTime(5);
+      for (const msg of msgs) { Game.ui.print(msg, 'output-system'); }
+    };
+
+    Game.engine.lookAt = function(target) {
+      if (!target) {
+        Game.ui.print('Look at what?', 'output-error');
+        return;
+      }
+      const npc = Game.schedules.findNPCByName(target);
+      if (npc) {
+        const present = Game.schedules.isNPCPresent(npc, Game.state.player.location);
+        if (!present) {
+          Game.ui.print(`You don't see ${npc.name} here.`, 'output-error');
+          return;
+        }
+        const activity = Game.schedules.getActivity(npc, Game.state.clock);
+        let text = npc.description;
+        if (activity) text += ` ${npc.name.split(' ')[0]} is ${activity}.`;
+        Game.ui.print(text, 'output-narrative');
+        return;
+      }
+      const monster = Game.schedules.findMonsterByName(target);
+      if (monster) {
+        const present = Game.schedules.isMonsterPresent(monster, Game.state.player.location);
+        if (!present) {
+          Game.ui.print(`You don't see ${monster.name} here.`, 'output-error');
+          return;
+        }
+        Game.ui.print(monster.description, 'output-narrative');
+        return;
+      }
+      const item = Object.values(Game.data.items).find(i => i.name.toLowerCase() === target || i.name.toLowerCase().includes(target));
+      if (item) {
+        Game.ui.print(item.description || `You see nothing special about the ${item.name}.`, 'output-narrative');
+        return;
+      }
+      Game.ui.print(`You don't see "${target}" here.`, 'output-error');
+    };
+
+    Game.characterCreation = {
+      currentStep: 0,
+      characterDraft: null,
+
+      initDraft: function() {
+        this.characterDraft = {
+          name: '',
+          backgroundId: null,
+          baseStats: { might: 0, agility: 0, endurance: 0, intellect: 0, will: 0, presence: 0 },
+          allocatedStatPoints: 0,
+          maxStatPoints: 6,
+          chosenSkills: [],
+          finalStats: {},
+          finalSkills: {},
+          startingItems: [],
+          startingGold: 0,
+          sacrificedStat: null
+        };
+        this.currentStep = 1;
+      },
+
+      start: function() {
+        this.initDraft();
+        Game.ui.print('', '');
+        this.showStep1();
+      },
+
+      showStep1: function() {
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('  CREATE YOUR CHARACTER', 'output-highlight');
+        Game.ui.print('  Step 1 of 7: Enter Your Name', 'output-highlight');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('', '');
+        Game.ui.print('What is your name, adventurer?', 'output-narrative');
+        Game.ui.print('', '');
+        Game.ui.print('Type your character name.', 'output-system');
+      },
+
+      showStep2: function() {
+        Game.ui.print('', '');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('  Step 2 of 7: Choose Your Background', 'output-highlight');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('', '');
+        const backgrounds = Game.data.backgrounds;
+        for (let i = 0; i < backgrounds.length; i++) {
+          const bg = backgrounds[i];
+          Game.ui.print(`  ${i + 1}. ${bg.name}`, 'output-highlight');
+          Game.ui.print(`     ${bg.description}`, 'output-narrative');
+          Game.ui.print('', '');
+        }
+        Game.ui.print('Type a number (1-7) or the background name.', 'output-system');
+        Game.ui.print('Type "back" to go to the previous step.', 'output-system');
+      },
+
+      showStep3: function() {
+        Game.ui.print('', '');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('  Step 3 of 7: Allocate Stat Points', 'output-highlight');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('', '');
+        Game.ui.print('You have 6 points to spend. No stat may exceed 3.', 'output-narrative');
+        Game.ui.print('You may lower one stat to -1 to gain an extra point.', 'output-narrative');
+        Game.ui.print('', '');
+        this.displayStats();
+        Game.ui.print('', '');
+        Game.ui.print('Commands:', 'output-system');
+        Game.ui.print('  increase might     - Raise a stat by 1', 'output-narrative');
+        Game.ui.print('  decrease agility   - Lower a stat by 1', 'output-narrative');
+        Game.ui.print('  set will 2         - Set a stat to a value', 'output-narrative');
+        Game.ui.print('  continue           - Move to next step', 'output-narrative');
+        Game.ui.print('  back               - Go to previous step', 'output-narrative');
+      },
+
+      displayStats: function() {
+        const draft = this.characterDraft;
+        const remaining = draft.maxStatPoints - draft.allocatedStatPoints;
+        Game.ui.print(`  Points remaining: ${remaining}`, 'output-highlight');
+        Game.ui.print('', '');
+        for (const stat of STAT_NAMES) {
+          const val = draft.baseStats[stat];
+          const label = stat.charAt(0).toUpperCase() + stat.slice(1);
+          const padded = label.padEnd(12);
+          Game.ui.print(`  ${padded}${val}`, 'output-narrative');
+        }
+      },
+
+      showStep4: function() {
+        Game.ui.print('', '');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('  Step 4 of 7: Choose Trained Skills', 'output-highlight');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('', '');
+        Game.ui.print('Choose 4 skills to train. Each gets +1. No skill above 3.', 'output-narrative');
+        Game.ui.print('', '');
+        this.displaySkills();
+        Game.ui.print('', '');
+        Game.ui.print('Commands:', 'output-system');
+        Game.ui.print('  train stealth      - Train a skill', 'output-narrative');
+        Game.ui.print('  untrain lore       - Untrain a skill', 'output-narrative');
+        Game.ui.print('  continue           - Move to next step', 'output-narrative');
+        Game.ui.print('  back               - Go to previous step', 'output-narrative');
+      },
+
+      displaySkills: function() {
+        const draft = this.characterDraft;
+        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        Game.ui.print(`  Skills trained: ${draft.chosenSkills.length} / 4`, 'output-highlight');
+        Game.ui.print('', '');
+        for (const skill of Game.data.skills) {
+          const bgBonus = (bg && bg.skillBonuses && bg.skillBonuses[skill.id]) ? bg.skillBonuses[skill.id] : 0;
+          const trained = draft.chosenSkills.includes(skill.id) ? 1 : 0;
+          const total = bgBonus + trained;
+          const trainedMark = trained ? ' [TRAINED]' : '';
+          const bgMark = bgBonus > 0 ? ` (+${bgBonus} bg)` : '';
+          const label = skill.name.padEnd(16);
+          Game.ui.print(`  ${label}${total}${bgMark}${trainedMark}`, 'output-narrative');
+        }
+      },
+
+      showStep5: function() {
+        Game.ui.print('', '');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('  Step 5 of 7: Review Starting Equipment', 'output-highlight');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('', '');
+
+        const draft = this.characterDraft;
+        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+
+        Game.ui.print(`  Starting Gold: ${bg.startingGold}`, 'output-highlight');
+        Game.ui.print('', '');
+        Game.ui.print('  Starting Items:', 'output-narrative');
+        for (const item of bg.startingItems) {
+          const data = Game.data.items[item.itemId];
+          const name = data ? data.name : item.itemId;
+          Game.ui.print(`    - ${name}`, 'output-narrative');
+        }
+
+        Game.ui.print('', '');
+        Game.ui.print('  Starting Equipment:', 'output-narrative');
+        const equipItems = bg.startingItems.filter(i => i.slot);
+        if (equipItems.length === 0) {
+          Game.ui.print('    None', 'output-system');
+        } else {
+          for (const item of equipItems) {
+            const data = Game.data.items[item.itemId];
+            const name = data ? data.name : item.itemId;
+            Game.ui.print(`    ${item.slot}: ${name}`, 'output-narrative');
+          }
+        }
+
+        Game.ui.print('', '');
+        Game.ui.print('Type "continue" to proceed, or "back" to go to the previous step.', 'output-system');
+      },
+
+      showStep6: function() {
+        Game.ui.print('', '');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('  Step 6 of 7: Confirm Your Character', 'output-highlight');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('', '');
+
+        const draft = this.characterDraft;
+        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        const finalStats = this.calculateFinalStats();
+        const finalSkills = this.calculateFinalSkills();
+        const maxHp = 10 + 2 * finalStats.endurance;
+        const maxStamina = 8 + finalStats.endurance + finalStats.might;
+        const maxMana = bg.magical ? 4 + finalStats.will + finalStats.intellect : 0;
+
+        Game.ui.print(`  Name:       ${draft.name}`, 'output-highlight');
+        Game.ui.print(`  Background: ${bg.name}`, 'output-highlight');
+        Game.ui.print('', '');
+        Game.ui.print('  Stats:', 'output-narrative');
+        for (const stat of STAT_NAMES) {
+          const label = stat.charAt(0).toUpperCase() + stat.slice(1);
+          Game.ui.print(`    ${label.padEnd(12)}${finalStats[stat]}`, 'output-narrative');
+        }
+        Game.ui.print('', '');
+        Game.ui.print('  Skills:', 'output-narrative');
+        for (const skill of Game.data.skills) {
+          if (finalSkills[skill.id] > 0) {
+            Game.ui.print(`    ${skill.name.padEnd(16)}${finalSkills[skill.id]}`, 'output-narrative');
+          }
+        }
+        Game.ui.print('', '');
+        Game.ui.print(`  Health:   ${maxHp}`, 'output-narrative');
+        Game.ui.print(`  Stamina:  ${maxStamina}`, 'output-narrative');
+        if (bg.magical) {
+          Game.ui.print(`  Mana:     ${maxMana}`, 'output-narrative');
+        }
+        Game.ui.print(`  Gold:     ${bg.startingGold}`, 'output-narrative');
+
+        Game.ui.print('', '');
+        Game.ui.print('Type "confirm" to begin your adventure.', 'output-system');
+        Game.ui.print('Type "restart" to start over, or "back" to go to the previous step.', 'output-system');
+      },
+
+      calculateFinalStats: function() {
+        const draft = this.characterDraft;
+        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        const final = {};
+        for (const stat of STAT_NAMES) {
+          final[stat] = draft.baseStats[stat] + ((bg.statBonuses && bg.statBonuses[stat]) ? bg.statBonuses[stat] : 0);
+        }
+        return final;
+      },
+
+      calculateFinalSkills: function() {
+        const draft = this.characterDraft;
+        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        const final = {};
+        for (const skill of Game.data.skills) {
+          let val = 0;
+          if (bg.skillBonuses && bg.skillBonuses[skill.id]) val += bg.skillBonuses[skill.id];
+          if (draft.chosenSkills.includes(skill.id)) val += 1;
+          final[skill.id] = val;
+        }
+        return final;
+      },
+
+      createPlayer: function() {
+        const draft = this.characterDraft;
+        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        const finalStats = this.calculateFinalStats();
+        const finalSkills = this.calculateFinalSkills();
+        const maxHp = 10 + 2 * finalStats.endurance;
+        const maxStamina = 8 + finalStats.endurance + finalStats.might;
+        const maxMana = bg.magical ? 4 + finalStats.will + finalStats.intellect : 0;
+
+        const inventory = [];
+        const equipment = { weapon: null, offhand: null, armor: null, cloak: null, accessory1: null, accessory2: null };
+
+        for (const item of bg.startingItems) {
+          if (item.slot && equipment[item.slot] === null) {
+            equipment[item.slot] = item.itemId;
+          } else {
+            inventory.push({ itemId: item.itemId, quantity: item.quantity || 1 });
+          }
+        }
+
+        const reputation = Object.assign({}, bg.reputation);
+
+        const player = {
+          id: 'player',
+          name: draft.name,
+          background: draft.backgroundId,
+          level: 1,
+          xp: 0,
+          stats: finalStats,
+          skills: finalSkills,
+          resources: {
+            hp: maxHp, maxHp: maxHp,
+            stamina: maxStamina, maxStamina: maxStamina,
+            mana: maxMana, maxMana: maxMana
+          },
+          inventory: inventory,
+          equipment: equipment,
+          gold: bg.startingGold,
+          conditions: [],
+          reputation: reputation,
+          flags: Object.assign({}, bg.flags),
+          location: 'village_square'
+        };
+
+        return player;
+      },
+
+      showStep7: function() {
+        Game.state.player = this.createPlayer();
+
+        Game.ui.print('', '');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('  Step 7 of 7: Your Adventure Begins', 'output-highlight');
+        Game.ui.print('══════════════════════════════════════', 'separator');
+        Game.ui.print('', '');
+        Game.ui.print(`  Welcome, ${Game.state.player.name}.`, 'output-highlight');
+        Game.ui.print('', '');
+
+        this.showOpeningScene();
+
+        Game.state.mode = GameModes.PLAYING;
+      },
+
+      showOpeningScene: function() {
+        const loc = Game.data.locations.village_square;
+      Game.ui.print(`  --- ${loc.name} ---`, 'output-highlight');
+      Game.ui.print('', '');
+      let defaultDesc = null;
+      for (const desc of loc.descriptions) {
+        if (desc.conditions && desc.conditions.length > 0) {
+          if (Game.engine.evaluateConditions(desc.conditions)) {
+            Game.ui.print(`${desc.text}`, 'output-narrative');
+            defaultDesc = null;
+            break;
+          }
+        } else {
+          defaultDesc = desc;
+        }
+      }
+      if (defaultDesc) {
+        Game.ui.print(`${defaultDesc.text}`, 'output-narrative');
+      }
+
+        Game.ui.print('  Exits:', 'output-system');
+        for (const [dir, exit] of Object.entries(loc.exits)) {
+          const exitLoc = Game.data.locations[exit.to];
+          const exitName = exitLoc ? exitLoc.name : dir;
+          Game.ui.print(`    ${dir.padEnd(8)} - ${exitName}`, 'output-narrative');
+        }
+        Game.ui.print('', '');
+
+        if (loc.items && loc.items.length > 0) {
+          Game.ui.print('  You notice: ' + loc.items.map(id => {
+            const item = Game.data.items[id];
+            return item ? item.name : id;
+          }).join(', '), 'output-system');
+          Game.ui.print('', '');
+        }
+
+        Game.ui.print('Type "help" for available commands.', 'output-system');
+      },
+
+      handleStep1: function(input) {
+        if (input.length < 1 || input.length > 24) {
+          Game.ui.print('Please enter a name between 1 and 24 characters.', 'output-error');
+          return;
+        }
+        if (input === 'back' || input === 'cancel') {
+          this.initDraft();
+          this.currentStep = 1;
+          this.showStep1();
+          return;
+        }
+        this.characterDraft.name = input.trim();
+        this.currentStep = 2;
+        this.showStep2();
+      },
+
+      handleStep2: function(input) {
+        if (input === 'back') {
+          this.currentStep = 1;
+          this.showStep1();
+          return;
+        }
+
+        let chosen = null;
+        const num = parseInt(input, 10);
+        if (!isNaN(num) && num >= 1 && num <= Game.data.backgrounds.length) {
+          chosen = Game.data.backgrounds[num - 1];
+        } else {
+          for (const bg of Game.data.backgrounds) {
+            if (bg.name.toLowerCase() === input || bg.id === input) {
+              chosen = bg;
+              break;
+            }
+          }
+          if (!chosen) {
+            for (const bg of Game.data.backgrounds) {
+              if (bg.name.toLowerCase().includes(input)) {
+                chosen = bg;
+                break;
+              }
+            }
+          }
+        }
+
+        if (!chosen) {
+          Game.ui.print('Please choose a valid background by number or name.', 'output-error');
+          return;
+        }
+
+        this.characterDraft.backgroundId = chosen.id;
+        this.currentStep = 3;
+        Game.ui.print(`  You chose: ${chosen.name}`, 'output-highlight');
+        this.showStep3();
+      },
+
+      handleStep3: function(input) {
+        const draft = this.characterDraft;
+        const parts = input.split(/\s+/);
+
+        if (input === 'back') {
+          this.currentStep = 2;
+          this.showStep2();
+          return;
+        }
+
+        if (input === 'continue' || input === 'next' || input === 'done') {
+          if (draft.allocatedStatPoints > draft.maxStatPoints) {
+            Game.ui.print('You have used more points than allowed. Lower some stats first.', 'output-error');
+            return;
+          }
+          this.currentStep = 4;
+          this.showStep4();
+          return;
+        }
+
+        if (input === 'help' || input === 'help stats') {
+          Game.ui.print('', '');
+          Game.ui.print('Stat Allocation Help:', 'output-highlight');
+          Game.ui.print('  increase <stat>    - Raise a stat by 1 (costs 1 point)', 'output-narrative');
+          Game.ui.print('  decrease <stat>    - Lower a stat by 1 (refunds 1 point)', 'output-narrative');
+          Game.ui.print('  set <stat> <val>   - Set a stat to a specific value', 'output-narrative');
+          Game.ui.print('  continue           - Move to next step', 'output-narrative');
+          Game.ui.print('  back               - Go to previous step', 'output-narrative');
+          Game.ui.print('', '');
+          Game.ui.print('Stats: might, agility, endurance, intellect, will, presence', 'output-system');
+          Game.ui.print('', '');
+          this.displayStats();
+          return;
+        }
+
+        if (parts[0] === 'increase' && parts[1]) {
+          return this.increaseStat(parts[1]);
+        }
+        if (parts[0] === 'decrease' && parts[1]) {
+          return this.decreaseStat(parts[1]);
+        }
+        if (parts[0] === 'set' && parts[1] && parts[2]) {
+          const val = parseInt(parts[2], 10);
+          if (isNaN(val)) {
+            Game.ui.print('Please provide a valid number.', 'output-error');
+            return;
+          }
+          return this.setStat(parts[1], val);
+        }
+
+        Game.ui.print('Unknown command. Try "increase might", "set will 2", "continue", or "help".', 'output-error');
+      },
+
+      increaseStat: function(statName) {
+        const draft = this.characterDraft;
+        if (!STAT_NAMES.includes(statName)) {
+          Game.ui.print(`Unknown stat: ${statName}. Valid stats: ${STAT_NAMES.join(', ')}`, 'output-error');
+          return;
+        }
+        if (draft.baseStats[statName] >= 3) {
+          Game.ui.print(`${statName} is already at the maximum of 3.`, 'output-error');
+          return;
+        }
+        const remaining = draft.maxStatPoints - draft.allocatedStatPoints;
+        if (remaining <= 0) {
+          Game.ui.print('No points remaining. Lower a stat or continue.', 'output-error');
+          return;
+        }
+        draft.baseStats[statName]++;
+        draft.allocatedStatPoints++;
+        Game.ui.print(`${statName} increased to ${draft.baseStats[statName]}. (${draft.maxStatPoints - draft.allocatedStatPoints} points remaining)`, 'output-system');
+        Game.ui.print('');
+        this.displayStats();
+      },
+
+      decreaseStat: function(statName) {
+        const draft = this.characterDraft;
+        if (!STAT_NAMES.includes(statName)) {
+          Game.ui.print(`Unknown stat: ${statName}. Valid stats: ${STAT_NAMES.join(', ')}`, 'output-error');
+          return;
+        }
+        if (draft.baseStats[statName] <= -1) {
+          Game.ui.print(`${statName} is already at the minimum of -1.`, 'output-error');
+          return;
+        }
+        if (draft.baseStats[statName] === 0) {
+          if (draft.sacrificedStat !== null) {
+            Game.ui.print('You have already sacrificed one stat. You cannot sacrifice another.', 'output-error');
+            return;
+          }
+        }
+        const newTarget = draft.baseStats[statName] - 1;
+        if (draft.baseStats[statName] === 0 && newTarget === -1) {
+          draft.sacrificedStat = statName;
+        }
+        draft.baseStats[statName]--;
+        draft.allocatedStatPoints = Math.max(0, draft.allocatedStatPoints - 1);
+        Game.ui.print(`${statName} decreased to ${draft.baseStats[statName]}. (${draft.maxStatPoints - draft.allocatedStatPoints} points remaining)`, 'output-system');
+        Game.ui.print('');
+        this.displayStats();
+      },
+
+      setStat: function(statName, value) {
+        const draft = this.characterDraft;
+        if (!STAT_NAMES.includes(statName)) {
+          Game.ui.print(`Unknown stat: ${statName}. Valid stats: ${STAT_NAMES.join(', ')}`, 'output-error');
+          return;
+        }
+        if (value > 3) {
+          Game.ui.print('No stat may be set above 3.', 'output-error');
+          return;
+        }
+        if (value < -1) {
+          Game.ui.print('No stat may be set below -1.', 'output-error');
+          return;
+        }
+        if (value === -1 && draft.sacrificedStat !== null && draft.sacrificedStat !== statName) {
+          Game.ui.print('Only one stat may be lowered to -1.', 'output-error');
+          return;
+        }
+
+        const oldValue = draft.baseStats[statName];
+        const cost = value - oldValue;
+        const newAllocated = draft.allocatedStatPoints + cost;
+
+        if (newAllocated > draft.maxStatPoints) {
+          Game.ui.print(`Cannot set ${statName} to ${value}. Not enough points.`, 'output-error');
+          return;
+        }
+        if (newAllocated < 0) {
+          Game.ui.print(`Cannot set ${statName} to ${value}.`, 'output-error');
+          return;
+        }
+
+        if (value === -1) {
+          draft.sacrificedStat = statName;
+        } else if (oldValue === -1 && value >= 0) {
+          draft.sacrificedStat = null;
+        }
+
+        draft.baseStats[statName] = value;
+        draft.allocatedStatPoints = newAllocated;
+        Game.ui.print(`${statName} set to ${value}. (${draft.maxStatPoints - draft.allocatedStatPoints} points remaining)`, 'output-system');
+        Game.ui.print('');
+        this.displayStats();
+      },
+
+      handleStep4: function(input) {
+        const draft = this.characterDraft;
+        const parts = input.split(/\s+/);
+
+        if (input === 'back') {
+          this.currentStep = 3;
+          this.showStep3();
+          return;
+        }
+
+        if (input === 'continue' || input === 'next' || input === 'done') {
+          if (draft.chosenSkills.length < 4) {
+            Game.ui.print(`You have trained ${draft.chosenSkills.length} of 4 skills. Train all 4 before continuing.`, 'output-error');
+            return;
+          }
+          this.currentStep = 5;
+          this.showStep5();
+          return;
+        }
+
+        if (parts[0] === 'train' && parts[1]) {
+          return this.trainSkill(parts.slice(1).join(' '));
+        }
+        if (parts[0] === 'untrain' && parts[1]) {
+          return this.untrainSkill(parts.slice(1).join(' '));
+        }
+
+        Game.ui.print('Unknown command. Try "train stealth", "untrain lore", "continue", or "back".', 'output-error');
+      },
+
+      findSkillId: function(name) {
+        const lower = name.toLowerCase();
+        for (const skill of Game.data.skills) {
+          if (skill.id === lower || skill.name.toLowerCase() === lower || skill.name.toLowerCase().includes(lower)) {
+            return skill.id;
+          }
+        }
+        return null;
+      },
+
+      getBackgroundSkillTotal: function(skillId) {
+        const bg = Game.data.backgrounds.find(b => b.id === this.characterDraft.backgroundId);
+        if (bg && bg.skillBonuses && bg.skillBonuses[skillId]) return bg.skillBonuses[skillId];
+        return 0;
+      },
+
+      trainSkill: function(name) {
+        const draft = this.characterDraft;
+        const skillId = this.findSkillId(name);
+        if (!skillId) {
+          Game.ui.print(`Unknown skill: ${name}. Available: ${Game.data.skills.map(s => s.id).join(', ')}`, 'output-error');
+          return;
+        }
+        if (draft.chosenSkills.includes(skillId)) {
+          Game.ui.print(`${skillId} is already trained.`, 'output-error');
+          return;
+        }
+        if (draft.chosenSkills.length >= 4) {
+          Game.ui.print('You have already chosen 4 skills. Untrain one first.', 'output-error');
+          return;
+        }
+        const bgBonus = this.getBackgroundSkillTotal(skillId);
+        if (bgBonus + 1 > 3) {
+          Game.ui.print(`Cannot train ${skillId}: would exceed the skill cap of 3.`, 'output-error');
+          return;
+        }
+        draft.chosenSkills.push(skillId);
+        Game.ui.print(`Trained: ${skillId} (+1). (${draft.chosenSkills.length}/4)`, 'output-system');
+        Game.ui.print('');
+        this.displaySkills();
+      },
+
+      untrainSkill: function(name) {
+        const draft = this.characterDraft;
+        const skillId = this.findSkillId(name);
+        if (!skillId) {
+          Game.ui.print(`Unknown skill: ${name}.`, 'output-error');
+          return;
+        }
+        const idx = draft.chosenSkills.indexOf(skillId);
+        if (idx === -1) {
+          Game.ui.print(`${skillId} is not currently trained.`, 'output-error');
+          return;
+        }
+        draft.chosenSkills.splice(idx, 1);
+        Game.ui.print(`Untrained: ${skillId}. (${draft.chosenSkills.length}/4)`, 'output-system');
+        Game.ui.print('');
+        this.displaySkills();
+      },
+
+      handleStep5: function(input) {
+        if (input === 'back') {
+          this.currentStep = 4;
+          this.showStep4();
+          return;
+        }
+        if (input === 'continue' || input === 'next') {
+          this.currentStep = 6;
+          this.showStep6();
+          return;
+        }
+        Game.ui.print('Type "continue" to proceed, or "back" to go to the previous step.', 'output-system');
+      },
+
+      handleStep6: function(input) {
+        if (input === 'back') {
+          this.currentStep = 5;
+          this.showStep5();
+          return;
+        }
+        if (input === 'confirm' || input === 'yes' || input === 'start') {
+          this.currentStep = 7;
+          this.showStep7();
+          return;
+        }
+        if (input === 'restart') {
+          this.start();
+          return;
+        }
+        Game.ui.print('Type "confirm" to begin, "restart" to start over, or "back".', 'output-system');
+      },
+
+      handleInput: function(input) {
+        switch (this.currentStep) {
+          case 1: this.handleStep1(input); break;
+          case 2: this.handleStep2(input); break;
+          case 3: this.handleStep3(input); break;
+          case 4: this.handleStep4(input); break;
+          case 5: this.handleStep5(input); break;
+          case 6: this.handleStep6(input); break;
+        }
+      }
+    };
+
+    Game.clock.init = function() {
+      Game.state.clock = {
+        day: 1,
+        hour: 8,
+        minute: 0,
+        month: 'Frostwane'
+      };
+    };
+
+    Game.clock.months = ['Frostwane', 'Emberwane', 'Thornwane', 'Bloomwane', 'Sunwane', 'Harvestwane', 'Stormwane', 'Ashwane'];
+    Game.clock.daysPerMonth = 30;
+
+    Game.clock.advanceTime = function(minutes) {
+      if (!minutes || minutes <= 0) return [];
+      const clock = Game.state.clock;
+      const prevPhase = Game.clock.getDayPhase();
+      clock.minute += minutes;
+      while (clock.minute >= 60) {
+        clock.minute -= 60;
+        clock.hour++;
+      }
+      while (clock.hour >= 24) {
+        clock.hour -= 24;
+        clock.day++;
+      }
+      if (clock.day > Game.clock.daysPerMonth) {
+        clock.day = 1;
+        const monthIdx = Game.clock.months.indexOf(clock.month);
+        clock.month = Game.clock.months[(monthIdx + 1) % Game.clock.months.length];
+      }
+      if (typeof Game.clock.tickConditions === 'function') {
+        Game.clock.tickConditions(minutes);
+      }
+      const newPhase = Game.clock.getDayPhase();
+      if (newPhase !== prevPhase) {
+        Game.ui.print('[ ' + newPhase + ' ]', 'output-system');
+      }
+      let scheduleMessages = [];
+      if (Game.schedules && typeof Game.schedules.update === 'function') {
+        scheduleMessages = Game.schedules.update();
+      }
+      return scheduleMessages;
+    };
+
+    Game.clock.getDayPhase = function() {
+      const hour = Game.state.clock.hour;
+      if (hour >= 5 && hour <= 7) return 'Dawn';
+      if (hour >= 8 && hour <= 11) return 'Morning';
+      if (hour >= 12 && hour <= 13) return 'Midday';
+      if (hour >= 14 && hour <= 16) return 'Afternoon';
+      if (hour >= 17 && hour <= 18) return 'Late afternoon';
+      if (hour >= 19 && hour <= 20) return 'Evening';
+      if (hour >= 21 && hour <= 23) return 'Night';
+      return 'Deep night';
+    };
+
+    Game.clock.getOrdinalDay = function() {
+      const ordinals = ['','first','second','third','fourth','fifth','sixth','seventh','eighth','ninth','tenth',
+        'eleventh','twelfth','thirteenth','fourteenth','fifteenth','sixteenth','seventeenth','eighteenth','nineteenth','twentieth',
+        'twenty-first','twenty-second','twenty-third','twenty-fourth','twenty-fifth','twenty-sixth','twenty-seventh','twenty-eighth','twenty-ninth','thirtieth'];
+      const day = Game.state.clock.day;
+      if (day >= 1 && day <= 30) return ordinals[day];
+      return day + 'th';
+    };
+
+    Game.clock.formatTime = function() {
+      const phase = this.getDayPhase();
+      const ordinal = this.getOrdinalDay();
+      const month = Game.state.clock.month;
+      return `${phase}, ${ordinal} day of ${month}`;
+    };
+
+    Game.clock.tickConditions = function(minutes) {
+      const player = Game.state.player;
+      if (!player) return;
+      const expired = Game.conditions.updateConditions(player, minutes);
+      for (const cond of expired) {
+        const condData = Game.data.conditions.find(c => c.id === cond.id);
+        const name = condData ? condData.name : cond.id;
+        Game.ui.print(`[ ${name} has worn off ]`, 'output-system');
+      }
+    };
+
+    Game.inventory.init = function() {
+      Game.state.inventory = [];
+      Game.state.equipment = {
+        weapon: null,
+        offhand: null,
+        armor: null,
+        cloak: null,
+        accessory1: null,
+        accessory2: null
+      };
+    };
+
+    Game.inventory.addItem = function(itemId, quantity) {
+      quantity = quantity || 1;
+      const item = Game.data.items[itemId];
+      if (!item) return false;
+      
+      const inv = Game.state.player.inventory;
+      if (item.stackable) {
+        const existing = inv.find(e => e.itemId === itemId);
+        if (existing) {
+          existing.quantity += quantity;
+          return true;
+        }
+      }
+      
+      inv.push({ itemId: itemId, quantity: quantity });
+      return true;
+    };
+
+    Game.inventory.removeItem = function(itemId, quantity) {
+      quantity = quantity || 1;
+      const inv = Game.state.player.inventory;
+      const entry = inv.find(e => e.itemId === itemId);
+      if (!entry) return false;
+      
+      entry.quantity -= quantity;
+      if (entry.quantity <= 0) {
+        const idx = inv.indexOf(entry);
+        inv.splice(idx, 1);
+      }
+      return true;
+    };
+
+    Game.inventory.hasItem = function(itemId) {
+      return Game.state.player.inventory.some(e => e.itemId === itemId);
+    };
+
+    Game.inventory.getItemCount = function(itemId) {
+      const entry = Game.state.player.inventory.find(e => e.itemId === itemId);
+      return entry ? entry.quantity : 0;
+    };
+
+    Game.inventory.getCarriedWeight = function() {
+      const player = Game.state.player;
+      let weight = 0;
+      
+      for (const entry of player.inventory) {
+        const item = Game.data.items[entry.itemId];
+        if (item) weight += (item.weight || 0) * entry.quantity;
+      }
+      
+      for (const [slot, itemId] of Object.entries(player.equipment)) {
+        if (itemId) {
+          const item = Game.data.items[itemId];
+          if (item) weight += (item.weight || 0);
+        }
+      }
+      
+      return weight;
+    };
+
+    Game.inventory.getCarryCapacity = function() {
+      const player = Game.state.player;
+      return 50 + 10 * (player.stats.might || 0) + 5 * (player.stats.endurance || 0);
+    };
+
+    Game.inventory.getEncumbranceTier = function() {
+      const weight = this.getCarriedWeight();
+      const capacity = this.getCarryCapacity();
+      const percent = (weight / capacity) * 100;
+      
+      if (percent <= 100) return { tier: 'unencumbered', penalties: {} };
+      if (percent <= 125) return { tier: 'burdened', penalties: { stealth: -1, agility: -1 } };
+      if (percent <= 150) return { tier: 'encumbered', penalties: { stealth: -2, agility: -2, travelMultiplier: 1.5 } };
+      return { tier: 'overloaded', penalties: { cannotTravel: true } };
+    };
+
+    Game.combat.init = function() {
+      Game.state.inCombat = false;
+      Game.state.currentEnemy = null;
+    };
+
+    Game.combat.startCombat = function(monster) {
+      Game.state.inCombat = true;
+      Game.state.currentEnemy = monster.id;
+      this.getMonsterState(monster);
+      Game.ui.print('', '');
+      Game.ui.print('━━━━━━━━━━ COMBAT ━━━━━━━━━━', 'output-error');
+      Game.ui.print('A ' + monster.name + ' attacks!', 'output-error');
+      Game.ui.print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'output-error');
+      Game.ui.print('', '');
+    };
+
+    Game.combat.getMonsterState = function(monster) {
+      if (!Game.state.world.monsterStates[monster.id]) {
+        Game.state.world.monsterStates[monster.id] = {
+          hp: monster.resources.hp,
+          maxHp: monster.resources.maxHp,
+          defeated: false,
+          behaviorState: 'hostile',
+          locationOverride: monster.defaultLocation
+        };
+      }
+      return Game.state.world.monsterStates[monster.id];
+    };
+
+    Game.combat.calculatePlayerDefense = function() {
+      const player = Game.state.player;
+      let defense = 10 + (player.stats.agility || 0) + (player.skills.defense || 0);
+      defense += Game.conditions.getModifierForStat(player, 'agility');
+      if (player.equipment.armor) {
+        const armor = Game.data.items[player.equipment.armor];
+        if (armor && armor.defenseBonus) defense += armor.defenseBonus;
+      }
+      if (player.equipment.offhand) {
+        const offhand = Game.data.items[player.equipment.offhand];
+        if (offhand && offhand.shieldBonus) defense += offhand.shieldBonus;
+      }
+      if (player.equipment.cloak) {
+        const cloak = Game.data.items[player.equipment.cloak];
+        if (cloak && cloak.defenseBonus) defense += cloak.defenseBonus;
+      }
+      return defense;
+    };
+
+    Game.combat.getPlayerAttackStat = function() {
+      const player = Game.state.player;
+      const weapon = player.equipment.weapon ? Game.data.items[player.equipment.weapon] : null;
+      if (weapon && weapon.stat) return weapon.stat;
+      return 'might';
+    };
+
+    Game.combat.getPlayerAttackSkill = function() {
+      const player = Game.state.player;
+      const weapon = player.equipment.weapon ? Game.data.items[player.equipment.weapon] : null;
+      if (weapon && weapon.skill) return weapon.skill;
+      return 'melee';
+    };
+
+    Game.combat.getPlayerWeaponDamage = function() {
+      const player = Game.state.player;
+      const weapon = player.equipment.weapon ? Game.data.items[player.equipment.weapon] : null;
+      if (weapon && weapon.damage) return weapon.damage;
+      return '1d4';
+    };
+
+    Game.combat.getPlayerWeaponBonus = function() {
+      const player = Game.state.player;
+      const weapon = player.equipment.weapon ? Game.data.items[player.equipment.weapon] : null;
+      if (weapon && weapon.attackBonus) return weapon.attackBonus;
+      return 0;
+    };
+
+    Game.combat.attack = function(targetName) {
+      const player = Game.state.player;
+      if (!targetName) {
+        const present = Game.schedules.getPresentMonsters(player.location);
+        if (present.length === 0) {
+          Game.ui.print('There is nothing to attack here.', 'output-error');
+          return;
+        }
+        if (present.length === 1) {
+          this.performAttack(present[0].monster);
+          return;
+        }
+        Game.ui.print('Attack whom? You see: ' + present.map(e => e.monster.name).join(', '), 'output-error');
+        return;
+      }
+      const monster = Game.schedules.findMonsterByName(targetName);
+      if (!monster) {
+        Game.ui.print('You don\'t see "' + targetName + '" to attack.', 'output-error');
+        return;
+      }
+      const present = Game.schedules.isMonsterPresent(monster, player.location);
+      if (!present) {
+        Game.ui.print(monster.name + ' is not here.', 'output-error');
+        return;
+      }
+      this.performAttack(monster);
+    };
+
+    Game.combat.performAttack = function(monster) {
+      const player = Game.state.player;
+      const mState = this.getMonsterState(monster);
+      if (!Game.state.inCombat) {
+        this.startCombat(monster);
+      }
+      const attackStat = this.getPlayerAttackStat();
+      const attackSkill = this.getPlayerAttackSkill();
+      const weaponBonus = this.getPlayerWeaponBonus();
+      const targetDefense = monster.defense || (10 + (monster.stats.agility || 0) + (monster.skills.defense || 0));
+      const die = Math.floor(Math.random() * 20) + 1;
+      const statVal = (player.stats[attackStat] || 0) + Game.conditions.getModifierForStat(player, attackStat);
+      const skillVal = (player.skills[attackSkill] || 0) + Game.conditions.getModifierForStat(player, attackSkill);
+      const attackTotal = die + statVal + skillVal + weaponBonus;
+      const weapon = player.equipment.weapon ? Game.data.items[player.equipment.weapon] : null;
+      const weaponName = weapon ? weapon.name : 'bare fists';
+      Game.ui.print('', '');
+      if (die === 20) {
+        const damage = this.rollDamage(this.getPlayerWeaponDamage(), statVal);
+        mState.hp -= damage.total;
+        Game.ui.print('Critical hit! Your ' + weaponName + ' strikes true, dealing ' + damage.total + ' damage!', 'output-highlight');
+        if (mState.hp <= 0) {
+          this.monsterDefeated(monster);
+          return;
+        }
+      } else if (die === 1) {
+        Game.ui.print('Critical miss! Your ' + weaponName + ' swings wide and you stumble.', 'output-error');
+      } else if (attackTotal >= targetDefense) {
+        const margin = attackTotal - targetDefense;
+        const damage = this.rollDamage(this.getPlayerWeaponDamage(), statVal);
+        mState.hp -= damage.total;
+        let prose;
+        if (margin >= 10) {
+          prose = 'You devastatingly strike the ' + monster.name + ' with your ' + weaponName + ' for ' + damage.total + ' damage!';
+        } else if (margin >= 5) {
+          prose = 'You land a solid hit on the ' + monster.name + ' with your ' + weaponName + ' for ' + damage.total + ' damage.';
+        } else {
+          prose = 'Your ' + weaponName + ' grazes the ' + monster.name + ' for ' + damage.total + ' damage.';
+        }
+        Game.ui.print(prose, 'output-narrative');
+        if (mState.hp <= 0) {
+          this.monsterDefeated(monster);
+          return;
+        }
+      } else {
+        const missMargin = targetDefense - attackTotal;
+        let prose;
+        if (missMargin >= 10) {
+          prose = 'The ' + monster.name + ' completely evades your ' + weaponName + '.';
+        } else if (missMargin >= 5) {
+          prose = 'The ' + monster.name + ' dodges your ' + weaponName + '.';
+        } else {
+          prose = 'Your ' + weaponName + ' barely misses the ' + monster.name + '.';
+        }
+        Game.ui.print(prose, 'output-narrative');
+      }
+      Game.ui.print('  [' + monster.name + ' HP: ' + mState.hp + '/' + mState.maxHp + ']', 'output-system');
+      this.checkMorale(monster);
+      if (mState.behaviorState === 'fleeing' || mState.behaviorState === 'surrendering') {
+        return;
+      }
+      this.monsterTurn(monster);
+      Game.clock.advanceTime(1);
+    };
+
+    Game.combat.rollDamage = function(diceExpr, statMod) {
+      const result = Game.checks.rollDice(diceExpr);
+      const total = Math.max(0, result.total + (statMod || 0));
+      return { total: total, rolls: result.rolls };
+    };
+
+    Game.combat.monsterTurn = function(monster) {
+      const player = Game.state.player;
+      const mState = this.getMonsterState(monster);
+      if (mState.hp <= 0) return;
+      const attack = monster.attacks && monster.attacks.length > 0 ? monster.attacks[0] : null;
+      const monsterStat = attack ? (attack.stat || 'might') : 'might';
+      const monsterSkill = attack ? (attack.skill || 'melee') : 'melee';
+      const damageExpr = attack ? attack.damage : '1d4';
+      const statVal = monster.stats[monsterStat] || 0;
+      const skillVal = monster.skills[monsterSkill] || 0;
+      const playerDefense = this.calculatePlayerDefense();
+      const die = Math.floor(Math.random() * 20) + 1;
+      const attackTotal = die + statVal + skillVal;
+      if (die === 20) {
+        const damage = this.rollDamage(damageExpr, statVal);
+        player.resources.hp -= damage.total;
+        Game.ui.print('The ' + monster.name + ' lands a devastating blow for ' + damage.total + ' damage!', 'output-error');
+      } else if (die === 1) {
+        Game.ui.print('The ' + monster.name + ' fumbles its attack!', 'output-narrative');
+      } else if (attackTotal >= playerDefense) {
+        const damage = this.rollDamage(damageExpr, statVal);
+        player.resources.hp -= damage.total;
+        const margin = attackTotal - playerDefense;
+        let prose;
+        if (margin >= 10) {
+          prose = 'The ' + monster.name + ' strikes you hard for ' + damage.total + ' damage!';
+        } else if (margin >= 5) {
+          prose = 'The ' + monster.name + ' hits you for ' + damage.total + ' damage.';
+        } else {
+          prose = 'The ' + monster.name + ' barely nicks you for ' + damage.total + ' damage.';
+        }
+        Game.ui.print(prose, 'output-error');
+      } else {
+        const missMargin = playerDefense - attackTotal;
+        let prose;
+        if (missMargin >= 10) {
+          prose = 'You easily dodge the ' + monster.name + '\'s attack.';
+        } else if (missMargin >= 5) {
+          prose = 'You dodge the ' + monster.name + '\'s attack.';
+        } else {
+          prose = 'The ' + monster.name + '\'s attack barely misses you.';
+        }
+        Game.ui.print(prose, 'output-narrative');
+      }
+      Game.ui.print('  [Your HP: ' + player.resources.hp + '/' + player.resources.maxHp + ']', 'output-system');
+      if (player.resources.hp <= 0) {
+        this.playerDefeated();
+      }
+    };
+
+    Game.combat.checkMorale = function(monster) {
+      const mState = this.getMonsterState(monster);
+      const behavior = monster.behavior || {};
+      const morale = behavior.morale || 10;
+      const fleesAtHpPercent = behavior.fleesAtHpPercent || 25;
+      const hpPercent = (mState.hp / mState.maxHp) * 100;
+      let shouldCheck = false;
+      let difficulty = 0;
+      if (hpPercent <= fleesAtHpPercent) {
+        shouldCheck = true;
+        difficulty = 15;
+      } else if (hpPercent <= 50) {
+        shouldCheck = true;
+        difficulty = 10;
+      }
+      if (!shouldCheck) return;
+      const willStat = monster.stats.will || 0;
+      const die = Math.floor(Math.random() * 20) + 1;
+      const total = die + willStat;
+      if (total + morale < difficulty) {
+        if (hpPercent <= 10) {
+          mState.behaviorState = 'surrendering';
+          Game.ui.print('', '');
+          Game.ui.print('The ' + monster.name + ' drops to its knees and surrenders!', 'output-highlight');
+        } else {
+          mState.behaviorState = 'fleeing';
+          Game.ui.print('', '');
+          Game.ui.print('The ' + monster.name + ' turns and flees!', 'output-highlight');
+          mState.defeated = true;
+          this.generateLoot(monster);
+          Game.state.inCombat = false;
+          Game.state.currentEnemy = null;
+        }
+      }
+    };
+
+    Game.combat.monsterDefeated = function(monster) {
+      const mState = this.getMonsterState(monster);
+      mState.hp = 0;
+      mState.defeated = true;
+      mState.behaviorState = 'defeated';
+      Game.ui.print('', '');
+      Game.ui.print('The ' + monster.name + ' is defeated!', 'output-highlight');
+      this.generateLoot(monster);
+      const xpGain = Math.max(1, Math.floor(monster.resources.maxHp / 2));
+      Game.state.player.xp = (Game.state.player.xp || 0) + xpGain;
+      Game.ui.print('You gain ' + xpGain + ' XP.', 'output-system');
+      Game.state.inCombat = false;
+      Game.state.currentEnemy = null;
+      Game.ui.print('', '');
+      Game.ui.print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'output-highlight');
+      Game.ui.print('', '');
+    };
+
+    Game.combat.generateLoot = function(monster) {
+      if (!monster.loot || monster.loot.length === 0) return;
+      const droppedItems = [];
+      for (const entry of monster.loot) {
+        const roll = Math.floor(Math.random() * 100) + 1;
+        if (roll <= entry.chance) {
+          const qty = entry.quantity ? Game.checks.rollDice(entry.quantity.toString()).total : 1;
+          Game.inventory.addItem(entry.itemId, qty);
+          const itemData = Game.data.items[entry.itemId];
+          const name = itemData ? itemData.name : entry.itemId;
+          const qtyText = qty > 1 ? ' x' + qty : '';
+          droppedItems.push(name + qtyText);
+        }
+      }
+      if (droppedItems.length > 0) {
+        Game.ui.print('Loot: ' + droppedItems.join(', '), 'output-highlight');
+      }
+    };
+
+    Game.combat.playerDefeated = function() {
+      Game.state.player.resources.hp = 0;
+      Game.state.inCombat = false;
+      Game.state.currentEnemy = null;
+      Game.ui.print('', '');
+      Game.ui.print('══════════════════════════════════════', 'separator');
+      Game.ui.print('', '');
+      Game.ui.print('  You have fallen...', 'output-error');
+      Game.ui.print('', '');
+      Game.ui.print('  Darkness claims you. Your adventure ends here.', 'output-narrative');
+      Game.ui.print('', '');
+      Game.ui.print('══════════════════════════════════════', 'separator');
+      Game.ui.print('', '');
+      Game.ui.print('Type "restart" for a new game or "quit" to exit.', 'output-system');
+      Game.state.mode = GameModes.GAME_OVER;
+    };
+
+    Game.combat.endCombat = function() {
+      Game.state.inCombat = false;
+      Game.state.currentEnemy = null;
+    };
+
+    Game.conditions.init = function() {
+      Game.state.conditions = [];
+    };
+
+    Game.conditions.addCondition = function(actor, conditionId, severity, remainingMinutes) {
+      if (!actor.conditions) actor.conditions = [];
+      const existing = actor.conditions.find(c => c.id === conditionId);
+      if (existing) {
+        if ((severity || 1) > existing.severity) existing.severity = severity || 1;
+        if ((remainingMinutes || 60) > existing.remainingMinutes) existing.remainingMinutes = remainingMinutes || 60;
+        return;
+      }
+      actor.conditions.push({ id: conditionId, severity: severity || 1, remainingMinutes: remainingMinutes || 60 });
+    };
+
+    Game.conditions.removeCondition = function(actor, conditionId) {
+      if (!actor.conditions) return;
+      const idx = actor.conditions.findIndex(c => c.id === conditionId);
+      if (idx !== -1) actor.conditions.splice(idx, 1);
+    };
+
+    Game.conditions.hasCondition = function(actor, conditionId) {
+      if (!actor.conditions) return false;
+      return actor.conditions.some(c => c.id === conditionId);
+    };
+
+    Game.conditions.updateConditions = function(actor, minutes) {
+      if (!actor.conditions || actor.conditions.length === 0) return [];
+      const expired = [];
+      for (let i = actor.conditions.length - 1; i >= 0; i--) {
+        const cond = actor.conditions[i];
+        if (cond.remainingMinutes > 0) {
+          cond.remainingMinutes -= minutes;
+          if (cond.remainingMinutes <= 0) {
+            expired.push(actor.conditions.splice(i, 1)[0]);
+          }
+        }
+      }
+      return expired;
+    };
+
+    Game.conditions.getModifierForStat = function(actor, stat) {
+      if (!actor || !actor.conditions || actor.conditions.length === 0) return 0;
+      let total = 0;
+      for (const cond of actor.conditions) {
+        const condData = Game.data.conditions.find(c => c.id === cond.id);
+        if (condData && condData.modifiers && condData.modifiers[stat] !== undefined) {
+          total += condData.modifiers[stat];
+        }
+      }
+      return total;
+    };
+
+    Game.checks.rollDice = function(expression) {
+      if (!expression) return { total: 0, rolls: [], modifier: 0, expression: '' };
+      const expr = expression.toString().trim().toLowerCase();
+      const match = expr.match(/^(\d+)d(\d+)([+-]\d+)?$/);
+      if (!match) {
+        const num = parseInt(expr, 10);
+        if (!isNaN(num)) return { total: num, rolls: [num], modifier: 0, expression: expr };
+        return { total: 0, rolls: [], modifier: 0, expression: expr };
+      }
+      const numDice = parseInt(match[1], 10);
+      const numSides = parseInt(match[2], 10);
+      const modifier = match[3] ? parseInt(match[3], 10) : 0;
+      const rolls = [];
+      for (let i = 0; i < numDice; i++) {
+        rolls.push(Math.floor(Math.random() * numSides) + 1);
+      }
+      const sum = rolls.reduce((a, b) => a + b, 0);
+      return { total: sum + modifier, rolls: rolls, modifier: modifier, expression: expr };
+    };
+
+    Game.checks.rollCheck = function(player, stat, skill, difficulty) {
+      const die = Math.floor(Math.random() * 20) + 1;
+      const statVal = (player.stats && player.stats[stat]) || 0;
+      const skillVal = (player.skills && player.skills[skill]) || 0;
+      const condMods = this.getConditionModifiers(player);
+      const bonusTotal = statVal + skillVal + condMods.total;
+      const total = die + bonusTotal;
+      const margin = total - difficulty;
+      let degree;
+      if (die === 20) {
+        degree = 'critical_success';
+      } else if (die === 1) {
+        degree = 'critical_failure';
+      } else if (margin >= 5) {
+        degree = 'strong_success';
+      } else if (margin >= 0) {
+        degree = 'success';
+      } else if (margin > -5) {
+        degree = 'failure';
+      } else {
+        degree = 'bad_failure';
+      }
+      if (Game.checks.debugMode) {
+        let d = '[DEBUG] d20(' + die + ') + ' + stat + '(' + statVal + ') + ' + skill + '(' + skillVal + ')';
+        if (condMods.total !== 0) d += ' + cond(' + condMods.total + ')';
+        d += ' = ' + total + ' vs ' + difficulty + ' [' + degree + ']';
+        Game.ui.print(d, 'output-system');
+      }
+      return { die: die, stat: stat, statValue: statVal, skill: skill, skillValue: skillVal, conditionModifiers: condMods.details, difficulty: difficulty, total: total, margin: margin, degree: degree };
+    };
+
+    Game.checks.getConditionModifiers = function(actor) {
+      if (!actor || !actor.conditions || actor.conditions.length === 0) {
+        return { total: 0, details: [] };
+      }
+      let total = 0;
+      const details = [];
+      for (const cond of actor.conditions) {
+        const condData = Game.data.conditions.find(c => c.id === cond.id);
+        if (condData && condData.modifiers) {
+          for (const [k, v] of Object.entries(condData.modifiers)) {
+            total += v;
+            details.push({ condition: cond.id, stat: k, value: v });
+          }
+        }
+      }
+      return { total: total, details: details };
+    };
+
+    Game.checks.getProse = function(degree) {
+      const map = {
+        critical_success: 'an extraordinary success',
+        strong_success: 'a clear success',
+        success: 'a narrow success',
+        failure: 'a failure',
+        bad_failure: 'a disastrous failure',
+        critical_failure: 'a catastrophic failure'
+      };
+      return map[degree] || 'an uncertain outcome';
+    };
+
+    Game.checks.getDifficulty = function(name) {
+      const lower = name.toString().toLowerCase().trim();
+      if (Game.data.difficulties[lower] !== undefined) return Game.data.difficulties[lower];
+      const num = parseInt(lower, 10);
+      if (!isNaN(num)) return num;
+      return Game.data.difficulties.moderate;
+    };
+
+    Game.storage.init = function() {
+      Game.state.saveSlots = 3;
+    };
+
+
+    Game.schedules = {};
+
+    Game.schedules.isTimeInRange = function(current, start, end) {
+      if (start <= end) {
+        return current >= start && current < end;
+      }
+      return current >= start || current < end;
+    };
+
+    Game.schedules.getSchedule = function(scheduleId) {
+      if (!scheduleId) return null;
+      return Game.data.schedules.find(s => s.id === scheduleId) || null;
+    };
+
+    Game.schedules.getCurrentMinutes = function(clock) {
+      return clock.hour * 60 + clock.minute;
+    };
+
+    Game.schedules.getScheduledLocation = function(entity, clock) {
+      if (!entity || !entity.scheduleId) return entity ? entity.defaultLocation : null;
+      const schedule = this.getSchedule(entity.scheduleId);
+      if (!schedule) return entity.defaultLocation;
+      const current = this.getCurrentMinutes(clock);
+      const entry = schedule.entries.find(e => this.isTimeInRange(current, e.start, e.end));
+      if (!entry) return entity.defaultLocation;
+      return entry.location;
+    };
+
+    Game.schedules.getActivity = function(entity, clock) {
+      if (!entity || !entity.scheduleId) return null;
+      const schedule = this.getSchedule(entity.scheduleId);
+      if (!schedule) return null;
+      const current = this.getCurrentMinutes(clock);
+      const entry = schedule.entries.find(e => this.isTimeInRange(current, e.start, e.end));
+      return entry ? entry.activity : null;
+    };
+
+    Game.schedules.resolveNPCLocation = function(npc) {
+      const override = Game.state.world.npcOverrides[npc.id];
+      if (override) return override.location;
+      return this.getScheduledLocation(npc, Game.state.clock);
+    };
+
+    Game.schedules.resolveMonsterLocation = function(monster) {
+      const mState = Game.state.world.monsterStates[monster.id];
+      if (mState && mState.locationOverride) return mState.locationOverride;
+      return this.getScheduledLocation(monster, Game.state.clock);
+    };
+
+    Game.schedules.getPresentNPCs = function(locationId) {
+      const result = [];
+      for (const npc of Game.data.npcs) {
+        const loc = this.resolveNPCLocation(npc);
+        if (loc === locationId) {
+          const activity = this.getActivity(npc, Game.state.clock);
+          result.push({ npc, activity });
+        }
+      }
+      return result;
+    };
+
+    Game.schedules.getPresentMonsters = function(locationId) {
+      const result = [];
+      for (const monster of Game.data.monsters) {
+        const mState = Game.state.world.monsterStates[monster.id];
+        if (mState && mState.defeated) continue;
+        const loc = this.resolveMonsterLocation(monster);
+        if (loc === locationId) {
+          const activity = this.getActivity(monster, Game.state.clock);
+          result.push({ monster, activity });
+        }
+      }
+      return result;
+    };
+
+    Game.schedules.isNPCPresent = function(npc, locationId) {
+      const loc = this.resolveNPCLocation(npc);
+      return loc === locationId;
+    };
+
+    Game.schedules.isMonsterPresent = function(monster, locationId) {
+      const mState = Game.state.world.monsterStates[monster.id];
+      if (mState && mState.defeated) return false;
+      const loc = this.resolveMonsterLocation(monster);
+      return loc === locationId;
+    };
+
+    Game.schedules.findNPCByName = function(name) {
+      for (const npc of Game.data.npcs) {
+        if (npc.name.toLowerCase() === name ||
+            npc.id === name ||
+            (npc.aliases && npc.aliases.includes(name))) {
+          return npc;
+        }
+      }
+      for (const npc of Game.data.npcs) {
+        if (npc.name.toLowerCase().includes(name)) return npc;
+      }
+      return null;
+    };
+
+    Game.schedules.findMonsterByName = function(name) {
+      for (const monster of Game.data.monsters) {
+        if (monster.name.toLowerCase() === name ||
+            monster.id === name ||
+            (monster.aliases && monster.aliases.includes(name))) {
+          return monster;
+        }
+      }
+      for (const monster of Game.data.monsters) {
+        if (monster.name.toLowerCase().includes(name)) return monster;
+      }
+      return null;
+    };
+
+    Game.schedules.init = function() {
+      Game.state.npcLocations = {};
+      Game.state.monsterLocations = {};
+      for (const npc of Game.data.npcs) {
+        Game.state.npcLocations[npc.id] = this.resolveNPCLocation(npc);
+      }
+      for (const monster of Game.data.monsters) {
+        Game.state.monsterLocations[monster.id] = this.resolveMonsterLocation(monster);
+      }
+    };
+
+    Game.schedules.update = function() {
+      const messages = [];
+      for (const npc of Game.data.npcs) {
+        const newLoc = this.resolveNPCLocation(npc);
+        const oldLoc = Game.state.npcLocations[npc.id];
+        if (newLoc !== oldLoc) {
+          Game.state.npcLocations[npc.id] = newLoc;
+          const playerLoc = Game.state.player ? Game.state.player.location : null;
+          if (oldLoc === playerLoc) {
+            const locData = Game.data.locations[oldLoc];
+            messages.push(npc.name + ' leaves' + (locData ? ' (' + locData.name + ')' : '') + '.');
+          }
+          if (newLoc === playerLoc) {
+            const locData = Game.data.locations[newLoc];
+            const activity = this.getActivity(npc, Game.state.clock);
+            let msg = npc.name + ' arrives' + (locData ? ' at ' + locData.name : '');
+            if (activity) msg += ', ' + activity;
+            messages.push(msg + '.');
+          }
+        }
+      }
+      for (const monster of Game.data.monsters) {
+        const mState = Game.state.world.monsterStates[monster.id];
+        if (mState && mState.defeated) continue;
+        const newLoc = this.resolveMonsterLocation(monster);
+        const oldLoc = Game.state.monsterLocations[monster.id];
+        if (newLoc !== oldLoc) {
+          Game.state.monsterLocations[monster.id] = newLoc;
+        }
+      }
+      return messages;
+    };
+
+    Game.state.player = null;
+    Game.state.flags = {};
+    Game.state.variables = {};
+    Game.state.world = {
+      itemLocations: {},
+      npcOverrides: {},
+      monsterStates: {},
+      locationStates: {},
+      npcAttitudes: {}
+    };
+
+    Game.data.dialogues = {
+      borin_dialogue: {
+        id: 'borin_dialogue',
+        npcId: 'borin_shopkeeper',
+        nodes: [
+          {
+            id: 'greeting',
+            text: '"Ah, a customer. Or are you just here to warm yourself by the fire?" Borin leans on the counter, studying you with careful eyes.',
+            responses: [
+              { text: 'Ask about recent news', next: 'news' },
+              { text: 'Ask about goblins', next: 'goblins', conditions: [{ variable: 'goblin_threat_level', gte: 1 }] },
+              { text: 'Offer to help with goblins', next: 'goblin_quest', conditions: [{ flag: 'goblin_quest_accepted', equals: false }] },
+              { text: 'Report goblins defeated', next: 'goblin_rewards', conditions: [{ flag: 'goblins_defeated', equals: true }] },
+              { text: 'What do you sell?', next: 'shop' },
+              { text: 'Goodbye', next: null }
+            ]
+          },
+          {
+            id: 'news',
+            text: '"The village has been quiet lately. Too quiet." He lowers his voice. "The goblins in the north woods are getting bold. A hunting party went missing last week. The elders are worried."',
+            responses: [
+              { text: 'I can help with the goblins', next: 'goblin_quest', conditions: [{ flag: 'goblin_quest_accepted', equals: false }] },
+              { text: 'What can you tell me about them?', next: 'goblins' },
+              { text: 'Back to main topic', next: 'greeting' }
+            ]
+          },
+          {
+            id: 'goblins',
+            text: '"Goblins? Filthy little creatures. They\'ve been raiding traders on the north road. Three merchants lost everything last moon. They\'re led by a bigger one — Scarclaw, they call him. Mean as a wounded bear and twice as smart."',
+            effects: [{ addVariable: 'goblin_threat_level', amount: 1 }],
+            responses: [
+              { text: 'I\'ll deal with them', next: 'goblin_quest', conditions: [{ flag: 'goblin_quest_accepted', equals: false }] },
+              { text: 'Sounds dangerous', next: 'greeting' }
+            ]
+          },
+          {
+            id: 'goblin_quest',
+            text: '"You\'d take them on? Brave or foolish — hard to tell which." He reaches under the counter and produces a small leather pouch. "Here. Twenty gold to start. Bring me proof you\'ve dealt with Scarclaw, and there\'s more where that came from."',
+            effects: [
+              { setFlag: 'goblin_quest_accepted', value: true },
+              { giveItem: 'gold_coins', quantity: 20 },
+              { changeReputation: { faction: 'village', amount: 1 } }
+            ],
+            responses: [
+              { text: 'I won\'t fail you', next: 'farewell' },
+              { text: 'We\'ll see', next: 'greeting' }
+            ]
+          },
+          {
+            id: 'goblin_rewards',
+            text: '"You did it? By the gods, I thought you were mad to try." He counts out coins and slides them across the counter. "Here\'s thirty gold as promised. And... take this." He produces a small silver amulet. "Protects against poison. Consider it a gift from a grateful merchant."',
+            effects: [
+              { setFlag: 'goblin_rewards_claimed', value: true },
+              { giveItem: 'gold_coins', quantity: 30 },
+              { giveItem: 'charm_of_protection', quantity: 1 },
+              { changeReputation: { faction: 'village', amount: 2 } }
+            ],
+            responses: [
+              { text: 'Thank you', next: 'farewell' }
+            ]
+          },
+          {
+            id: 'shop',
+            text: '"I\'ve got supplies fit for a king — or at least a reasonably wealthy adventurer." He gestures at the shelves behind him.',
+            responses: [
+              { text: 'What weapons do you have?', next: 'shop_weapons' },
+              { text: 'What about armor?', next: 'shop_armor' },
+              { text: 'What else?', next: 'shop_misc' },
+              { text: 'Never mind', next: 'greeting' }
+            ]
+          },
+          {
+            id: 'shop_weapons',
+            text: '"Iron swords, hunting bows, throwing knives — all good steel. Prices are fair, but I don\'t haggle. Take it or leave it."',
+            responses: [
+              { text: 'Show me more', next: 'shop' },
+              { text: 'Back to main topic', next: 'greeting' }
+            ]
+          },
+          {
+            id: 'shop_armor',
+            text: '"Leather armor, padded tunics, shields. Nothing fancy, but it\'ll keep you breathing."',
+            responses: [
+              { text: 'Show me more', next: 'shop' },
+              { text: 'Back to main topic', next: 'greeting' }
+            ]
+          },
+          {
+            id: 'shop_misc',
+            text: '"Ropes, torches, travel rations, healing herbs, spell pouches. Whatever you need for the road."',
+            responses: [
+              { text: 'Show me more', next: 'shop' },
+              { text: 'Back to main topic', next: 'greeting' }
+            ]
+          },
+          {
+            id: 'farewell',
+            text: '"Safe travels. Don\'t get yourself killed out there."',
+            responses: [
+              { text: 'Goodbye', next: null }
+            ]
+          }
+        ]
+      }
+    };
+
+    Game.engine.applyEffects = function(effects) {
+      if (!effects || !Array.isArray(effects)) return;
+      const player = Game.state.player;
+      for (const effect of effects) {
+        if (effect.setFlag) {
+          Game.state.flags[effect.setFlag] = effect.value !== undefined ? effect.value : true;
+          Game.ui.print(`[Flag set: ${effect.setFlag}]`, 'output-system');
+        } else if (effect.addVariable) {
+          const current = Game.state.variables[effect.addVariable] || 0;
+          Game.state.variables[effect.addVariable] = current + (effect.amount || 1);
+          Game.ui.print(`[${effect.addVariable}: ${current} → ${Game.state.variables[effect.addVariable]}]`, 'output-system');
+        } else if (effect.giveItem) {
+          Game.inventory.addItem(effect.giveItem, effect.quantity || 1);
+          const itemData = Game.data.items[effect.giveItem];
+          const name = itemData ? itemData.name : effect.giveItem;
+          Game.ui.print(`[Received: ${name}]`, 'output-highlight');
+        } else if (effect.removeItem) {
+          Game.inventory.removeItem(effect.removeItem, effect.quantity || 1);
+          const itemData = Game.data.items[effect.removeItem];
+          const name = itemData ? itemData.name : effect.removeItem;
+          Game.ui.print(`[Lost: ${name}]`, 'output-system');
+        } else if (effect.addCondition) {
+          Game.conditions.addCondition(player, effect.addCondition, 1, effect.durationMinutes || 180);
+          const condData = Game.data.conditions.find(c => c.id === effect.addCondition);
+          const name = condData ? condData.name : effect.addCondition;
+          Game.ui.print(`[Gained condition: ${name}]`, 'output-highlight');
+        } else if (effect.changeReputation) {
+          if (!player.reputation) player.reputation = {};
+          const faction = effect.changeReputation.faction;
+          const current = player.reputation[faction] || 0;
+          player.reputation[faction] = current + (effect.changeReputation.amount || 1);
+          Game.ui.print(`[Reputation with ${faction}: ${current} → ${player.reputation[faction]}]`, 'output-system');
+        }
+      }
+    };
+
+    Game.engine.evaluateConditions = function(conditions) {
+      if (!conditions || !Array.isArray(conditions)) return true;
+      if (conditions.length === 0) return true;
+      const player = Game.state.player;
+      const clock = Game.state.clock;
+      for (const cond of conditions) {
+        if (cond.flag !== undefined) {
+          const flagValue = Game.state.flags[cond.flag];
+          if (cond.equals !== undefined && flagValue !== cond.equals) return false;
+          if (cond.equals === undefined && !flagValue) return false;
+        }
+        if (cond.variable !== undefined) {
+          const varValue = Game.state.variables[cond.variable] || 0;
+          if (cond.equals !== undefined && varValue !== cond.equals) return false;
+          if (cond.gt !== undefined && !(varValue > cond.gt)) return false;
+          if (cond.gte !== undefined && !(varValue >= cond.gte)) return false;
+          if (cond.lt !== undefined && !(varValue < cond.lt)) return false;
+          if (cond.lte !== undefined && !(varValue <= cond.lte)) return false;
+        }
+        if (cond.hasItem !== undefined) {
+          if (!Game.inventory.hasItem(cond.hasItem)) return false;
+        }
+        if (cond.lacksItem !== undefined) {
+          if (Game.inventory.hasItem(cond.lacksItem)) return false;
+        }
+        if (cond.timeBetween !== undefined) {
+          const currentMinutes = clock.hour * 60 + clock.minute;
+          const start = cond.timeBetween.start;
+          const end = cond.timeBetween.end;
+          if (start <= end) {
+            if (currentMinutes < start || currentMinutes >= end) return false;
+          } else {
+            if (currentMinutes < start && currentMinutes >= end) return false;
+          }
+        }
+        if (cond.npcAtLocation !== undefined) {
+          const npc = Game.data.npcs.find(n => n.id === cond.npcAtLocation.npcId);
+          if (!npc) return false;
+          const loc = Game.schedules.resolveNPCLocation(npc);
+          if (loc !== cond.npcAtLocation.locationId) return false;
+        }
+      }
+      return true;
+    };
+
+    Game.dialogue.init = function() {
+      Game.state.inDialogue = false;
+      Game.state.currentDialogue = null;
+      Game.state.currentNode = null;
+    };
+
+    Game.dialogue.startDialogue = function(dialogueId) {
+      const dialogue = Game.data.dialogues[dialogueId];
+      if (!dialogue) {
+        Game.ui.print('No dialogue available.', 'output-error');
+        return;
+      }
+      Game.state.inDialogue = true;
+      Game.state.currentDialogue = dialogue;
+      Game.dialogue.showNode('greeting');
+    };
+
+    Game.dialogue.showNode = function(nodeId) {
+      const dialogue = Game.state.currentDialogue;
+      if (!dialogue) return;
+      const node = dialogue.nodes.find(n => n.id === nodeId);
+      if (!node) {
+        Game.ui.print('Dialogue error: node not found.', 'output-error');
+        this.endDialogue();
+        return;
+      }
+      Game.state.currentNode = node;
+      if (node.effects) {
+        Game.engine.applyEffects(node.effects);
+      }
+      Game.ui.print('', '');
+      Game.ui.print(node.text, 'output-narrative');
+      Game.ui.print('', '');
+      const availableResponses = node.responses.filter(r => !r.conditions || Game.engine.evaluateConditions(r.conditions));
+      if (availableResponses.length === 0) {
+        this.endDialogue();
+        return;
+      }
+      Game.ui.print('─'.repeat(40), 'separator');
+      availableResponses.forEach((response, index) => {
+        Game.ui.print(`  ${index + 1}. ${response.text}`, 'output-system');
+      });
+      Game.ui.print('─'.repeat(40), 'separator');
+      Game.ui.print('', '');
+    };
+
+    Game.dialogue.handleInput = function(input) {
+      const normalized = input.trim().toLowerCase();
+      const node = Game.state.currentNode;
+      if (!node) {
+        this.endDialogue();
+        return;
+      }
+      const availableResponses = node.responses.filter(r => !r.conditions || Game.engine.evaluateConditions(r.conditions));
+      if (normalized === 'exit' || normalized === 'quit' || normalized === 'end') {
+        this.endDialogue();
+        return;
+      }
+      const choiceNum = parseInt(normalized, 10);
+      if (!isNaN(choiceNum) && choiceNum >= 1 && choiceNum <= availableResponses.length) {
+        const selected = availableResponses[choiceNum - 1];
+        if (selected.next === null) {
+          this.endDialogue();
+          return;
+        }
+        this.showNode(selected.next);
+        return;
+      }
+      const matchedResponse = availableResponses.find(r => r.text.toLowerCase().includes(normalized));
+      if (matchedResponse) {
+        if (matchedResponse.next === null) {
+          this.endDialogue();
+          return;
+        }
+        this.showNode(matchedResponse.next);
+        return;
+      }
+      Game.ui.print('Invalid choice. Enter a number or "exit" to end dialogue.', 'output-error');
+    };
+
+    Game.dialogue.endDialogue = function() {
+      Game.state.inDialogue = false;
+      Game.state.currentDialogue = null;
+      Game.state.currentNode = null;
+      Game.ui.print('', '');
+      Game.ui.print('[Dialogue ended]', 'output-system');
+      Game.ui.print('', '');
+    };
+
+    Game.dialogue.findDialogueForNPC = function(npc) {
+      if (!npc || !npc.dialogueId) return null;
+      return Game.data.dialogues[npc.dialogueId] || null;
+    };
+
+    Game.engine.attitudeSystem = {
+      scale: {
+        HOSTILE: -3,
+        UNFRIENDLY: -2,
+        UNCOOPERATIVE: -1,
+        NEUTRAL: 0,
+        FRIENDLY: 1,
+        HELPFUL: 2,
+        LOYAL: 3
+      },
+      getAttitude: function(npcId) {
+        return Game.state.world.npcAttitudes[npcId] || 0;
+      },
+      setAttitude: function(npcId, value) {
+        Game.state.world.npcAttitudes[npcId] = Math.max(-3, Math.min(3, value));
+      },
+      adjustAttitude: function(npcId, amount) {
+        const current = this.getAttitude(npcId);
+        this.setAttitude(npcId, current + amount);
+        return this.getAttitude(npcId);
+      },
+      getAttitudeName: function(attitude) {
+        const scale = this.scale;
+        if (attitude <= scale.HOSTILE) return 'Hostile';
+        if (attitude <= scale.UNFRIENDLY) return 'Unfriendly';
+        if (attitude <= scale.UNCOOPERATIVE) return 'Uncooperative';
+        if (attitude === scale.NEUTRAL) return 'Neutral';
+        if (attitude >= scale.LOYAL) return 'Loyal';
+        if (attitude >= scale.HELPFUL) return 'Helpful';
+        return 'Friendly';
+      },
+      initAttitudes: function() {
+        for (const npc of Game.data.npcs) {
+          const baseAttitude = (npc.disposition && npc.disposition.baseAttitude) || 0;
+          Game.state.world.npcAttitudes[npc.id] = baseAttitude;
+        }
+      }
+    };
+
+    Game.engine.persuade = function(target) {
+      const npc = Game.schedules.findNPCByName(target);
+      if (!npc) {
+        Game.ui.print(`You don't see anyone by that name here.`, 'output-error');
+        return;
+      }
+      const present = Game.schedules.isNPCPresent(npc, Game.state.player.location);
+      if (!present) {
+        Game.ui.print(`${npc.name} is not here.`, 'output-error');
+        return;
+      }
+      const player = Game.state.player;
+      const attitude = Game.engine.attitudeSystem.getAttitude(npc.id);
+      const difficulty = 15 - attitude;
+      const result = Game.checks.rollCheck(player, 'presence', 'persuasion', difficulty);
+      Game.ui.print('', '');
+      Game.ui.print(`You attempt to persuade ${npc.name}...`, 'output-narrative');
+      Game.ui.print(`  Roll: ${result.die} + presence(${result.statValue}) + persuasion(${result.skillValue}) = ${result.total} vs ${difficulty}`, 'output-system');
+      Game.ui.print(`  Result: ${Game.checks.getProse(result.degree)}`, 'output-highlight');
+      if (result.degree === 'critical_success') {
+        Game.engine.attitudeSystem.adjustAttitude(npc.id, 2);
+        Game.ui.print(`${npc.name} is very impressed! (Attitude: +2)`, 'output-highlight');
+      } else if (result.degree === 'strong_success' || result.degree === 'success') {
+        Game.engine.attitudeSystem.adjustAttitude(npc.id, 1);
+        Game.ui.print(`${npc.name} seems more favorably disposed. (Attitude: +1)`, 'output-narrative');
+      } else if (result.degree === 'failure') {
+        Game.ui.print(`${npc.name} is unconvinced.`, 'output-system');
+      } else if (result.degree === 'bad_failure' || result.degree === 'critical_failure') {
+        Game.engine.attitudeSystem.adjustAttitude(npc.id, -1);
+        Game.ui.print(`${npc.name} seems annoyed by your attempt. (Attitude: -1)`, 'output-error');
+      }
+      Game.clock.advanceTime(5);
+    };
+
+    Game.engine.intimidate = function(target) {
+      const npc = Game.schedules.findNPCByName(target);
+      if (!npc) {
+        Game.ui.print(`You don't see anyone by that name here.`, 'output-error');
+        return;
+      }
+      const present = Game.schedules.isNPCPresent(npc, Game.state.player.location);
+      if (!present) {
+        Game.ui.print(`${npc.name} is not here.`, 'output-error');
+        return;
+      }
+      const player = Game.state.player;
+      const attitude = Game.engine.attitudeSystem.getAttitude(npc.id);
+      const difficulty = 15 - attitude;
+      const result = Game.checks.rollCheck(player, 'presence', 'intimidation', difficulty);
+      Game.ui.print('', '');
+      Game.ui.print(`You attempt to intimidate ${npc.name}...`, 'output-narrative');
+      Game.ui.print(`  Roll: ${result.die} + presence(${result.statValue}) + intimidation(${result.skillValue}) = ${result.total} vs ${difficulty}`, 'output-system');
+      Game.ui.print(`  Result: ${Game.checks.getProse(result.degree)}`, 'output-highlight');
+      if (result.degree === 'critical_success') {
+        Game.engine.attitudeSystem.adjustAttitude(npc.id, -2);
+        Game.ui.print(`${npc.name} is visibly shaken. (Attitude: -2)`, 'output-error');
+      } else if (result.degree === 'strong_success' || result.degree === 'success') {
+        Game.engine.attitudeSystem.adjustAttitude(npc.id, -1);
+        Game.ui.print(`${npc.name} seems wary of you now. (Attitude: -1)`, 'output-narrative');
+      } else if (result.degree === 'failure') {
+        Game.ui.print(`${npc.name} is unimpressed by your threats.`, 'output-system');
+      } else if (result.degree === 'bad_failure' || result.degree === 'critical_failure') {
+        Game.engine.attitudeSystem.adjustAttitude(npc.id, 1);
+        Game.ui.print(`${npc.name} laughs at your feeble attempt. (Attitude: +1)`, 'output-error');
+      }
+      Game.clock.advanceTime(5);
+    };
+
+    Game.engine.askAbout = function(npcName, topic) {
+      const npc = Game.schedules.findNPCByName(npcName);
+      if (!npc) {
+        Game.ui.print(`You don't see anyone by that name here.`, 'output-error');
+        return;
+      }
+      const present = Game.schedules.isNPCPresent(npc, Game.state.player.location);
+      if (!present) {
+        Game.ui.print(`${npc.name} is not here.`, 'output-error');
+        return;
+      }
+      const dialogue = Game.dialogue.findDialogueForNPC(npc);
+      if (!dialogue) {
+        Game.ui.print(`${npc.name} has nothing to say about that.`, 'output-narrative');
+        return;
+      }
+      const topicNode = dialogue.nodes.find(n => n.id === topic || n.id === topic.replace(/\s+/g, '_'));
+      if (!topicNode) {
+        Game.ui.print(`${npc.name} doesn't seem to know about "${topic}".`, 'output-system');
+        return;
+      }
+      Game.state.inDialogue = true;
+      Game.state.currentDialogue = dialogue;
+      Game.dialogue.showNode(topic);
+    };
+
+    Game.init = function() {
+      this.clock.init();
+      this.inventory.init();
+      this.combat.init();
+      this.conditions.init();
+      this.storage.init();
+      this.schedules.init();
+      this.dialogue.init();
+      this.attitudeSystem.initAttitudes();
+      
+      Game.ui.showTitle();
+      Game.ui.print('', '');
+    };
+
+    Game.data.dialogues = {
+      borin_dialogue: {
+        id: 'borin_dialogue',
+        npcId: 'borin_shopkeeper',
+        nodes: [
+          {
+            id: 'greeting',
+            text: '"Ah, a customer. Or are you just here to warm yourself by the fire?" Borin leans on the counter, studying you with careful eyes.',
+            responses: [
+              { text: 'Ask about recent news', next: 'news' },
+              { text: 'Ask about goblins', next: 'goblins', conditions: [{ variable: 'goblin_threat_level', gte: 1 }] },
+              { text: 'Offer to help with goblins', next: 'goblin_quest', conditions: [{ flag: 'goblin_quest_accepted', equals: false }] },
+              { text: 'Report goblins defeated', next: 'goblin_rewards', conditions: [{ flag: 'goblins_defeated', equals: true }] },
+              { text: 'What do you sell?', next: 'shop' },
+              { text: 'Goodbye', next: null }
+            ]
+          },
+          {
+            id: 'news',
+            text: '"The village has been quiet lately. Too quiet." He lowers his voice. "The goblins in the north woods are getting bold. A hunting party went missing last week. The elders are worried."',
+            responses: [
+              { text: 'I can help with the goblins', next: 'goblin_quest', conditions: [{ flag: 'goblin_quest_accepted', equals: false }] },
+              { text: 'What can you tell me about them?', next: 'goblins' },
+              { text: 'Back to main topic', next: 'greeting' }
+            ]
+          },
+          {
+            id: 'goblins',
+            text: '"Goblins? Filthy little creatures. They\'ve been raiding traders on the north road. Three merchants lost everything last moon. They\'re led by a bigger one — Scarclaw, they call him. Mean as a wounded bear and twice as smart."',
+            effects: [{ addVariable: 'goblin_threat_level', amount: 1 }],
+            responses: [
+              { text: 'I\'ll deal with them', next: 'goblin_quest', conditions: [{ flag: 'goblin_quest_accepted', equals: false }] },
+              { text: 'Sounds dangerous', next: 'greeting' }
+            ]
+          },
+          {
+            id: 'goblin_quest',
+            text: '"You\'d take them on? Brave or foolish — hard to tell which." He reaches under the counter and produces a small leather pouch. "Here. Twenty gold to start. Bring me proof you\'ve dealt with Scarclaw, and there\'s more where that came from."',
+            effects: [
+              { setFlag: 'goblin_quest_accepted', value: true },
+              { giveItem: 'gold_coins', quantity: 20 },
+              { changeReputation: { faction: 'village', amount: 1 } }
+            ],
+            responses: [
+              { text: 'I won\'t fail you', next: 'farewell' },
+              { text: 'We\'ll see', next: 'greeting' }
+            ]
+          },
+          {
+            id: 'goblin_rewards',
+            text: '"You did it? By the gods, I thought you were mad to try." He counts out coins and slides them across the counter. "Here\'s thirty gold as promised. And... take this." He produces a small silver amulet. "Protects against poison. Consider it a gift from a grateful merchant."',
+            effects: [
+              { setFlag: 'goblin_rewards_claimed', value: true },
+              { giveItem: 'gold_coins', quantity: 30 },
+              { giveItem: 'charm_of_protection', quantity: 1 },
+              { changeReputation: { faction: 'village', amount: 2 } }
+            ],
+            responses: [
+              { text: 'Thank you', next: 'farewell' }
+            ]
+          },
+          {
+            id: 'shop',
+            text: '"I\'ve got supplies fit for a king — or at least a reasonably wealthy adventurer." He gestures at the shelves behind him.',
+            responses: [
+              { text: 'What weapons do you have?', next: 'shop_weapons' },
+              { text: 'What about armor?', next: 'shop_armor' },
+              { text: 'What else?', next: 'shop_misc' },
+              { text: 'Never mind', next: 'greeting' }
+            ]
+          },
+          {
+            id: 'shop_weapons',
+            text: '"Iron swords, hunting bows, throwing knives — all good steel. Prices are fair, but I don\'t haggle. Take it or leave it."',
+            responses: [
+              { text: 'Show me more', next: 'shop' },
+              { text: 'Back to main topic', next: 'greeting' }
+            ]
+          },
+          {
+            id: 'shop_armor',
+            text: '"Leather armor, padded tunics, shields. Nothing fancy, but it\'ll keep you breathing."',
+            responses: [
+              { text: 'Show me more', next: 'shop' },
+              { text: 'Back to main topic', next: 'greeting' }
+            ]
+          },
+          {
+            id: 'shop_misc',
+            text: '"Ropes, torches, travel rations, healing herbs, spell pouches. Whatever you need for the road."',
+            responses: [
+              { text: 'Show me more', next: 'shop' },
+              { text: 'Back to main topic', next: 'greeting' }
+            ]
+          },
+          {
+            id: 'farewell',
+            text: '"Safe travels. Don\'t get yourself killed out there."',
+            responses: [
+              { text: 'Goodbye', next: null }
+            ]
+          }
+        ]
+      }
+    };
+
+    Game.engine.applyEffects = function(effects) {
+      if (!effects || !Array.isArray(effects)) return;
+      const player = Game.state.player;
+      for (const effect of effects) {
+        if (effect.setFlag) {
+          Game.state.flags[effect.setFlag] = effect.value !== undefined ? effect.value : true;
+          Game.ui.print(`[Flag set: ${effect.setFlag}]`, 'output-system');
+        } else if (effect.addVariable) {
+          const current = Game.state.variables[effect.addVariable] || 0;
+          Game.state.variables[effect.addVariable] = current + (effect.amount || 1);
+          Game.ui.print(`[${effect.addVariable}: ${current} → ${Game.state.variables[effect.addVariable]}]`, 'output-system');
+        } else if (effect.giveItem) {
+          Game.inventory.addItem(effect.giveItem, effect.quantity || 1);
+          const itemData = Game.data.items[effect.giveItem];
+          const name = itemData ? itemData.name : effect.giveItem;
+          Game.ui.print(`[Received: ${name}]`, 'output-highlight');
+        } else if (effect.removeItem) {
+          Game.inventory.removeItem(effect.removeItem, effect.quantity || 1);
+          const itemData = Game.data.items[effect.removeItem];
+          const name = itemData ? itemData.name : effect.removeItem;
+          Game.ui.print(`[Lost: ${name}]`, 'output-system');
+        } else if (effect.addCondition) {
+          Game.conditions.addCondition(player, effect.addCondition, 1, effect.durationMinutes || 180);
+          const condData = Game.data.conditions.find(c => c.id === effect.addCondition);
+          const name = condData ? condData.name : effect.addCondition;
+          Game.ui.print(`[Gained condition: ${name}]`, 'output-highlight');
+        } else if (effect.changeReputation) {
+          if (!player.reputation) player.reputation = {};
+          const faction = effect.changeReputation.faction;
+          const current = player.reputation[faction] || 0;
+          player.reputation[faction] = current + (effect.changeReputation.amount || 1);
+          Game.ui.print(`[Reputation with ${faction}: ${current} → ${player.reputation[faction]}]`, 'output-system');
+        }
+      }
+    };
+
+    Game.engine.evaluateConditions = function(conditions) {
+      if (!conditions || !Array.isArray(conditions)) return true;
+      if (conditions.length === 0) return true;
+      const player = Game.state.player;
+      const clock = Game.state.clock;
+      for (const cond of conditions) {
+        if (cond.flag !== undefined) {
+          const flagValue = Game.state.flags[cond.flag];
+          if (cond.equals !== undefined && flagValue !== cond.equals) return false;
+          if (cond.equals === undefined && !flagValue) return false;
+        }
+        if (cond.variable !== undefined) {
+          const varValue = Game.state.variables[cond.variable] || 0;
+          if (cond.equals !== undefined && varValue !== cond.equals) return false;
+          if (cond.gt !== undefined && !(varValue > cond.gt)) return false;
+          if (cond.gte !== undefined && !(varValue >= cond.gte)) return false;
+          if (cond.lt !== undefined && !(varValue < cond.lt)) return false;
+          if (cond.lte !== undefined && !(varValue <= cond.lte)) return false;
+        }
+        if (cond.hasItem !== undefined) {
+          if (!Game.inventory.hasItem(cond.hasItem)) return false;
+        }
+        if (cond.lacksItem !== undefined) {
+          if (Game.inventory.hasItem(cond.lacksItem)) return false;
+        }
+        if (cond.timeBetween !== undefined) {
+          const currentMinutes = clock.hour * 60 + clock.minute;
+          const start = cond.timeBetween.start;
+          const end = cond.timeBetween.end;
+          if (start <= end) {
+            if (currentMinutes < start || currentMinutes >= end) return false;
+          } else {
+            if (currentMinutes < start && currentMinutes >= end) return false;
+          }
+        }
+        if (cond.npcAtLocation !== undefined) {
+          const npc = Game.data.npcs.find(n => n.id === cond.npcAtLocation.npcId);
+          if (!npc) return false;
+          const loc = Game.schedules.resolveNPCLocation(npc);
+          if (loc !== cond.npcAtLocation.locationId) return false;
+        }
+      }
+      return true;
+    };
+
+    Game.dialogue.init = function() {
+      Game.state.inDialogue = false;
+      Game.state.currentDialogue = null;
+      Game.state.currentNode = null;
+    };
+
+    Game.dialogue.startDialogue = function(dialogueId) {
+      const dialogue = Game.data.dialogues[dialogueId];
+      if (!dialogue) {
+        Game.ui.print('No dialogue available.', 'output-error');
+        return;
+      }
+      Game.state.inDialogue = true;
+      Game.state.currentDialogue = dialogue;
+      Game.dialogue.showNode('greeting');
+    };
+
+    Game.dialogue.showNode = function(nodeId) {
+      const dialogue = Game.state.currentDialogue;
+      if (!dialogue) return;
+      const node = dialogue.nodes.find(n => n.id === nodeId);
+      if (!node) {
+        Game.ui.print('Dialogue error: node not found.', 'output-error');
+        this.endDialogue();
+        return;
+      }
+      Game.state.currentNode = node;
+      if (node.effects) {
+        Game.engine.applyEffects(node.effects);
+      }
+      Game.ui.print('', '');
+      Game.ui.print(node.text, 'output-narrative');
+      Game.ui.print('', '');
+      const availableResponses = node.responses.filter(r => !r.conditions || Game.engine.evaluateConditions(r.conditions));
+      if (availableResponses.length === 0) {
+        this.endDialogue();
+        return;
+      }
+      Game.ui.print('─'.repeat(40), 'separator');
+      availableResponses.forEach((response, index) => {
+        Game.ui.print(`  ${index + 1}. ${response.text}`, 'output-system');
+      });
+      Game.ui.print('─'.repeat(40), 'separator');
+      Game.ui.print('', '');
+    };
+
+    Game.dialogue.handleInput = function(input) {
+      const normalized = input.trim().toLowerCase();
+      const node = Game.state.currentNode;
+      if (!node) {
+        this.endDialogue();
+        return;
+      }
+      const availableResponses = node.responses.filter(r => !r.conditions || Game.engine.evaluateConditions(r.conditions));
+      if (normalized === 'exit' || normalized === 'quit' || normalized === 'end') {
+        this.endDialogue();
+        return;
+      }
+      const choiceNum = parseInt(normalized, 10);
+      if (!isNaN(choiceNum) && choiceNum >= 1 && choiceNum <= availableResponses.length) {
+        const selected = availableResponses[choiceNum - 1];
+        if (selected.next === null) {
+          this.endDialogue();
+          return;
+        }
+        this.showNode(selected.next);
+        return;
+      }
+      const matchedResponse = availableResponses.find(r => r.text.toLowerCase().includes(normalized));
+      if (matchedResponse) {
+        if (matchedResponse.next === null) {
+          this.endDialogue();
+          return;
+        }
+        this.showNode(matchedResponse.next);
+        return;
+      }
+      Game.ui.print('Invalid choice. Enter a number or "exit" to end dialogue.', 'output-error');
+    };
+
+    Game.dialogue.endDialogue = function() {
+      Game.state.inDialogue = false;
+      Game.state.currentDialogue = null;
+      Game.state.currentNode = null;
+      Game.ui.print('', '');
+      Game.ui.print('[Dialogue ended]', 'output-system');
+      Game.ui.print('', '');
+    };
+
+    Game.dialogue.findDialogueForNPC = function(npc) {
+      if (!npc || !npc.dialogueId) return null;
+      return Game.data.dialogues[npc.dialogueId] || null;
+    };
+
+    Game.engine.attitudeSystem = {
+      scale: {
+        HOSTILE: -3,
+        UNFRIENDLY: -2,
+        UNCOOPERATIVE: -1,
+        NEUTRAL: 0,
+        FRIENDLY: 1,
+        HELPFUL: 2,
+        LOYAL: 3
+      },
+      getAttitude: function(npcId) {
+        return Game.state.world.npcAttitudes[npcId] || 0;
+      },
+      setAttitude: function(npcId, value) {
+        Game.state.world.npcAttitudes[npcId] = Math.max(-3, Math.min(3, value));
+      },
+      adjustAttitude: function(npcId, amount) {
+        const current = this.getAttitude(npcId);
+        this.setAttitude(npcId, current + amount);
+        return this.getAttitude(npcId);
+      },
+      getAttitudeName: function(attitude) {
+        const scale = this.scale;
+        if (attitude <= scale.HOSTILE) return 'Hostile';
+        if (attitude <= scale.UNFRIENDLY) return 'Unfriendly';
+        if (attitude <= scale.UNCOOPERATIVE) return 'Uncooperative';
+        if (attitude === scale.NEUTRAL) return 'Neutral';
+        if (attitude >= scale.LOYAL) return 'Loyal';
+        if (attitude >= scale.HELPFUL) return 'Helpful';
+        return 'Friendly';
+      },
+      initAttitudes: function() {
+        for (const npc of Game.data.npcs) {
+          const baseAttitude = (npc.disposition && npc.disposition.baseAttitude) || 0;
+          Game.state.world.npcAttitudes[npc.id] = baseAttitude;
+        }
+      }
+    };
+
+    Game.engine.persuade = function(target) {
+      const npc = Game.schedules.findNPCByName(target);
+      if (!npc) {
+        Game.ui.print(`You don't see anyone by that name here.`, 'output-error');
+        return;
+      }
+      const present = Game.schedules.isNPCPresent(npc, Game.state.player.location);
+      if (!present) {
+        Game.ui.print(`${npc.name} is not here.`, 'output-error');
+        return;
+      }
+      const player = Game.state.player;
+      const attitude = Game.engine.attitudeSystem.getAttitude(npc.id);
+      const difficulty = 15 - attitude;
+      const result = Game.checks.rollCheck(player, 'presence', 'persuasion', difficulty);
+      Game.ui.print('', '');
+      Game.ui.print(`You attempt to persuade ${npc.name}...`, 'output-narrative');
+      Game.ui.print(`  Roll: ${result.die} + presence(${result.statValue}) + persuasion(${result.skillValue}) = ${result.total} vs ${difficulty}`, 'output-system');
+      Game.ui.print(`  Result: ${Game.checks.getProse(result.degree)}`, 'output-highlight');
+      if (result.degree === 'critical_success') {
+        Game.engine.attitudeSystem.adjustAttitude(npc.id, 2);
+        Game.ui.print(`${npc.name} is very impressed! (Attitude: +2)`, 'output-highlight');
+      } else if (result.degree === 'strong_success' || result.degree === 'success') {
+        Game.engine.attitudeSystem.adjustAttitude(npc.id, 1);
+        Game.ui.print(`${npc.name} seems more favorably disposed. (Attitude: +1)`, 'output-narrative');
+      } else if (result.degree === 'failure') {
+        Game.ui.print(`${npc.name} is unconvinced.`, 'output-system');
+      } else if (result.degree === 'bad_failure' || result.degree === 'critical_failure') {
+        Game.engine.attitudeSystem.adjustAttitude(npc.id, -1);
+        Game.ui.print(`${npc.name} seems annoyed by your attempt. (Attitude: -1)`, 'output-error');
+      }
+      Game.clock.advanceTime(5);
+    };
+
+    Game.engine.intimidate = function(target) {
+      const npc = Game.schedules.findNPCByName(target);
+      if (!npc) {
+        Game.ui.print(`You don't see anyone by that name here.`, 'output-error');
+        return;
+      }
+      const present = Game.schedules.isNPCPresent(npc, Game.state.player.location);
+      if (!present) {
+        Game.ui.print(`${npc.name} is not here.`, 'output-error');
+        return;
+      }
+      const player = Game.state.player;
+      const attitude = Game.engine.attitudeSystem.getAttitude(npc.id);
+      const difficulty = 15 - attitude;
+      const result = Game.checks.rollCheck(player, 'presence', 'intimidation', difficulty);
+      Game.ui.print('', '');
+      Game.ui.print(`You attempt to intimidate ${npc.name}...`, 'output-narrative');
+      Game.ui.print(`  Roll: ${result.die} + presence(${result.statValue}) + intimidation(${result.skillValue}) = ${result.total} vs ${difficulty}`, 'output-system');
+      Game.ui.print(`  Result: ${Game.checks.getProse(result.degree)}`, 'output-highlight');
+      if (result.degree === 'critical_success') {
+        Game.engine.attitudeSystem.adjustAttitude(npc.id, -2);
+        Game.ui.print(`${npc.name} is visibly shaken. (Attitude: -2)`, 'output-error');
+      } else if (result.degree === 'strong_success' || result.degree === 'success') {
+        Game.engine.attitudeSystem.adjustAttitude(npc.id, -1);
+        Game.ui.print(`${npc.name} seems wary of you now. (Attitude: -1)`, 'output-narrative');
+      } else if (result.degree === 'failure') {
+        Game.ui.print(`${npc.name} is unimpressed by your threats.`, 'output-system');
+      } else if (result.degree === 'bad_failure' || result.degree === 'critical_failure') {
+        Game.engine.attitudeSystem.adjustAttitude(npc.id, 1);
+        Game.ui.print(`${npc.name} laughs at your feeble attempt. (Attitude: +1)`, 'output-error');
+      }
+      Game.clock.advanceTime(5);
+    };
+
+    Game.engine.askAbout = function(npcName, topic) {
+      const npc = Game.schedules.findNPCByName(npcName);
+      if (!npc) {
+        Game.ui.print(`You don't see anyone by that name here.`, 'output-error');
+        return;
+      }
+      const present = Game.schedules.isNPCPresent(npc, Game.state.player.location);
+      if (!present) {
+        Game.ui.print(`${npc.name} is not here.`, 'output-error');
+        return;
+      }
+      const dialogue = Game.dialogue.findDialogueForNPC(npc);
+      if (!dialogue) {
+        Game.ui.print(`${npc.name} has nothing to say about that.`, 'output-narrative');
+        return;
+      }
+      const topicNode = dialogue.nodes.find(n => n.id === topic || n.id === topic.replace(/\s+/g, '_'));
+      if (!topicNode) {
+        Game.ui.print(`${npc.name} doesn't seem to know about "${topic}".`, 'output-system');
+        return;
+      }
+      Game.state.inDialogue = true;
+      Game.state.currentDialogue = dialogue;
+      Game.dialogue.showNode(topic);
+    };
+
+    Game.init = function() {
+      this.clock.init();
+      this.inventory.init();
+      this.combat.init();
+      this.conditions.init();
+      this.storage.init();
+      this.schedules.init();
+      this.dialogue.init();
+      this.attitudeSystem.initAttitudes();
+      
+      Game.ui.showTitle();
+      Game.ui.print('', '');
+    };
+
+    const commandInput = document.getElementById('command-input');
+    
+    commandInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        const value = this.value;
+        this.value = '';
+        Game.ui.handleInput(value);
+      }
+    });
+
+    commandInput.addEventListener('focus', function() {
+      document.querySelector('.cursor').style.display = 'none';
+    });
+
+    commandInput.addEventListener('blur', function() {
+      document.querySelector('.cursor').style.display = 'inline-block';
+      this.focus();
+    });
+
+    setTimeout(() => commandInput.focus(), 100);
+    Game.init();
+  </script>
+</body>
+</html>
