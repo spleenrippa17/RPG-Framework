@@ -180,7 +180,7 @@
 
   <script>
     const Game = {
-      version: "1.0.0",
+      version: "1.1.0",
       
       data: {
         npcs: [
@@ -3083,13 +3083,43 @@
       return Game.data.difficulties.moderate;
     };
 
+    // Save format: { version, savedAt, mode, player, clock, flags, variables, world }.
+    // The schema-normalization milestone (v1.1.0) did NOT change the save shape —
+    // player/clock/flags/variables/world are unchanged and serialize wholesale. The
+    // dynamic item-placement state lives in world.itemLocations (seeded from the
+    // static location.items arrays at game start). Migrations below bridge older
+    // saves that may predate flags/variables/itemLocations by safely defaulting them.
     Game.storage = {
-      SAVE_VERSION: '1.0.0',
+      SAVE_VERSION: '1.1.0',
       KEY_PREFIX: 'fantasyAdventure.save.slot',
       MAX_SLOTS: 3,
 
       migrations: {
-        '1.0.0_to_1.1.0': function(save) { return save; }
+        '1.0.0_to_1.1.0': function(save) {
+          save.flags = save.flags || {};
+          save.variables = save.variables || {};
+          save.world = save.world || {};
+          const world = save.world;
+          if (!world.itemLocations || typeof world.itemLocations !== 'object') {
+            world.itemLocations = {};
+          }
+          if (Array.isArray(world.items)) {
+            for (const entry of world.items) {
+              if (entry && entry.locationId && entry.itemId) {
+                if (!Array.isArray(world.itemLocations[entry.locationId])) {
+                  world.itemLocations[entry.locationId] = [];
+                }
+                world.itemLocations[entry.locationId].push(entry.itemId);
+              }
+            }
+            delete world.items;
+          }
+          world.npcOverrides = world.npcOverrides || {};
+          world.monsterStates = world.monsterStates || {};
+          world.locationStates = world.locationStates || {};
+          world.npcAttitudes = world.npcAttitudes || {};
+          return save;
+        }
       },
 
       init: function() {
@@ -3116,20 +3146,48 @@
       _validateSave: function(data) {
         if (!data || typeof data !== 'object') return false;
         if (!data.version) return false;
-        if (!data.player || !data.clock || !data.flags || !data.world) return false;
+        if (!data.player || !data.clock) return false;
         if (!data.player.name || !data.player.location) return false;
         return true;
       },
 
+      _applyDefaults: function(data) {
+        if (!data.flags || typeof data.flags !== 'object') data.flags = {};
+        if (!data.variables || typeof data.variables !== 'object') data.variables = {};
+        if (!data.world || typeof data.world !== 'object') data.world = {};
+        const world = data.world;
+        if (!world.itemLocations || typeof world.itemLocations !== 'object') world.itemLocations = {};
+        if (!world.npcOverrides) world.npcOverrides = {};
+        if (!world.monsterStates) world.monsterStates = {};
+        if (!world.locationStates) world.locationStates = {};
+        if (!world.npcAttitudes) world.npcAttitudes = {};
+        return data;
+      },
+
+      _normalizeWorld: function() {
+        if (!Game.state.world || typeof Game.state.world !== 'object') {
+          Game.state.world = {};
+        }
+        const w = Game.state.world;
+        if (!w.npcOverrides) w.npcOverrides = {};
+        if (!w.monsterStates) w.monsterStates = {};
+        if (!w.locationStates) w.locationStates = {};
+        if (!w.npcAttitudes) w.npcAttitudes = {};
+        if (!w.itemLocations || typeof w.itemLocations !== 'object' || Object.keys(w.itemLocations).length === 0) {
+          Game.engine.seedItemLocations();
+        }
+      },
+
       _migrate: function(data) {
         const targetVersion = this.SAVE_VERSION;
-        if (data.version === targetVersion) return data;
-        const migrationKey = data.version + '_to_' + targetVersion;
-        if (this.migrations[migrationKey]) {
-          data = this.migrations[migrationKey](data);
-          data.version = targetVersion;
+        if (data.version !== targetVersion) {
+          const migrationKey = data.version + '_to_' + targetVersion;
+          if (this.migrations[migrationKey]) {
+            data = this.migrations[migrationKey](data);
+            data.version = targetVersion;
+          }
         }
-        return data;
+        return this._applyDefaults(data);
       },
 
       save: function(slotNumber) {
@@ -3176,9 +3234,10 @@
           data = this._migrate(data);
           Game.state.player = data.player;
           Game.state.clock = data.clock;
-          Game.state.flags = data.flags || {};
-          Game.state.variables = data.variables || {};
+          Game.state.flags = data.flags;
+          Game.state.variables = data.variables;
           Game.state.world = data.world;
+          this._normalizeWorld();
           Game.state.mode = GameModes.PLAYING;
           Game.state.inCombat = false;
           Game.state.currentEnemy = null;
@@ -3202,9 +3261,10 @@
           data = this._migrate(data);
           Game.state.player = data.player;
           Game.state.clock = data.clock;
-          Game.state.flags = data.flags || {};
-          Game.state.variables = data.variables || {};
+          Game.state.flags = data.flags;
+          Game.state.variables = data.variables;
           Game.state.world = data.world;
+          this._normalizeWorld();
           Game.state.mode = GameModes.PLAYING;
           Game.state.inCombat = false;
           Game.state.currentEnemy = null;
@@ -3333,9 +3393,10 @@
         const migrated = this._migrate(data);
         Game.state.player = migrated.player;
         Game.state.clock = migrated.clock;
-        Game.state.flags = migrated.flags || {};
-        Game.state.variables = migrated.variables || {};
+        Game.state.flags = migrated.flags;
+        Game.state.variables = migrated.variables;
         Game.state.world = migrated.world;
+        this._normalizeWorld();
         Game.state.mode = GameModes.PLAYING;
         Game.state.inCombat = false;
         Game.state.currentEnemy = null;
