@@ -1174,7 +1174,8 @@
       village_notice: { id: 'village_notice', name: 'notice board posting', aliases: ['notice', 'posting', 'notice board', 'sign'], weight: 0, type: 'misc', portable: false, value: 0 },
       goblin_knife: { id: 'goblin_knife', name: 'goblin knife', aliases: ['knife', 'jagged knife'], weight: 1, slot: 'weapon', type: 'weapon', portable: true, value: 2, damage: '1d4+1', stat: 'agility', skill: 'melee', attackBonus: 0 },
       copper_coin: { id: 'copper_coin', name: 'copper coin', aliases: ['coin', 'copper', 'coins'], weight: 0, type: 'treasure', stackable: true, portable: true, value: 1 },
-      arrows: { id: 'arrows', name: 'arrows', aliases: ['arrow'], weight: 1, type: 'ammunition', stackable: true, portable: true, value: 1 }
+      arrows: { id: 'arrows', name: 'arrows', aliases: ['arrow'], weight: 1, type: 'ammunition', stackable: true, portable: true, value: 1 },
+      charm_of_protection: { id: 'charm_of_protection', name: 'charm of protection', aliases: ['charm', 'amulet'], weight: 0, slot: 'accessory1', type: 'misc', portable: true, value: 25, description: 'A small silver amulet that protects against poison.' }
     };
 
     Game.data.locations = {
@@ -1848,6 +1849,11 @@
       } else if (normalized.startsWith('attack ') || normalized.startsWith('strike ') || normalized.startsWith('hit ') || normalized.startsWith('fight ') || normalized.startsWith('shoot ')) {
         const target = normalized.replace(/^(attack|strike|hit|fight|shoot)\s+/, '');
         Game.combat.attack(target);
+      } else if (normalized.startsWith('cast ')) {
+        const spellName = normalized.replace(/^cast\s+/, '');
+        this.castSpell(spellName);
+      } else if (normalized === 'cast') {
+        Game.ui.print('Cast what spell?', 'output-error');
       } else if (normalized === 'save') {
         this.handleSave(null);
       } else if (normalized.startsWith('save ')) {
@@ -1890,7 +1896,7 @@
         Game.state.awaitingConfirm = null;
         Game.ui.print('Save overwrite cancelled.', 'output-system');
       } else {
-        var suggestions = ['look', 'go', 'take', 'drop', 'equip', 'inventory', 'attack', 'talk', 'wait', 'save', 'help'];
+        var suggestions = ['look', 'go', 'take', 'drop', 'equip', 'inventory', 'attack', 'cast', 'talk', 'wait', 'save', 'help'];
         var verb = normalized.split(' ')[0];
         var close = suggestions.filter(s => s.startsWith(verb) || s.includes(verb)).slice(0, 3);
         var msg = 'I don\'t understand "' + normalized + '".';
