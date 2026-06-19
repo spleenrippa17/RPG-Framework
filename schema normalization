@@ -1,0 +1,88 @@
+Please implement a stabilization and schema-normalization milestone for this single-file fantasy text RPG engine.
+
+Do not add major new content yet. The goal is to make the engine stable and ready for future quests, external JSON data packs, and a standalone content builder.
+
+Requirements:
+
+1. Normalize Game.data
+- Remove duplicate/redundant Game.data definitions.
+- Choose one canonical schema for static collections.
+- Use JSON-friendly arrays for exported data collections:
+  stats, skills, backgrounds, locations, items, npcs, monsters, schedules, conditions, spells, dialogues, quests.
+- Build internal lookup indexes by ID after data load, e.g. Game.index.itemsById, Game.index.locationsById.
+- Update all runtime code to use helper functions such as Game.engine.getItem(id), Game.engine.getLocation(id), etc.
+- Preserve the best existing descriptions/content when consolidating data.
+
+2. Preserve static/dynamic separation
+- Do not mutate Game.data during play.
+- On new game, initialize Game.state.world.itemLocations from location.items.
+- During take/drop, only modify Game.state.world.itemLocations.
+- Static location item arrays should remain unchanged.
+- Save/load should correctly preserve moved/taken/dropped items after page refresh.
+
+3. Fix condition evaluation
+- Treat missing flags as false.
+- Check both Game.state.flags and Game.state.player.flags where appropriate.
+- Support existing legacy condition arrays:
+  { flag, equals }
+  { variable, equals/gte/lte/gt/lt }
+  { hasItem }
+  { lacksItem }
+  { timeBetween }
+  { npcAtLocation }
+  { reputation }
+- Add a single helper:
+  Game.conditions.matches(conditions, context)
+- Replace direct calls to Game.engine.evaluateConditions with the new helper, but keep backward compatibility.
+
+4. Fix condition modifiers
+- Condition modifiers should only apply to the relevant stat or skill.
+- Do not add all condition modifiers to every check.
+- Update Game.checks.rollCheck so it applies modifiers for the requested stat and requested skill only.
+- Keep debug output optional.
+
+5. Standardize effects
+- Add a universal effect applier:
+  Game.effects.apply(effects, context)
+- Support both legacy effect syntax and new type-based syntax.
+- New preferred syntax:
+  { type: "setFlag", key: "some_flag", value: true }
+  { type: "clearFlag", key: "some_flag" }
+  { type: "setVar", key: "var_name", value: 1 }
+  { type: "addVar", key: "var_name", amount: 1 }
+  { type: "giveItem", itemId: "item_id", quantity: 1 }
+  { type: "removeItem", itemId: "item_id", quantity: 1 }
+  { type: "changeReputation", faction: "village", amount: 1 }
+  { type: "addCondition", conditionId: "blessed", remainingMinutes: 180 }
+  { type: "removeCondition", conditionId: "blessed" }
+- Update dialogue, spells, and other systems to call Game.effects.apply.
+- Preserve support for current dialogue effects.
+
+6. Prevent repeat reward/effect exploits
+- Add support for once-only dialogue node effects.
+- For example:
+  node.onceFlag = "borin_goblin_advance_paid"
+- If onceFlag is already set, do not apply that node's effects again.
+- Use this for quest advance/reward dialogue nodes.
+
+7. Add basic validation
+- Add a development command or console-accessible function:
+  Game.validation.validateData()
+- Validate duplicate IDs, missing IDs, invalid item references, invalid location exits, invalid schedule references, invalid dialogue node references, and missing item IDs in effects.
+- Print a readable validation summary.
+
+8. Preserve save compatibility if possible
+- If save shape changes, add a migration path or safely default missing fields.
+- Ensure save/load/export/import still work.
+
+Acceptance tests:
+- Start a new game.
+- Create a character.
+- Move between locations.
+- Take/drop/equip/unequip items.
+- Save, refresh page, load, and confirm taken/dropped items remain correct.
+- Talk to Borin and confirm dialogue choices behave correctly.
+- Accept a quest-like dialogue once and confirm rewards cannot be repeated.
+- Fight the goblin and confirm combat still works.
+- Export and import save successfully.
+- Run Game.validation.validateData() and get no critical errors.
