@@ -981,6 +981,15 @@
       ]
     };
 
+    Game.engine.seedItemLocations = function() {
+      if (!Game.state.world) Game.state.world = {};
+      const il = {};
+      for (const loc of Game.data.locations) {
+        il[loc.id] = Array.isArray(loc.items) ? loc.items.slice() : [];
+      }
+      Game.state.world.itemLocations = il;
+    };
+
     Game.engine.take = function(itemName) {
       const player = Game.state.player;
       const loc = Game.engine.getLocation(player.location);
@@ -994,50 +1003,38 @@
         return;
       }
       
-      const staticIdx = loc.items.findIndex(id => {
-        const item = Game.engine.getItem(id);
-        if (!item) return false;
-        return item.name === itemName || (item.aliases && item.aliases.includes(itemName));
-      });
-      
+      if (!Game.state.world.itemLocations) {
+        Game.state.world.itemLocations = {};
+      }
       const locItems = Game.state.world.itemLocations[player.location] || [];
       const dynamicIdx = locItems.findIndex(id => {
         const item = Game.engine.getItem(id);
         if (!item) return false;
         return item.name === itemName || (item.aliases && item.aliases.includes(itemName));
       });
-      
+
       let foundId = null;
-      let source = null;
-      
-      if (staticIdx !== -1) {
-        foundId = loc.items[staticIdx];
-        source = 'static';
-      } else if (dynamicIdx !== -1) {
+
+      if (dynamicIdx !== -1) {
         foundId = locItems[dynamicIdx];
-        source = 'dynamic';
       }
-      
+
       if (!foundId) {
         Game.ui.print(`You don't see "${itemName}" here.`, 'output-error');
         return;
       }
-      
+
       const itemData = Game.engine.getItem(foundId);
       if (!itemData.portable) {
         Game.ui.print(`You can't take the ${itemData.name}.`, 'output-error');
         return;
       }
-      
+
       const oldTier = Game.inventory.getEncumbranceTier().tier;
-      
-      if (source === 'static') {
-        loc.items.splice(staticIdx, 1);
-      } else {
-        locItems.splice(dynamicIdx, 1);
-        Game.state.world.itemLocations[player.location] = locItems;
-      }
-      
+
+      locItems.splice(dynamicIdx, 1);
+      Game.state.world.itemLocations[player.location] = locItems;
+
       Game.inventory.addItem(foundId, 1);
       
       const newTier = Game.inventory.getEncumbranceTier().tier;
@@ -1095,6 +1092,9 @@
       Game.inventory.removeItem(entry.itemId, quantity);
       
       const locId = player.location;
+      if (!Game.state.world.itemLocations) {
+        Game.state.world.itemLocations = {};
+      }
       if (!Game.state.world.itemLocations[locId]) {
         Game.state.world.itemLocations[locId] = [];
       }
@@ -1574,13 +1574,8 @@
       if (presentMonsters.length > 0) Game.ui.print('', '');
       
       const allItems = [];
-      if (loc.items && loc.items.length > 0) {
-        for (const id of loc.items) {
-          const item = Game.engine.getItem(id);
-          if (item) allItems.push(item.name);
-        }
-      }
-      const dynamicItems = Game.state.world.itemLocations[locId] || [];
+      const il = Game.state.world.itemLocations || {};
+      const dynamicItems = il[locId] || [];
       for (const id of dynamicItems) {
         const item = Game.engine.getItem(id);
         if (item) allItems.push(item.name);
@@ -1970,6 +1965,16 @@
       showStep7: function() {
         Game.state.player = this.createPlayer();
 
+        Game.state.world = {
+          itemLocations: {},
+          npcOverrides: {},
+          monsterStates: {},
+          locationStates: {},
+          npcAttitudes: {}
+        };
+        Game.engine.attitudeSystem.initAttitudes();
+        Game.engine.seedItemLocations();
+
         Game.ui.print('', '');
         Game.ui.print('══════════════════════════════════════', 'separator');
         Game.ui.print('  Step 7 of 7: Your Adventure Begins', 'output-highlight');
@@ -2023,21 +2028,16 @@
         }
         if (presentMonsters.length > 0) Game.ui.print('', '');
 
-        if (loc.items && loc.items.length > 0) {
-          var allShownItems = [];
-          for (var si = 0; si < loc.items.length; si++) {
-            var sitm = Game.engine.getItem(loc.items[si]);
-            if (sitm) allShownItems.push(sitm.name);
-          }
-          var dynItems = Game.state.world.itemLocations['village_square'] || [];
-          for (var di = 0; di < dynItems.length; di++) {
-            var ditm = Game.engine.getItem(dynItems[di]);
-            if (ditm) allShownItems.push(ditm.name);
-          }
-          if (allShownItems.length > 0) {
-            Game.ui.print('  You notice: ' + allShownItems.join(', '), 'output-system');
-            Game.ui.print('', '');
-          }
+        var il = Game.state.world.itemLocations || {};
+        var dynItems = il['village_square'] || [];
+        var allShownItems = [];
+        for (var di = 0; di < dynItems.length; di++) {
+          var ditm = Game.engine.getItem(dynItems[di]);
+          if (ditm) allShownItems.push(ditm.name);
+        }
+        if (allShownItems.length > 0) {
+          Game.ui.print('  You notice: ' + allShownItems.join(', '), 'output-system');
+          Game.ui.print('', '');
         }
 
         Game.ui.print('Type "help" for available commands.', 'output-system');
