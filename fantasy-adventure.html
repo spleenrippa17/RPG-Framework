@@ -3634,6 +3634,7 @@
           },
           {
             id: 'goblin_quest',
+            onceFlag: 'borin_goblin_quest_accepted',
             text: '"You\'d take them on? Brave or foolish — hard to tell which." He reaches under the counter and produces a small leather pouch. "Here. Twenty gold to start. Bring me proof you\'ve dealt with Scarclaw, and there\'s more where that came from."',
             effects: [
               { setFlag: 'goblin_quest_accepted', value: true },
@@ -3647,6 +3648,7 @@
           },
           {
             id: 'goblin_rewards',
+            onceFlag: 'borin_goblin_rewards_claimed',
             text: '"You did it? By the gods, I thought you were mad to try." He counts out coins and slides them across the counter. "Here\'s thirty gold as promised. And... take this." He produces a small silver amulet. "Protects against poison. Consider it a gift from a grateful merchant."',
             effects: [
               { setFlag: 'goblin_rewards_claimed', value: true },
@@ -3903,7 +3905,14 @@
       }
       Game.state.currentNode = node;
       if (node.effects) {
-        Game.effects.apply(node.effects);
+        if (node.onceFlag && Game.state.flags[node.onceFlag]) {
+          Game.ui.print('[Reward already claimed]', 'output-system');
+        } else {
+          Game.effects.apply(node.effects);
+          if (node.onceFlag && !Game.state.flags[node.onceFlag]) {
+            Game.state.flags[node.onceFlag] = true;
+          }
+        }
       }
       Game.ui.print('', '');
       Game.ui.print(node.text, 'output-narrative');
