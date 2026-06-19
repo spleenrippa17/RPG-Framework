@@ -3017,8 +3017,10 @@
       const die = Math.floor(Math.random() * 20) + 1;
       const statVal = (player.stats && player.stats[stat]) || 0;
       const skillVal = (player.skills && player.skills[skill]) || 0;
-      const condMods = this.getConditionModifiers(player);
-      const bonusTotal = statVal + skillVal + condMods.total;
+      const statMod = Game.conditions.getModifierForStat(player, stat);
+      const skillMod = Game.conditions.getModifierForStat(player, skill);
+      const condModTotal = statMod + skillMod;
+      const bonusTotal = statVal + skillVal + condModTotal;
       const total = die + bonusTotal;
       const margin = total - difficulty;
       let degree;
@@ -3036,12 +3038,11 @@
         degree = 'bad_failure';
       }
       if (Game.checks.debugMode) {
-        let d = '[DEBUG] d20(' + die + ') + ' + stat + '(' + statVal + ') + ' + skill + '(' + skillVal + ')';
-        if (condMods.total !== 0) d += ' + cond(' + condMods.total + ')';
-        d += ' = ' + total + ' vs ' + difficulty + ' [' + degree + ']';
+        let d = '[DEBUG] d20(' + die + ') + ' + stat + '(' + statVal + (statMod !== 0 ? (statMod >= 0 ? '+' : '') + statMod : '') + ') + ' + skill + '(' + skillVal + (skillMod !== 0 ? (skillMod >= 0 ? '+' : '') + skillMod : '') + ') = ' + total + ' vs ' + difficulty + ' [' + degree + ']';
         Game.ui.print(d, 'output-system');
       }
-      return { die: die, stat: stat, statValue: statVal, skill: skill, skillValue: skillVal, conditionModifiers: condMods.details, difficulty: difficulty, total: total, margin: margin, degree: degree };
+      const condMods = this.getConditionModifiers(player);
+      return { die: die, stat: stat, statValue: statVal, statModifier: statMod, skill: skill, skillValue: skillVal, skillModifier: skillMod, conditionModifiers: condMods.details, difficulty: difficulty, total: total, margin: margin, degree: degree };
     };
 
     Game.checks.getConditionModifiers = function(actor) {
