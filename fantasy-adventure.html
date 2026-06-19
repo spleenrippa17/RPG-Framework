@@ -183,550 +183,6 @@
       version: "1.0.0",
       
       data: {
-        locations: [
-          {
-            id: "village_square",
-            name: "Village Square",
-            descriptions: [
-              {
-                text: "You stand in the muddy square of a small frontier village. A stone well sits in the center, its rope frayed from years of use. Timber-framed buildings line the edges, their upper stories leaning over the square like eavesdroppers. The scent of woodsmoke hangs in the damp air.",
-                conditions: []
-              },
-              {
-                text: "The village square is quiet. The old well has collapsed into a dark pit, its stones scattered across the mud.",
-                conditions: [
-                  { flag: "well_collapsed", equals: true }
-                ]
-              },
-              {
-                text: "The village square is bathed in pale moonlight. The well stands silent, and the buildings loom as dark shapes against the starless sky.",
-                conditions: [
-                  { timeBetween: [0, 300] }
-                ]
-              }
-            ],
-            exits: {
-              north: {
-                to: "general_store",
-                travelMinutes: 2,
-                conditions: []
-              },
-              south: {
-                to: "silver_stag_tavern",
-                travelMinutes: 2,
-                conditions: []
-              },
-              east: {
-                to: "temple_yard",
-                travelMinutes: 3,
-                conditions: []
-              }
-            },
-            items: ["village_notice"],
-            tags: ["settlement", "outdoors"]
-          },
-          {
-            id: "general_store",
-            name: "Borin's General Store",
-            descriptions: [
-              {
-                text: "Crates and barrels crowd the narrow shop. Dried herbs hang from the low ceiling, and a battered ledger lies open on the counter. Shelves groan under the weight of rope, nails, lamps, and sundry goods. The smell of ink and sawdust fills the air.",
-                conditions: []
-              },
-              {
-                text: "The shop is closed. Wooden shutters cover the windows, and a sign reading 'BACK AT DAWN' hangs on the door.",
-                conditions: [
-                  { timeBetween: [1260, 480] }
-                ]
-              }
-            ],
-            exits: {
-              south: {
-                to: "village_square",
-                travelMinutes: 2,
-                conditions: []
-              }
-            },
-            items: [],
-            tags: ["settlement", "indoors", "shop"]
-          },
-          {
-            id: "silver_stag_tavern",
-            name: "The Silver Stag Tavern",
-            descriptions: [
-              {
-                text: "A warm fire crackles in the stone hearth. Rough-hewn tables surround a bar of dark oak, behind which rows of bottles catch the firelight. A mounted stag's head watches from above the mantle, its antlers draped with dried hops. The hum of quiet conversation fills the room.",
-                conditions: []
-              },
-              {
-                text: "The tavern is deserted. Chairs are stacked on tables, and the fire has burned low to embers. A single candle gutters on the bar.",
-                conditions: [
-                  { timeBetween: [0, 360] }
-                ]
-              },
-              {
-                text: "The tavern is lively. A bard strums a lute in the corner, and the smell of roasting meat drifts from the kitchen.",
-                conditions: [
-                  { timeBetween: [1020, 1320] }
-                ]
-              }
-            ],
-            exits: {
-              north: {
-                to: "village_square",
-                travelMinutes: 2,
-                conditions: []
-              }
-            },
-            items: [],
-            tags: ["settlement", "indoors", "tavern"]
-          },
-          {
-            id: "temple_yard",
-            name: "Temple Yard",
-            descriptions: [
-              {
-                text: "A small stone temple stands at the edge of a weed-choked yard. Weathered statues of forgotten saints line a cracked flagstone path. A simple altar is visible through the open doorway, candles flickering within. The air here feels still and watchful.",
-                conditions: []
-              }
-            ],
-            exits: {
-              west: {
-                to: "village_square",
-                travelMinutes: 3,
-                conditions: []
-              }
-            },
-            items: [],
-            tags: ["settlement", "outdoors", "sacred"]
-          },
-          {
-            id: "north_wood",
-            name: "North Wood",
-            descriptions: [
-              {
-                text: "The village gives way to a curtain of ancient oaks. The canopy is thick overhead, filtering the light into a dim green haze. A narrow trail winds between gnarled roots and fallen logs. Birdsong seems distant here, replaced by the creak of branches and the occasional snap of a twig.",
-                conditions: []
-              },
-              {
-                text: "The forest is eerily silent. Even the wind has died. Something watches from the shadows between the trunks.",
-                conditions: [
-                  { flag: "goblins_in_woods", equals: true }
-                ]
-              },
-              {
-                text: "Moonlight filters through the bare branches, casting long silver shadows on the forest floor. The trail is hard to follow in the dark.",
-                conditions: [
-                  { timeBetween: [1200, 360] }
-                ]
-              }
-            ],
-            exits: {
-              south: {
-                to: "village_square",
-                travelMinutes: 3,
-                conditions: []
-              }
-            },
-            items: [],
-            tags: ["wilderness", "outdoors", "forest"]
-          }
-        ],
-
-        items: [
-          {
-            id: "hunting_bow",
-            name: "hunting bow",
-            type: "weapon",
-            aliases: ["bow", "yew bow"],
-            description: "A simple but well-kept bow of yew wood. The string is taut and oiled.",
-            weight: 2,
-            stackable: false,
-            portable: true,
-            slot: "weapon",
-            stat: "agility",
-            skill: "ranged",
-            damage: "1d6",
-            attackBonus: 0,
-            value: 15
-          },
-          {
-            id: "rusty_sword",
-            name: "rusty sword",
-            type: "weapon",
-            aliases: ["sword", "blade", "rusty blade"],
-            description: "A pitted iron sword. It has seen better days, but the edge still bites.",
-            weight: 3,
-            stackable: false,
-            portable: true,
-            slot: "weapon",
-            stat: "might",
-            skill: "melee",
-            damage: "1d6",
-            attackBonus: 0,
-            value: 5
-          },
-          {
-            id: "iron_sword",
-            name: "iron sword",
-            type: "weapon",
-            aliases: ["sword", "blade"],
-            description: "A plain but reliable iron sword. The grip is wrapped in worn leather.",
-            weight: 3,
-            stackable: false,
-            portable: true,
-            slot: "weapon",
-            stat: "might",
-            skill: "melee",
-            damage: "1d8",
-            attackBonus: 0,
-            value: 20
-          },
-          {
-            id: "travel_rations",
-            name: "travel rations",
-            type: "consumable",
-            aliases: ["rations", "food", "ration"],
-            description: "Dried meat, hard bread, and a little cheese wrapped in cloth.",
-            weight: 1,
-            stackable: true,
-            portable: true,
-            slot: null,
-            stat: null,
-            skill: null,
-            damage: null,
-            attackBonus: 0,
-            value: 1
-          },
-          {
-            id: "old_iron_key",
-            name: "old iron key",
-            type: "key",
-            aliases: ["key", "iron key"],
-            description: "An old key with a dark red stain near the teeth. It feels heavier than it should.",
-            weight: 0,
-            stackable: false,
-            portable: true,
-            slot: null,
-            stat: null,
-            skill: null,
-            damage: null,
-            attackBonus: 0,
-            value: 0
-          },
-          {
-            id: "chainmail",
-            name: "chainmail",
-            type: "armor",
-            aliases: ["mail", "chain", "chain mail"],
-            description: "A shirt of interlocking iron rings. It offers solid protection at the cost of noise and weight.",
-            weight: 35,
-            stackable: false,
-            portable: true,
-            slot: "armor",
-            stat: null,
-            skill: null,
-            damage: null,
-            attackBonus: 0,
-            value: 75,
-            defenseBonus: 3,
-            stealthPenalty: -2,
-            agilityPenalty: -1
-          },
-          {
-            id: "travel_cloak",
-            name: "travel cloak",
-            type: "armor",
-            aliases: ["cloak"],
-            description: "A rough wool cloak, dark green and travel-stained. It keeps the rain off well enough.",
-            weight: 2,
-            stackable: false,
-            portable: true,
-            slot: "cloak",
-            stat: null,
-            skill: null,
-            damage: null,
-            attackBonus: 0,
-            value: 5,
-            defenseBonus: 1,
-            stealthPenalty: 0,
-            agilityPenalty: 0
-          },
-          {
-            id: "torch",
-            name: "torch",
-            type: "light",
-            aliases: ["torches"],
-            description: "A length of pitch-soaked wood wrapped in oily rags. It will burn for a few hours.",
-            weight: 1,
-            stackable: true,
-            portable: true,
-            slot: null,
-            stat: null,
-            skill: null,
-            damage: null,
-            attackBonus: 0,
-            value: 1
-          },
-          {
-            id: "skinning_knife",
-            name: "skinning knife",
-            type: "tool",
-            aliases: ["knife"],
-            description: "A short, curved blade with a bone handle. Useful for dressing game, and sharp enough in a pinch.",
-            weight: 1,
-            stackable: false,
-            portable: true,
-            slot: null,
-            stat: null,
-            skill: null,
-            damage: null,
-            attackBonus: 0,
-            value: 3
-          },
-          {
-            id: "flint_and_steel",
-            name: "flint and steel",
-            type: "tool",
-            aliases: ["flint", "steel", "flint and steel"],
-            description: "A piece of flint and a small steel striker. Enough to start a fire in dry conditions.",
-            weight: 1,
-            stackable: false,
-            portable: true,
-            slot: null,
-            stat: null,
-            skill: null,
-            damage: null,
-            attackBonus: 0,
-            value: 2
-          },
-          {
-            id: "coil_of_rope",
-            name: "coil of rope",
-            type: "tool",
-            aliases: ["rope"],
-            description: "About fifty feet of sturdy hemp rope, coiled and tied.",
-            weight: 10,
-            stackable: false,
-            portable: true,
-            slot: null,
-            stat: null,
-            skill: null,
-            damage: null,
-            attackBonus: 0,
-            value: 5
-          },
-          {
-            id: "arrows",
-            name: "arrows",
-            type: "ammunition",
-            aliases: ["arrow", "arrows"],
-            description: "Iron-tipped arrows with goose-feather fletching.",
-            weight: 1,
-            stackable: true,
-            portable: true,
-            slot: null,
-            stat: null,
-            skill: null,
-            damage: null,
-            attackBonus: 0,
-            value: 1
-          },
-          {
-            id: "copper_coin",
-            name: "copper coin",
-            type: "treasure",
-            aliases: ["coin", "copper", "coins"],
-            description: "A worn copper coin stamped with the profile of a forgotten king.",
-            weight: 0,
-            stackable: true,
-            portable: true,
-            slot: null,
-            stat: null,
-            skill: null,
-            damage: null,
-            attackBonus: 0,
-            value: 1
-          },
-          {
-            id: "goblin_knife",
-            name: "goblin knife",
-            type: "weapon",
-            aliases: ["knife", "jagged knife"],
-            description: "A crude, jagged blade crusted with old blood. It smells of rust and rot.",
-            weight: 1,
-            stackable: false,
-            portable: true,
-            slot: "weapon",
-            stat: "agility",
-            skill: "melee",
-            damage: "1d4+1",
-            attackBonus: 0,
-            value: 2
-          },
-          {
-            id: "village_notice",
-            name: "village notice",
-            type: "quest",
-            aliases: ["notice", "posted notice", "sign"],
-            description: "A notice nailed to a post. It reads: 'GOBLIN SIGHTINGS IN THE NORTH WOOD. BOUNTY OFFERED FOR THEIR REMOVAL. SEE BORIN AT THE GENERAL STORE.'",
-            weight: 0,
-            stackable: false,
-            portable: false,
-            slot: null,
-            stat: null,
-            skill: null,
-            damage: null,
-            attackBonus: 0,
-            value: 0
-          }
-        ],
-
-        backgrounds: [
-          {
-            id: "mercenary",
-            name: "Mercenary",
-            description: "You have fought in a dozen skirmishes for coin. You know the weight of steel and the smell of blood.",
-            statBonuses: { might: 1, endurance: 1 },
-            skillBonuses: { melee: 2, defense: 1, intimidation: 1 },
-            startingItems: [
-              { itemId: "iron_sword", quantity: 1 },
-              { itemId: "travel_cloak", quantity: 1 },
-              { itemId: "travel_rations", quantity: 2 },
-              { itemId: "flint_and_steel", quantity: 1 }
-            ],
-            startingEquipment: {
-              weapon: "iron_sword",
-              cloak: "travel_cloak"
-            },
-            startingGold: 15,
-            flags: { veteran_fighter: true },
-            reputation: { village: 0, goblins: -1 }
-          },
-          {
-            id: "village_hunter",
-            name: "Village Hunter",
-            description: "You know the old tracks, the deer paths, and the silence before danger.",
-            statBonuses: { agility: 1, endurance: 1 },
-            skillBonuses: { survival: 2, ranged: 1, stealth: 1 },
-            startingItems: [
-              { itemId: "hunting_bow", quantity: 1 },
-              { itemId: "skinning_knife", quantity: 1 },
-              { itemId: "travel_cloak", quantity: 1 },
-              { itemId: "travel_rations", quantity: 3 },
-              { itemId: "flint_and_steel", quantity: 1 },
-              { itemId: "arrows", quantity: 10 }
-            ],
-            startingEquipment: {
-              weapon: "hunting_bow",
-              cloak: "travel_cloak"
-            },
-            startingGold: 8,
-            flags: { knows_forest_paths: true },
-            reputation: { village: 1, goblins: -1 }
-          },
-          {
-            id: "hedge_wizard",
-            name: "Hedge Wizard",
-            description: "You learned a few tricks from a traveling mystic. Not true magic, perhaps, but close enough.",
-            statBonuses: { will: 1, intellect: 1 },
-            skillBonuses: { magic: 2, lore: 1, investigation: 1 },
-            startingItems: [
-              { itemId: "skinning_knife", quantity: 1 },
-              { itemId: "travel_cloak", quantity: 1 },
-              { itemId: "travel_rations", quantity: 2 },
-              { itemId: "torch", quantity: 2 }
-            ],
-            startingEquipment: {
-              weapon: "skinning_knife",
-              cloak: "travel_cloak"
-            },
-            startingGold: 5,
-            flags: { knows_witchlight: true },
-            reputation: { village: 0, church: 1 }
-          },
-          {
-            id: "temple_acolyte",
-            name: "Temple Acolyte",
-            description: "You served in a small temple, learning the old rites and the patience of stone walls.",
-            statBonuses: { will: 1, presence: 1 },
-            skillBonuses: { lore: 2, persuasion: 1, magic: 1 },
-            startingItems: [
-              { itemId: "travel_cloak", quantity: 1 },
-              { itemId: "torch", quantity: 2 },
-              { itemId: "travel_rations", quantity: 2 },
-              { itemId: "flint_and_steel", quantity: 1 }
-            ],
-            startingEquipment: {
-              cloak: "travel_cloak"
-            },
-            startingGold: 6,
-            flags: { temple_training: true },
-            reputation: { village: 0, church: 2 }
-          },
-          {
-            id: "street_urchin",
-            name: "Street Urchin",
-            description: "You grew up in the gutters, learning to survive by your wits and nimble fingers.",
-            statBonuses: { agility: 2 },
-            skillBonuses: { stealth: 2, thievery: 1, deception: 1 },
-            startingItems: [
-              { itemId: "skinning_knife", quantity: 1 },
-              { itemId: "travel_cloak", quantity: 1 },
-              { itemId: "travel_rations", quantity: 1 },
-              { itemId: "torch", quantity: 1 }
-            ],
-            startingEquipment: {
-              weapon: "skinning_knife",
-              cloak: "travel_cloak"
-            },
-            startingGold: 12,
-            flags: { streetwise: true },
-            reputation: { village: -1, thieves_guild: 1 }
-          },
-          {
-            id: "disgraced_noble",
-            name: "Disgraced Noble",
-            description: "Your family name opened doors, once. Now you carry only the memory of better days and the skills of your upbringing.",
-            statBonuses: { presence: 2 },
-            skillBonuses: { persuasion: 2, deception: 1, lore: 1 },
-            startingItems: [
-              { itemId: "iron_sword", quantity: 1 },
-              { itemId: "travel_cloak", quantity: 1 },
-              { itemId: "travel_rations", quantity: 2 },
-              { itemId: "torch", quantity: 1 }
-            ],
-            startingEquipment: {
-              weapon: "iron_sword",
-              cloak: "travel_cloak"
-            },
-            startingGold: 20,
-            flags: { noble_bearing: true },
-            reputation: { village: 1, church: 0 }
-          },
-          {
-            id: "grave_robber",
-            name: "Grave Robber",
-            description: "You know the weight of silence and the sound of a lock giving way. The dead do not argue.",
-            statBonuses: { agility: 1, intellect: 1 },
-            skillBonuses: { thievery: 2, stealth: 1, investigation: 1 },
-            startingItems: [
-              { itemId: "skinning_knife", quantity: 1 },
-              { itemId: "travel_cloak", quantity: 1 },
-              { itemId: "torch", quantity: 3 },
-              { itemId: "old_iron_key", quantity: 1 },
-              { itemId: "flint_and_steel", quantity: 1 }
-            ],
-            startingEquipment: {
-              weapon: "skinning_knife",
-              cloak: "travel_cloak"
-            },
-            startingGold: 10,
-            flags: { unclean_hands: true },
-            reputation: { village: -1, church: -1, thieves_guild: 1 }
-          }
-        ],
-
         npcs: [
           {
             id: "borin_shopkeeper",
@@ -946,22 +402,6 @@
           }
         ],
 
-        skills: [
-          { id: "athletics", name: "Athletics", mainStat: "might" },
-          { id: "stealth", name: "Stealth", mainStat: "agility" },
-          { id: "thievery", name: "Thievery", mainStat: "agility" },
-          { id: "survival", name: "Survival", mainStat: "endurance" },
-          { id: "lore", name: "Lore", mainStat: "intellect" },
-          { id: "investigation", name: "Investigation", mainStat: "intellect" },
-          { id: "persuasion", name: "Persuasion", mainStat: "presence" },
-          { id: "deception", name: "Deception", mainStat: "presence" },
-          { id: "intimidation", name: "Intimidation", mainStat: "presence" },
-          { id: "melee", name: "Melee", mainStat: "might" },
-          { id: "ranged", name: "Ranged", mainStat: "agility" },
-          { id: "defense", name: "Defense", mainStat: "agility" },
-          { id: "magic", name: "Magic", mainStat: "will" }
-        ],
-
         difficulties: {
           trivial: 5,
           easy: 8,
@@ -985,8 +425,10 @@
           shoot: "attack"
         }
       },
+
+      index: {},
       state: {},
-      
+
       ui: {},
       parser: {},
       engine: {},
@@ -1150,42 +592,58 @@
       }
     ];
 
-    Game.data.items = {
-      iron_sword: { id: 'iron_sword', name: 'iron sword', aliases: ['sword', 'blade'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 20, damage: '1d8', stat: 'might', skill: 'melee', attackBonus: 0 },
-      hunting_bow: { id: 'hunting_bow', name: 'hunting bow', aliases: ['bow', 'yew bow'], weight: 2, slot: 'weapon', type: 'weapon', portable: true, value: 15, damage: '1d6', stat: 'agility', skill: 'ranged', attackBonus: 0 },
-      skinning_knife: { id: 'skinning_knife', name: 'skinning knife', aliases: ['knife'], weight: 1, type: 'tool', portable: true, value: 3, damage: '1d4', stat: 'agility', skill: 'melee', attackBonus: 0 },
-      travel_cloak: { id: 'travel_cloak', name: 'travel cloak', aliases: ['cloak'], weight: 2, slot: 'cloak', type: 'clothing', portable: true, value: 5, defenseBonus: 1 },
-      travel_rations: { id: 'travel_rations', name: 'travel rations', aliases: ['rations', 'food', 'ration'], weight: 1, type: 'consumable', stackable: true, portable: true, value: 1 },
-      flint_and_steel: { id: 'flint_and_steel', name: 'flint and steel', aliases: ['flint', 'steel'], weight: 1, type: 'tool', portable: true, value: 2 },
-      leather_armor: { id: 'leather_armor', name: 'leather armor', aliases: ['armor', 'leather'], weight: 15, slot: 'armor', type: 'armor', portable: true, defenseBonus: 2, value: 30 },
-      gnarled_staff: { id: 'gnarled_staff', name: 'gnarled staff', aliases: ['staff'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 5, damage: '1d6', stat: 'might', skill: 'melee', attackBonus: 0 },
-      traveling_robes: { id: 'traveling_robes', name: 'traveling robes', aliases: ['robes'], weight: 3, slot: 'armor', type: 'clothing', portable: true, value: 5 },
-      spell_pouch: { id: 'spell_pouch', name: 'spell pouch', aliases: ['spell pouch'], weight: 1, type: 'tool', portable: true, value: 10 },
-      wooden_shield: { id: 'wooden_shield', name: 'wooden shield', aliases: ['shield'], weight: 6, slot: 'offhand', type: 'shield', portable: true, shieldBonus: 1, value: 8 },
-      holy_symbol: { id: 'holy_symbol', name: 'holy symbol', aliases: ['symbol', 'holy symbol'], weight: 0, type: 'misc', portable: true, value: 0 },
-      rusty_dagger: { id: 'rusty_dagger', name: 'rusty dagger', aliases: ['dagger', 'rusty dagger'], weight: 1, slot: 'weapon', type: 'weapon', portable: true, value: 2, damage: '1d4', stat: 'agility', skill: 'melee', attackBonus: 0 },
-      ragged_cloak: { id: 'ragged_cloak', name: 'ragged cloak', aliases: ['cloak', 'ragged cloak'], weight: 1, slot: 'cloak', type: 'clothing', portable: true, value: 1 },
-      lockpicks: { id: 'lockpicks', name: 'lockpicks', aliases: ['lockpicks', 'picks'], weight: 0, type: 'tool', portable: true, value: 5 },
-      fine_sword: { id: 'fine_sword', name: 'fine sword', aliases: ['sword', 'blade', 'fine blade'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 40, damage: '1d8', stat: 'might', skill: 'melee', attackBonus: 1 },
-      noble_clothes: { id: 'noble_clothes', name: 'noble clothes', aliases: ['clothes', 'noble clothes'], weight: 3, slot: 'armor', type: 'clothing', portable: true, value: 25 },
-      signet_ring: { id: 'signet_ring', name: 'signet ring', aliases: ['ring', 'signet'], weight: 0, slot: 'accessory1', type: 'misc', portable: true, value: 15 },
-      dark_cloak: { id: 'dark_cloak', name: 'dark cloak', aliases: ['cloak', 'dark cloak'], weight: 2, slot: 'cloak', type: 'clothing', portable: true, value: 5 },
-      torch: { id: 'torch', name: 'torch', aliases: ['torches'], weight: 1, type: 'light', stackable: true, portable: true, value: 1 },
-      village_notice: { id: 'village_notice', name: 'notice board posting', aliases: ['notice', 'posting', 'notice board', 'sign'], weight: 0, type: 'misc', portable: false, value: 0 },
-      goblin_knife: { id: 'goblin_knife', name: 'goblin knife', aliases: ['knife', 'jagged knife'], weight: 1, slot: 'weapon', type: 'weapon', portable: true, value: 2, damage: '1d4+1', stat: 'agility', skill: 'melee', attackBonus: 0 },
-      copper_coin: { id: 'copper_coin', name: 'copper coin', aliases: ['coin', 'copper', 'coins'], weight: 0, type: 'treasure', stackable: true, portable: true, value: 1 },
-      arrows: { id: 'arrows', name: 'arrows', aliases: ['arrow'], weight: 1, type: 'ammunition', stackable: true, portable: true, value: 1 },
-      charm_of_protection: { id: 'charm_of_protection', name: 'charm of protection', aliases: ['charm', 'amulet'], weight: 0, slot: 'accessory1', type: 'misc', portable: true, value: 25, description: 'A small silver amulet that protects against poison.' }
-    };
+    Game.data.items = [
+      { id: 'iron_sword', name: 'iron sword', aliases: ['sword', 'blade'], description: 'A plain but reliable iron sword. The grip is wrapped in worn leather.', weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 20, damage: '1d8', stat: 'might', skill: 'melee', attackBonus: 0 },
+      { id: 'hunting_bow', name: 'hunting bow', aliases: ['bow', 'yew bow'], description: 'A simple but well-kept bow of yew wood. The string is taut and oiled.', weight: 2, slot: 'weapon', type: 'weapon', portable: true, value: 15, damage: '1d6', stat: 'agility', skill: 'ranged', attackBonus: 0 },
+      { id: 'skinning_knife', name: 'skinning knife', aliases: ['knife'], description: 'A short, curved blade with a bone handle. Useful for dressing game, and sharp enough in a pinch.', weight: 1, type: 'tool', portable: true, value: 3, damage: '1d4', stat: 'agility', skill: 'melee', attackBonus: 0 },
+      { id: 'travel_cloak', name: 'travel cloak', aliases: ['cloak'], description: 'A rough wool cloak, dark green and travel-stained. It keeps the rain off well enough.', weight: 2, slot: 'cloak', type: 'clothing', portable: true, value: 5, defenseBonus: 1 },
+      { id: 'travel_rations', name: 'travel rations', aliases: ['rations', 'food', 'ration'], description: 'Dried meat, hard bread, and a little cheese wrapped in cloth.', weight: 1, type: 'consumable', stackable: true, portable: true, value: 1 },
+      { id: 'flint_and_steel', name: 'flint and steel', aliases: ['flint', 'steel'], description: 'A piece of flint and a small steel striker. Enough to start a fire in dry conditions.', weight: 1, type: 'tool', portable: true, value: 2 },
+      { id: 'leather_armor', name: 'leather armor', aliases: ['armor', 'leather'], weight: 15, slot: 'armor', type: 'armor', portable: true, defenseBonus: 2, value: 30 },
+      { id: 'gnarled_staff', name: 'gnarled staff', aliases: ['staff'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 5, damage: '1d6', stat: 'might', skill: 'melee', attackBonus: 0 },
+      { id: 'traveling_robes', name: 'traveling robes', aliases: ['robes'], weight: 3, slot: 'armor', type: 'clothing', portable: true, value: 5 },
+      { id: 'spell_pouch', name: 'spell pouch', aliases: ['spell pouch'], weight: 1, type: 'tool', portable: true, value: 10 },
+      { id: 'wooden_shield', name: 'wooden shield', aliases: ['shield'], weight: 6, slot: 'offhand', type: 'shield', portable: true, shieldBonus: 1, value: 8 },
+      { id: 'holy_symbol', name: 'holy symbol', aliases: ['symbol', 'holy symbol'], weight: 0, type: 'misc', portable: true, value: 0 },
+      { id: 'rusty_dagger', name: 'rusty dagger', aliases: ['dagger', 'rusty dagger'], weight: 1, slot: 'weapon', type: 'weapon', portable: true, value: 2, damage: '1d4', stat: 'agility', skill: 'melee', attackBonus: 0 },
+      { id: 'ragged_cloak', name: 'ragged cloak', aliases: ['cloak', 'ragged cloak'], weight: 1, slot: 'cloak', type: 'clothing', portable: true, value: 1 },
+      { id: 'lockpicks', name: 'lockpicks', aliases: ['lockpicks', 'picks'], weight: 0, type: 'tool', portable: true, value: 5 },
+      { id: 'fine_sword', name: 'fine sword', aliases: ['sword', 'blade', 'fine blade'], weight: 3, slot: 'weapon', type: 'weapon', portable: true, value: 40, damage: '1d8', stat: 'might', skill: 'melee', attackBonus: 1 },
+      { id: 'noble_clothes', name: 'noble clothes', aliases: ['clothes', 'noble clothes'], weight: 3, slot: 'armor', type: 'clothing', portable: true, value: 25 },
+      { id: 'signet_ring', name: 'signet ring', aliases: ['ring', 'signet'], weight: 0, slot: 'accessory1', type: 'misc', portable: true, value: 15 },
+      { id: 'dark_cloak', name: 'dark cloak', aliases: ['cloak', 'dark cloak'], weight: 2, slot: 'cloak', type: 'clothing', portable: true, value: 5 },
+      { id: 'torch', name: 'torch', aliases: ['torches'], description: 'A length of pitch-soaked wood wrapped in oily rags. It will burn for a few hours.', weight: 1, type: 'light', stackable: true, portable: true, value: 1 },
+      { id: 'village_notice', name: 'notice board posting', aliases: ['notice', 'posting', 'notice board', 'sign'], description: "A notice nailed to a post. It reads: 'GOBLIN SIGHTINGS IN THE NORTH WOOD. BOUNTY OFFERED FOR THEIR REMOVAL. SEE BORIN AT THE GENERAL STORE.'", weight: 0, type: 'misc', portable: false, value: 0 },
+      { id: 'goblin_knife', name: 'goblin knife', aliases: ['knife', 'jagged knife'], description: 'A crude, jagged blade crusted with old blood. It smells of rust and rot.', weight: 1, slot: 'weapon', type: 'weapon', portable: true, value: 2, damage: '1d4+1', stat: 'agility', skill: 'melee', attackBonus: 0 },
+      { id: 'copper_coin', name: 'copper coin', aliases: ['coin', 'copper', 'coins'], description: 'A worn copper coin stamped with the profile of a forgotten king.', weight: 0, type: 'treasure', stackable: true, portable: true, value: 1 },
+      { id: 'arrows', name: 'arrows', aliases: ['arrow'], description: 'Iron-tipped arrows with goose-feather fletching.', weight: 1, type: 'ammunition', stackable: true, portable: true, value: 1 },
+      { id: 'charm_of_protection', name: 'charm of protection', aliases: ['charm', 'amulet'], weight: 0, slot: 'accessory1', type: 'misc', portable: true, value: 25, description: 'A small silver amulet that protects against poison.' },
+      { id: 'rusty_sword', name: 'rusty sword', type: 'weapon', aliases: ['sword', 'blade', 'rusty blade'], description: 'A pitted iron sword. It has seen better days, but the edge still bites.', weight: 3, stackable: false, portable: true, slot: 'weapon', stat: 'might', skill: 'melee', damage: '1d6', attackBonus: 0, value: 5 },
+      { id: 'old_iron_key', name: 'old iron key', type: 'key', aliases: ['key', 'iron key'], description: 'An old key with a dark red stain near the teeth. It feels heavier than it should.', weight: 0, stackable: false, portable: true, slot: null, stat: null, skill: null, damage: null, attackBonus: 0, value: 0 },
+      { id: 'chainmail', name: 'chainmail', type: 'armor', aliases: ['mail', 'chain', 'chain mail'], description: 'A shirt of interlocking iron rings. It offers solid protection at the cost of noise and weight.', weight: 35, stackable: false, portable: true, slot: 'armor', stat: null, skill: null, damage: null, attackBonus: 0, value: 75, defenseBonus: 3, stealthPenalty: -2, agilityPenalty: -1 },
+      { id: 'coil_of_rope', name: 'coil of rope', type: 'tool', aliases: ['rope'], description: 'About fifty feet of sturdy hemp rope, coiled and tied.', weight: 10, stackable: false, portable: true, slot: null, stat: null, skill: null, damage: null, attackBonus: 0, value: 5 }
+    ];
 
-    Game.data.locations = {
-      village_square: {
+    Game.data.locations = [
+      {
         id: 'village_square',
         name: 'Village Square',
         descriptions: [
           {
             text: 'You stand in the muddy square of a small frontier village. A stone well sits at the center, its rope darkened by years of use. Timber-framed buildings crowd the edges — the general store to the north, the Silver Stag tavern to the south, and the temple yard to the east. A notice board stands near the well, plastered with faded parchments.',
             conditions: []
+          },
+          {
+            text: 'The village square is quiet. The old well has collapsed into a dark pit, its stones scattered across the mud.',
+            conditions: [
+              { flag: 'well_collapsed', equals: true }
+            ]
+          },
+          {
+            text: 'The village square is bathed in pale moonlight. The well stands silent, and the buildings loom as dark shapes against the starless sky.',
+            conditions: [
+              { timeBetween: [0, 300] }
+            ]
           }
         ],
         exits: {
@@ -1196,13 +654,19 @@
         items: ['village_notice'],
         tags: ['settlement', 'outdoors']
       },
-      general_store: {
+      {
         id: 'general_store',
         name: "Borin's General Store",
         descriptions: [
           {
             text: 'Crates and barrels crowd the narrow shop. Dried herbs hang from the low ceiling, and a battered ledger lies open on the counter. Shelves groan under the weight of rope, nails, lamps, and sundry goods. The smell of ink and sawdust fills the air.',
             conditions: []
+          },
+          {
+            text: 'The shop is closed. Wooden shutters cover the windows, and a sign reading \'BACK AT DAWN\' hangs on the door.',
+            conditions: [
+              { timeBetween: [1260, 480] }
+            ]
           }
         ],
         exits: {
@@ -1212,13 +676,25 @@
         items: [],
         tags: ['settlement', 'indoors', 'shop']
       },
-      silver_stag_tavern: {
+      {
         id: 'silver_stag_tavern',
         name: 'The Silver Stag Tavern',
         descriptions: [
           {
             text: 'A warm fire crackles in the stone hearth. Rough-hewn tables surround a bar of dark oak, behind which rows of bottles catch the firelight. A mounted stag head watches from above the mantle, its antlers draped with dried hops.',
             conditions: []
+          },
+          {
+            text: 'The tavern is deserted. Chairs are stacked on tables, and the fire has burned low to embers. A single candle gutters on the bar.',
+            conditions: [
+              { timeBetween: [0, 360] }
+            ]
+          },
+          {
+            text: 'The tavern is lively. A bard strums a lute in the corner, and the smell of roasting meat drifts from the kitchen.',
+            conditions: [
+              { timeBetween: [1020, 1320] }
+            ]
           }
         ],
         exits: {
@@ -1227,7 +703,7 @@
         items: [],
         tags: ['settlement', 'indoors', 'tavern']
       },
-      temple_yard: {
+      {
         id: 'temple_yard',
         name: 'Temple Yard',
         descriptions: [
@@ -1242,13 +718,25 @@
         items: [],
         tags: ['settlement', 'outdoors', 'sacred']
       },
-      north_wood: {
+      {
         id: 'north_wood',
         name: 'North Wood',
         descriptions: [
           {
             text: 'The village gives way to a curtain of ancient oaks. The canopy is thick overhead, filtering the light into a dim green haze. A narrow trail winds between gnarled roots and fallen logs. Birdsong seems distant here, replaced by the creak of branches and the occasional snap of a twig.',
             conditions: []
+          },
+          {
+            text: 'The forest is eerily silent. Even the wind has died. Something watches from the shadows between the trunks.',
+            conditions: [
+              { flag: 'goblins_in_woods', equals: true }
+            ]
+          },
+          {
+            text: 'Moonlight filters through the bare branches, casting long silver shadows on the forest floor. The trail is hard to follow in the dark.',
+            conditions: [
+              { timeBetween: [1200, 360] }
+            ]
           }
         ],
         exits: {
@@ -1257,7 +745,7 @@
         items: [],
         tags: ['wilderness', 'outdoors', 'forest']
       }
-    };
+    ];
 
     Game.ui.print = function(text, className = 'output-narrative') {
       const outputArea = document.getElementById('output-area');
@@ -1304,7 +792,7 @@
       const sidebar = document.getElementById('sidebar');
       const content = document.getElementById('sidebar-content');
       sidebar.style.display = 'block';
-      const bg = Game.data.backgrounds.find(b => b.id === player.background);
+      const bg = Game.engine.getBackground(player.background);
       const bgName = bg ? bg.name : '?';
       const encTier = Game.inventory.getEncumbranceTier();
       const encColor = encTier.tier === 'overloaded' ? '#ff5555' : encTier.tier !== 'unencumbered' ? '#ffb86c' : '#50fa7b';
@@ -1317,17 +805,17 @@
       h += '<div style="color:' + encColor + '">Enc: ' + encTier.tier + '</div>';
       h += '<div style="margin-top:6px;color:#ffb86c;font-size:0.85em">' + Game.clock.formatTime() + '</div>';
       if (player.equipment.weapon) {
-        const w = Game.data.items[player.equipment.weapon];
+        const w = Game.engine.getItem(player.equipment.weapon);
         if (w) h += '<div style="margin-top:6px;color:#bd93f9;font-size:0.85em">' + w.name + '</div>';
       }
       if (player.equipment.armor) {
-        const a = Game.data.items[player.equipment.armor];
+        const a = Game.engine.getItem(player.equipment.armor);
         if (a) h += '<div style="color:#bd93f9;font-size:0.85em">' + a.name + '</div>';
       }
       if (player.conditions && player.conditions.length > 0) {
         h += '<div style="margin-top:6px;color:#ff5555">';
         for (const c of player.conditions) {
-          const cd = Game.data.conditions.find(x => x.id === c.id);
+          const cd = Game.engine.getCondition(c.id);
           h += (cd ? cd.name : c.id) + '<br>';
         }
         h += '</div>';
@@ -1495,7 +983,7 @@
 
     Game.engine.take = function(itemName) {
       const player = Game.state.player;
-      const loc = Game.data.locations[player.location];
+      const loc = Game.engine.getLocation(player.location);
       if (!loc) {
         Game.ui.print('You are nowhere in particular.', 'output-error');
         return;
@@ -1507,14 +995,14 @@
       }
       
       const staticIdx = loc.items.findIndex(id => {
-        const item = Game.data.items[id];
+        const item = Game.engine.getItem(id);
         if (!item) return false;
         return item.name === itemName || (item.aliases && item.aliases.includes(itemName));
       });
       
       const locItems = Game.state.world.itemLocations[player.location] || [];
       const dynamicIdx = locItems.findIndex(id => {
-        const item = Game.data.items[id];
+        const item = Game.engine.getItem(id);
         if (!item) return false;
         return item.name === itemName || (item.aliases && item.aliases.includes(itemName));
       });
@@ -1535,7 +1023,7 @@
         return;
       }
       
-      const itemData = Game.data.items[foundId];
+      const itemData = Game.engine.getItem(foundId);
       if (!itemData.portable) {
         Game.ui.print(`You can't take the ${itemData.name}.`, 'output-error');
         return;
@@ -1579,7 +1067,7 @@
 
       for (const [eqSlot, eqItemId] of Object.entries(player.equipment)) {
         if (!eqItemId) continue;
-        const eqItem = Game.data.items[eqItemId];
+        const eqItem = Game.engine.getItem(eqItemId);
         if (eqItem && (eqItem.name === itemName || (eqItem.aliases && eqItem.aliases.includes(itemName)))) {
           Game.ui.print(`You are wearing the ${eqItem.name}. Unequip it first.`, 'output-error');
           return;
@@ -1587,7 +1075,7 @@
       }
       
       const entry = player.inventory.find(e => {
-        const item = Game.data.items[e.itemId];
+        const item = Game.engine.getItem(e.itemId);
         if (!item) return false;
         return item.name === itemName || (item.aliases && item.aliases.includes(itemName));
       });
@@ -1598,11 +1086,11 @@
       }
       
       if (entry.quantity < quantity) {
-        Game.ui.print(`You only have ${entry.quantity} ${Game.data.items[entry.itemId].name}.`, 'output-error');
+        Game.ui.print(`You only have ${entry.quantity} ${Game.engine.getItem(entry.itemId).name}.`, 'output-error');
         return;
       }
       
-      const itemData = Game.data.items[entry.itemId];
+      const itemData = Game.engine.getItem(entry.itemId);
       
       Game.inventory.removeItem(entry.itemId, quantity);
       
@@ -1631,7 +1119,7 @@
       }
       
       const entry = player.inventory.find(e => {
-        const item = Game.data.items[e.itemId];
+        const item = Game.engine.getItem(e.itemId);
         if (!item) return false;
         return item.name === itemName || (item.aliases && item.aliases.includes(itemName));
       });
@@ -1641,7 +1129,7 @@
         return;
       }
       
-      const itemData = Game.data.items[entry.itemId];
+      const itemData = Game.engine.getItem(entry.itemId);
       if (!itemData.slot) {
         Game.ui.print(`You can't equip the ${itemData.name}.`, 'output-error');
         return;
@@ -1651,7 +1139,7 @@
       
       if (player.equipment[slot]) {
         const currentItemId = player.equipment[slot];
-        const currentItem = Game.data.items[currentItemId];
+        const currentItem = Game.engine.getItem(currentItemId);
         Game.inventory.addItem(currentItemId, 1);
         Game.ui.print(`You remove the ${currentItem ? currentItem.name : currentItemId}.`, 'output-narrative');
       }
@@ -1683,7 +1171,7 @@
       
       for (const [slot, itemId] of Object.entries(player.equipment)) {
         if (!itemId) continue;
-        const item = Game.data.items[itemId];
+        const item = Game.engine.getItem(itemId);
         if (item && (item.name === itemName || (item.aliases && item.aliases.includes(itemName)))) {
           foundSlot = slot;
           foundItemId = itemId;
@@ -1701,7 +1189,7 @@
         return;
       }
       
-      const itemData = Game.data.items[foundItemId];
+      const itemData = Game.engine.getItem(foundItemId);
       
       Game.inventory.addItem(foundItemId, 1);
       player.equipment[foundSlot] = null;
@@ -1959,7 +1447,7 @@
         Game.ui.print('No active character.', 'output-error');
         return;
       }
-      const bg = Game.data.backgrounds.find(b => b.id === player.background);
+      const bg = Game.engine.getBackground(player.background);
       const bgName = bg ? bg.name : 'Unknown';
       Game.ui.print('', '');
       Game.ui.print('══════════════════════════════════════', 'separator');
@@ -1980,7 +1468,7 @@
       for (const [slot, itemId] of Object.entries(player.equipment)) {
         const label = slot.padEnd(12);
         if (itemId) {
-          const item = Game.data.items[itemId];
+          const item = Game.engine.getItem(itemId);
           Game.ui.print(`    ${label}${item ? item.name : itemId}`, 'output-narrative');
         } else {
           Game.ui.print(`    ${label}None`, 'output-system');
@@ -1990,7 +1478,7 @@
       if (player.conditions && player.conditions.length > 0) {
         Game.ui.print('  Status Effects:', 'output-narrative');
         for (const cond of player.conditions) {
-          const condData = Game.data.conditions.find(c => c.id === cond.id);
+          const condData = Game.engine.getCondition(cond.id);
           const condName = condData ? condData.name : cond.id;
           const remaining = cond.remainingMinutes > 0 ? ` (${cond.remainingMinutes} min remaining)` : '';
           Game.ui.print(`    - ${condName}${remaining}`, 'output-highlight');
@@ -2024,7 +1512,7 @@
       } else {
         Game.ui.print('  Carried Items:', 'output-narrative');
         for (const entry of player.inventory) {
-          const item = Game.data.items[entry.itemId];
+          const item = Game.engine.getItem(entry.itemId);
           const name = item ? item.name : entry.itemId;
           const weight = item ? (item.weight || 0) * entry.quantity : 0;
           const qty = entry.quantity > 1 ? ` x${entry.quantity}` : '';
@@ -2041,7 +1529,7 @@
         return;
       }
       const locId = Game.state.player.location;
-      const loc = Game.data.locations[locId];
+      const loc = Game.engine.getLocation(locId);
       if (!loc) {
         Game.ui.print('This location does not exist.', 'output-error');
         return;
@@ -2066,7 +1554,7 @@
       Game.ui.print('', '');
       Game.ui.print('Exits:', 'output-system');
       for (const [dir, exit] of Object.entries(loc.exits)) {
-        const exitLoc = Game.data.locations[exit.to];
+        const exitLoc = Game.engine.getLocation(exit.to);
         const exitName = exitLoc ? exitLoc.name : dir;
         Game.ui.print(`  ${dir.padEnd(8)} - ${exitName}`, 'output-narrative');
       }
@@ -2088,13 +1576,13 @@
       const allItems = [];
       if (loc.items && loc.items.length > 0) {
         for (const id of loc.items) {
-          const item = Game.data.items[id];
+          const item = Game.engine.getItem(id);
           if (item) allItems.push(item.name);
         }
       }
       const dynamicItems = Game.state.world.itemLocations[locId] || [];
       for (const id of dynamicItems) {
-        const item = Game.data.items[id];
+        const item = Game.engine.getItem(id);
         if (item) allItems.push(item.name);
       }
       if (allItems.length > 0) {
@@ -2110,7 +1598,7 @@
         Game.ui.print('You are overloaded and cannot move! Drop some items first.', 'output-error');
         return;
       }
-      const loc = Game.data.locations[player.location];
+      const loc = Game.engine.getLocation(player.location);
       if (!loc || !loc.exits[direction]) {
         Game.ui.print("You can't go that way.", 'output-error');
         return;
@@ -2120,7 +1608,7 @@
       if (encumbrance.tier === 'encumbered') travelMinutes = Math.ceil(travelMinutes * 1.5);
       player.location = exit.to;
       const msgs = Game.clock.advanceTime(travelMinutes);
-      const newLoc = Game.data.locations[exit.to];
+      const newLoc = Game.engine.getLocation(exit.to);
       if (newLoc) {
         Game.ui.print('', '');
         Game.ui.print(`You head ${direction}...`, 'output-narrative');
@@ -2202,7 +1690,7 @@
         Game.ui.print(monster.description, 'output-narrative');
         return;
       }
-      const item = Object.values(Game.data.items).find(i => i.name.toLowerCase() === target || i.name.toLowerCase().includes(target));
+      const item = Game.data.items.find(i => i.name.toLowerCase() === target || i.name.toLowerCase().includes(target));
       if (item) {
         Game.ui.print(item.description || `You see nothing special about the ${item.name}.`, 'output-narrative');
         return;
@@ -2316,7 +1804,7 @@
 
       displaySkills: function() {
         const draft = this.characterDraft;
-        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        const bg = Game.engine.getBackground(draft.backgroundId);
         Game.ui.print(`  Skills trained: ${draft.chosenSkills.length} / 4`, 'output-highlight');
         Game.ui.print('', '');
         for (const skill of Game.data.skills) {
@@ -2338,13 +1826,13 @@
         Game.ui.print('', '');
 
         const draft = this.characterDraft;
-        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        const bg = Game.engine.getBackground(draft.backgroundId);
 
         Game.ui.print(`  Starting Gold: ${bg.startingGold}`, 'output-highlight');
         Game.ui.print('', '');
         Game.ui.print('  Starting Items:', 'output-narrative');
         for (const item of bg.startingItems) {
-          const data = Game.data.items[item.itemId];
+          const data = Game.engine.getItem(item.itemId);
           const name = data ? data.name : item.itemId;
           Game.ui.print(`    - ${name}`, 'output-narrative');
         }
@@ -2356,7 +1844,7 @@
           Game.ui.print('    None', 'output-system');
         } else {
           for (const item of equipItems) {
-            const data = Game.data.items[item.itemId];
+            const data = Game.engine.getItem(item.itemId);
             const name = data ? data.name : item.itemId;
             Game.ui.print(`    ${item.slot}: ${name}`, 'output-narrative');
           }
@@ -2374,7 +1862,7 @@
         Game.ui.print('', '');
 
         const draft = this.characterDraft;
-        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        const bg = Game.engine.getBackground(draft.backgroundId);
         const finalStats = this.calculateFinalStats();
         const finalSkills = this.calculateFinalSkills();
         const maxHp = 10 + 2 * finalStats.endurance;
@@ -2411,7 +1899,7 @@
 
       calculateFinalStats: function() {
         const draft = this.characterDraft;
-        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        const bg = Game.engine.getBackground(draft.backgroundId);
         const final = {};
         for (const stat of STAT_NAMES) {
           final[stat] = draft.baseStats[stat] + ((bg.statBonuses && bg.statBonuses[stat]) ? bg.statBonuses[stat] : 0);
@@ -2421,7 +1909,7 @@
 
       calculateFinalSkills: function() {
         const draft = this.characterDraft;
-        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        const bg = Game.engine.getBackground(draft.backgroundId);
         const final = {};
         for (const skill of Game.data.skills) {
           let val = 0;
@@ -2434,7 +1922,7 @@
 
       createPlayer: function() {
         const draft = this.characterDraft;
-        const bg = Game.data.backgrounds.find(b => b.id === draft.backgroundId);
+        const bg = Game.engine.getBackground(draft.backgroundId);
         const finalStats = this.calculateFinalStats();
         const finalSkills = this.calculateFinalSkills();
         const maxHp = 10 + 2 * finalStats.endurance;
@@ -2496,7 +1984,7 @@
       },
 
       showOpeningScene: function() {
-        const loc = Game.data.locations.village_square;
+        const loc = Game.engine.getLocation('village_square');
       Game.ui.print(`  --- ${loc.name} ---`, 'output-highlight');
       Game.ui.print('', '');
       let defaultDesc = null;
@@ -2517,7 +2005,7 @@
 
         Game.ui.print('  Exits:', 'output-system');
         for (const [dir, exit] of Object.entries(loc.exits)) {
-          const exitLoc = Game.data.locations[exit.to];
+          const exitLoc = Game.engine.getLocation(exit.to);
           const exitName = exitLoc ? exitLoc.name : dir;
           Game.ui.print(`    ${dir.padEnd(8)} - ${exitName}`, 'output-narrative');
         }
@@ -2538,12 +2026,12 @@
         if (loc.items && loc.items.length > 0) {
           var allShownItems = [];
           for (var si = 0; si < loc.items.length; si++) {
-            var sitm = Game.data.items[loc.items[si]];
+            var sitm = Game.engine.getItem(loc.items[si]);
             if (sitm) allShownItems.push(sitm.name);
           }
           var dynItems = Game.state.world.itemLocations['village_square'] || [];
           for (var di = 0; di < dynItems.length; di++) {
-            var ditm = Game.data.items[dynItems[di]];
+            var ditm = Game.engine.getItem(dynItems[di]);
             if (ditm) allShownItems.push(ditm.name);
           }
           if (allShownItems.length > 0) {
@@ -2799,7 +2287,7 @@
       },
 
       getBackgroundSkillTotal: function(skillId) {
-        const bg = Game.data.backgrounds.find(b => b.id === this.characterDraft.backgroundId);
+        const bg = Game.engine.getBackground(this.characterDraft.backgroundId);
         if (bg && bg.skillBonuses && bg.skillBonuses[skillId]) return bg.skillBonuses[skillId];
         return 0;
       },
@@ -2969,7 +2457,7 @@
       if (!player) return;
       const expired = Game.conditions.updateConditions(player, minutes);
       for (const cond of expired) {
-        const condData = Game.data.conditions.find(c => c.id === cond.id);
+        const condData = Game.engine.getCondition(cond.id);
         const name = condData ? condData.name : cond.id;
         Game.ui.print(`[ ${name} has worn off ]`, 'output-system');
       }
@@ -2989,7 +2477,7 @@
 
     Game.inventory.addItem = function(itemId, quantity) {
       quantity = quantity || 1;
-      const item = Game.data.items[itemId];
+      const item = Game.engine.getItem(itemId);
       if (!item) return false;
       
       const inv = Game.state.player.inventory;
@@ -3033,13 +2521,13 @@
       let weight = 0;
       
       for (const entry of player.inventory) {
-        const item = Game.data.items[entry.itemId];
+        const item = Game.engine.getItem(entry.itemId);
         if (item) weight += (item.weight || 0) * entry.quantity;
       }
       
       for (const [slot, itemId] of Object.entries(player.equipment)) {
         if (itemId) {
-          const item = Game.data.items[itemId];
+          const item = Game.engine.getItem(itemId);
           if (item) weight += (item.weight || 0);
         }
       }
@@ -3097,15 +2585,15 @@
       let defense = 10 + (player.stats.agility || 0) + (player.skills.defense || 0);
       defense += Game.conditions.getModifierForStat(player, 'agility');
       if (player.equipment.armor) {
-        const armor = Game.data.items[player.equipment.armor];
+        const armor = Game.engine.getItem(player.equipment.armor);
         if (armor && armor.defenseBonus) defense += armor.defenseBonus;
       }
       if (player.equipment.offhand) {
-        const offhand = Game.data.items[player.equipment.offhand];
+        const offhand = Game.engine.getItem(player.equipment.offhand);
         if (offhand && offhand.shieldBonus) defense += offhand.shieldBonus;
       }
       if (player.equipment.cloak) {
-        const cloak = Game.data.items[player.equipment.cloak];
+        const cloak = Game.engine.getItem(player.equipment.cloak);
         if (cloak && cloak.defenseBonus) defense += cloak.defenseBonus;
       }
       return defense;
@@ -3113,28 +2601,28 @@
 
     Game.combat.getPlayerAttackStat = function() {
       const player = Game.state.player;
-      const weapon = player.equipment.weapon ? Game.data.items[player.equipment.weapon] : null;
+      const weapon = player.equipment.weapon ? Game.engine.getItem(player.equipment.weapon) : null;
       if (weapon && weapon.stat) return weapon.stat;
       return 'might';
     };
 
     Game.combat.getPlayerAttackSkill = function() {
       const player = Game.state.player;
-      const weapon = player.equipment.weapon ? Game.data.items[player.equipment.weapon] : null;
+      const weapon = player.equipment.weapon ? Game.engine.getItem(player.equipment.weapon) : null;
       if (weapon && weapon.skill) return weapon.skill;
       return 'melee';
     };
 
     Game.combat.getPlayerWeaponDamage = function() {
       const player = Game.state.player;
-      const weapon = player.equipment.weapon ? Game.data.items[player.equipment.weapon] : null;
+      const weapon = player.equipment.weapon ? Game.engine.getItem(player.equipment.weapon) : null;
       if (weapon && weapon.damage) return weapon.damage;
       return '1d4';
     };
 
     Game.combat.getPlayerWeaponBonus = function() {
       const player = Game.state.player;
-      const weapon = player.equipment.weapon ? Game.data.items[player.equipment.weapon] : null;
+      const weapon = player.equipment.weapon ? Game.engine.getItem(player.equipment.weapon) : null;
       if (weapon && weapon.attackBonus) return weapon.attackBonus;
       return 0;
     };
@@ -3181,7 +2669,7 @@
       const statVal = (player.stats[attackStat] || 0) + Game.conditions.getModifierForStat(player, attackStat);
       const skillVal = (player.skills[attackSkill] || 0) + Game.conditions.getModifierForStat(player, attackSkill);
       const attackTotal = die + statVal + skillVal + weaponBonus;
-      const weapon = player.equipment.weapon ? Game.data.items[player.equipment.weapon] : null;
+      const weapon = player.equipment.weapon ? Game.engine.getItem(player.equipment.weapon) : null;
       const weaponName = weapon ? weapon.name : 'bare fists';
       Game.ui.print('', '');
       if (die === 20) {
@@ -3352,7 +2840,7 @@
         if (roll <= entry.chance) {
           const qty = entry.quantity ? Game.checks.rollDice(entry.quantity.toString()).total : 1;
           Game.inventory.addItem(entry.itemId, qty);
-          const itemData = Game.data.items[entry.itemId];
+          const itemData = Game.engine.getItem(entry.itemId);
           const name = itemData ? itemData.name : entry.itemId;
           const qtyText = qty > 1 ? ' x' + qty : '';
           droppedItems.push(name + qtyText);
@@ -3430,7 +2918,7 @@
       if (!actor || !actor.conditions || actor.conditions.length === 0) return 0;
       let total = 0;
       for (const cond of actor.conditions) {
-        const condData = Game.data.conditions.find(c => c.id === cond.id);
+        const condData = Game.engine.getCondition(cond.id);
         if (condData && condData.modifiers && condData.modifiers[stat] !== undefined) {
           total += condData.modifiers[stat];
         }
@@ -3496,7 +2984,7 @@
       let total = 0;
       const details = [];
       for (const cond of actor.conditions) {
-        const condData = Game.data.conditions.find(c => c.id === cond.id);
+        const condData = Game.engine.getCondition(cond.id);
         if (condData && condData.modifiers) {
           for (const [k, v] of Object.entries(condData.modifiers)) {
             total += v;
@@ -3818,7 +3306,7 @@
 
     Game.schedules.getSchedule = function(scheduleId) {
       if (!scheduleId) return null;
-      return Game.data.schedules.find(s => s.id === scheduleId) || null;
+      return Game.engine.getSchedule(scheduleId) || null;
     };
 
     Game.schedules.getCurrentMinutes = function(clock) {
@@ -3942,11 +3430,11 @@
           Game.state.npcLocations[npc.id] = newLoc;
           const playerLoc = Game.state.player ? Game.state.player.location : null;
           if (oldLoc === playerLoc) {
-            const locData = Game.data.locations[oldLoc];
+            const locData = Game.engine.getLocation(oldLoc);
             messages.push(npc.name + ' leaves' + (locData ? ' (' + locData.name + ')' : '') + '.');
           }
           if (newLoc === playerLoc) {
-            const locData = Game.data.locations[newLoc];
+            const locData = Game.engine.getLocation(newLoc);
             const activity = this.getActivity(npc, Game.state.clock);
             let msg = npc.name + ' arrives' + (locData ? ' at ' + locData.name : '');
             if (activity) msg += ', ' + activity;
@@ -3979,8 +3467,8 @@
       npcAttitudes: {}
     };
 
-    Game.data.dialogues = {
-      borin_dialogue: {
+    Game.data.dialogues = [
+      {
         id: 'borin_dialogue',
         npcId: 'borin_shopkeeper',
         nodes: [
@@ -4083,7 +3571,57 @@
           }
         ]
       }
+    ];
+
+    Game.data.stats = STAT_NAMES.map(function(name) {
+      return { id: name, name: name.charAt(0).toUpperCase() + name.slice(1) };
+    });
+
+    Game.data.quests = [];
+
+    Game.index.build = function() {
+      const collections = [
+        ['items', 'itemsById'],
+        ['locations', 'locationsById'],
+        ['npcs', 'npcsById'],
+        ['monsters', 'monstersById'],
+        ['schedules', 'schedulesById'],
+        ['conditions', 'conditionsById'],
+        ['spells', 'spellsById'],
+        ['dialogues', 'dialoguesById'],
+        ['backgrounds', 'backgroundsById'],
+        ['skills', 'skillsById'],
+        ['stats', 'statsById'],
+        ['quests', 'questsById']
+      ];
+      for (const [dataKey, indexKey] of collections) {
+        const arr = Game.data[dataKey];
+        const map = {};
+        if (Array.isArray(arr)) {
+          for (const el of arr) {
+            if (el && el.id != null) {
+              map[el.id] = el;
+            }
+          }
+        }
+        Game.index[indexKey] = map;
+      }
     };
+
+    Game.index.build();
+
+    Game.engine.getItem = function(id) { return Game.index.itemsById[id]; };
+    Game.engine.getLocation = function(id) { return Game.index.locationsById[id]; };
+    Game.engine.getNpc = function(id) { return Game.index.npcsById[id]; };
+    Game.engine.getMonster = function(id) { return Game.index.monstersById[id]; };
+    Game.engine.getSchedule = function(id) { return Game.index.schedulesById[id]; };
+    Game.engine.getCondition = function(id) { return Game.index.conditionsById[id]; };
+    Game.engine.getSpell = function(id) { return Game.index.spellsById[id]; };
+    Game.engine.getDialogue = function(id) { return Game.index.dialoguesById[id]; };
+    Game.engine.getBackground = function(id) { return Game.index.backgroundsById[id]; };
+    Game.engine.getSkill = function(id) { return Game.index.skillsById[id]; };
+    Game.engine.getStat = function(id) { return Game.index.statsById[id]; };
+    Game.engine.getQuest = function(id) { return Game.index.questsById[id]; };
 
     Game.engine.applyEffects = function(effects) {
       if (!effects || !Array.isArray(effects)) return;
@@ -4103,7 +3641,7 @@
           player.gold += (effect.quantity || 1);
           Game.ui.print('[Received: ' + (effect.quantity || 1) + ' gold]', 'output-highlight');
         } else if (effect.giveItem) {
-          var itemData = Game.data.items[effect.giveItem];
+          var itemData = Game.engine.getItem(effect.giveItem);
           if (!itemData) {
             if (effect.giveItem === 'charm_of_protection') {
               Game.inventory.addItem('charm_of_protection', effect.quantity || 1);
@@ -4117,12 +3655,12 @@
           }
         } else if (effect.removeItem) {
           Game.inventory.removeItem(effect.removeItem, effect.quantity || 1);
-          const itemData = Game.data.items[effect.removeItem];
+          const itemData = Game.engine.getItem(effect.removeItem);
           const name = itemData ? itemData.name : effect.removeItem;
           Game.ui.print(`[Lost: ${name}]`, 'output-system');
         } else if (effect.addCondition) {
           Game.conditions.addCondition(player, effect.addCondition, 1, effect.durationMinutes || 180);
-          const condData = Game.data.conditions.find(c => c.id === effect.addCondition);
+          const condData = Game.engine.getCondition(effect.addCondition);
           const name = condData ? condData.name : effect.addCondition;
           Game.ui.print(`[Gained condition: ${name}]`, 'output-highlight');
         } else if (effect.changeReputation) {
@@ -4174,7 +3712,7 @@
           }
         }
         if (cond.npcAtLocation !== undefined) {
-          const npc = Game.data.npcs.find(n => n.id === cond.npcAtLocation.npcId);
+          const npc = Game.engine.getNpc(cond.npcAtLocation.npcId);
           if (!npc) return false;
           const loc = Game.schedules.resolveNPCLocation(npc);
           if (loc !== cond.npcAtLocation.locationId) return false;
@@ -4198,7 +3736,7 @@
     };
 
     Game.dialogue.startDialogue = function(dialogueId) {
-      const dialogue = Game.data.dialogues[dialogueId];
+      const dialogue = Game.engine.getDialogue(dialogueId);
       if (!dialogue) {
         Game.ui.print('No dialogue available.', 'output-error');
         return;
@@ -4282,7 +3820,7 @@
 
     Game.dialogue.findDialogueForNPC = function(npc) {
       if (!npc || !npc.dialogueId) return null;
-      return Game.data.dialogues[npc.dialogueId] || null;
+      return Game.engine.getDialogue(npc.dialogueId) || null;
     };
 
     Game.engine.attitudeSystem = {
@@ -4456,6 +3994,7 @@
     };
 
     Game.init = function() {
+      Game.index.build();
       this.clock.init();
       this.inventory.init();
       this.combat.init();
