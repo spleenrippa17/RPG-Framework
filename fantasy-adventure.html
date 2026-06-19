@@ -441,6 +441,7 @@
       conditions: {},
       combat: {},
       dialogue: {},
+      effects: {},
       utilities: {}
     };
 
@@ -3752,57 +3753,122 @@
     Game.engine.getStat = function(id) { return Game.index.statsById[id]; };
     Game.engine.getQuest = function(id) { return Game.index.questsById[id]; };
 
-    Game.engine.applyEffects = function(effects) {
+    Game.effects.apply = function(effects, context) {
       if (!effects || !Array.isArray(effects)) return;
-      const player = Game.state.player;
+      const ctx = context || {};
+      const player = ctx.player || Game.state.player;
       let flagChanged = false;
+
+      const giveItem = function(itemId, quantity) {
+        const qty = quantity || 1;
+        if (itemId === 'gold_coins') {
+          if (!player.gold) player.gold = 0;
+          player.gold += qty;
+          Game.ui.print('[Received: ' + qty + ' gold]', 'output-highlight');
+          return;
+        }
+        const itemData = Game.engine.getItem(itemId);
+        if (!itemData) {
+          Game.ui.print('[Item not found: ' + itemId + ']', 'output-error');
+          return;
+        }
+        Game.inventory.addItem(itemId, qty);
+        Game.ui.print('[Received: ' + itemData.name + ']', 'output-highlight');
+      };
+
+      const removeItem = function(itemId, quantity) {
+        Game.inventory.removeItem(itemId, quantity || 1);
+        const itemData = Game.engine.getItem(itemId);
+        const name = itemData ? itemData.name : itemId;
+        Game.ui.print(`[Lost: ${name}]`, 'output-system');
+      };
+
+      const addCondition = function(conditionId, remainingMinutes) {
+        Game.conditions.addCondition(player, conditionId, 1, remainingMinutes || 180);
+        const condData = Game.engine.getCondition(conditionId);
+        const name = condData ? condData.name : conditionId;
+        Game.ui.print(`[Gained condition: ${name}]`, 'output-highlight');
+      };
+
+      const removeCondition = function(conditionId) {
+        Game.conditions.removeCondition(player, conditionId);
+        Game.ui.print(`[Condition removed: ${conditionId}]`, 'output-system');
+      };
+
+      const changeReputation = function(faction, amount) {
+        if (!player.reputation) player.reputation = {};
+        const current = player.reputation[faction] || 0;
+        player.reputation[faction] = current + (amount || 1);
+        Game.ui.print(`[Reputation with ${faction}: ${current} → ${player.reputation[faction]}]`, 'output-system');
+      };
+
       for (const effect of effects) {
-        if (effect.setFlag) {
+        if (effect.type) {
+          switch (effect.type) {
+            case 'setFlag':
+              Game.state.flags[effect.key] = effect.value !== undefined ? effect.value : true;
+              Game.ui.print(`[Flag set: ${effect.key}]`, 'output-system');
+              flagChanged = true;
+              break;
+            case 'clearFlag':
+              Game.state.flags[effect.key] = false;
+              Game.ui.print(`[Flag cleared: ${effect.key}]`, 'output-system');
+              flagChanged = true;
+              break;
+            case 'setVar':
+              Game.state.variables[effect.key] = effect.value;
+              Game.ui.print(`[${effect.key} = ${effect.value}]`, 'output-system');
+              break;
+            case 'addVar': {
+              const current = Game.state.variables[effect.key] || 0;
+              Game.state.variables[effect.key] = current + (effect.amount || 1);
+              Game.ui.print(`[${effect.key}: ${current} → ${Game.state.variables[effect.key]}]`, 'output-system');
+              break;
+            }
+            case 'giveItem':
+              giveItem(effect.itemId, effect.quantity);
+              break;
+            case 'removeItem':
+              removeItem(effect.itemId, effect.quantity);
+              break;
+            case 'changeReputation':
+              changeReputation(effect.faction, effect.amount);
+              break;
+            case 'addCondition':
+              addCondition(effect.conditionId, effect.remainingMinutes);
+              break;
+            case 'removeCondition':
+              removeCondition(effect.conditionId);
+              break;
+          }
+        } else if (effect.setFlag) {
           Game.state.flags[effect.setFlag] = effect.value !== undefined ? effect.value : true;
           Game.ui.print(`[Flag set: ${effect.setFlag}]`, 'output-system');
           flagChanged = true;
+          if (effect.durationMinutes) {
+            addCondition(effect.setFlag, effect.durationMinutes);
+          }
         } else if (effect.addVariable) {
           const current = Game.state.variables[effect.addVariable] || 0;
           Game.state.variables[effect.addVariable] = current + (effect.amount || 1);
           Game.ui.print(`[${effect.addVariable}: ${current} → ${Game.state.variables[effect.addVariable]}]`, 'output-system');
-        } else if (effect.giveItem === 'gold_coins') {
-          if (!player.gold) player.gold = 0;
-          player.gold += (effect.quantity || 1);
-          Game.ui.print('[Received: ' + (effect.quantity || 1) + ' gold]', 'output-highlight');
         } else if (effect.giveItem) {
-          var itemData = Game.engine.getItem(effect.giveItem);
-          if (!itemData) {
-            if (effect.giveItem === 'charm_of_protection') {
-              Game.inventory.addItem('charm_of_protection', effect.quantity || 1);
-              Game.ui.print('[Received: charm of protection]', 'output-highlight');
-            } else {
-              Game.ui.print('[Item not found: ' + effect.giveItem + ']', 'output-error');
-            }
-          } else {
-            Game.inventory.addItem(effect.giveItem, effect.quantity || 1);
-            Game.ui.print('[Received: ' + itemData.name + ']', 'output-highlight');
-          }
+          giveItem(effect.giveItem, effect.quantity);
         } else if (effect.removeItem) {
-          Game.inventory.removeItem(effect.removeItem, effect.quantity || 1);
-          const itemData = Game.engine.getItem(effect.removeItem);
-          const name = itemData ? itemData.name : effect.removeItem;
-          Game.ui.print(`[Lost: ${name}]`, 'output-system');
+          removeItem(effect.removeItem, effect.quantity);
         } else if (effect.addCondition) {
-          Game.conditions.addCondition(player, effect.addCondition, 1, effect.durationMinutes || 180);
-          const condData = Game.engine.getCondition(effect.addCondition);
-          const name = condData ? condData.name : effect.addCondition;
-          Game.ui.print(`[Gained condition: ${name}]`, 'output-highlight');
+          addCondition(effect.addCondition, effect.durationMinutes);
         } else if (effect.changeReputation) {
-          if (!player.reputation) player.reputation = {};
-          const faction = effect.changeReputation.faction;
-          const current = player.reputation[faction] || 0;
-          player.reputation[faction] = current + (effect.changeReputation.amount || 1);
-          Game.ui.print(`[Reputation with ${faction}: ${current} → ${player.reputation[faction]}]`, 'output-system');
+          changeReputation(effect.changeReputation.faction, effect.changeReputation.amount);
         }
       }
       if (flagChanged) {
         Game.storage.autoSave();
       }
+    };
+
+    Game.engine.applyEffects = function(effects) {
+      Game.effects.apply(effects);
     };
 
     Game.engine.evaluateConditions = function(conditions) {
@@ -3837,7 +3903,7 @@
       }
       Game.state.currentNode = node;
       if (node.effects) {
-        Game.engine.applyEffects(node.effects);
+        Game.effects.apply(node.effects);
       }
       Game.ui.print('', '');
       Game.ui.print(node.text, 'output-narrative');
@@ -4035,12 +4101,7 @@
       } else {
         Game.ui.print(spell.successText || 'The spell succeeds!', 'output-highlight');
         if (spell.effects) {
-          for (const effect of spell.effects) {
-            if (effect.setFlag) {
-              Game.state.flags[effect.setFlag] = effect.value !== undefined ? effect.value : true;
-              if (effect.durationMinutes) Game.conditions.addCondition(player, effect.setFlag, 1, effect.durationMinutes);
-            }
-          }
+          Game.effects.apply(spell.effects);
         }
       }
       Game.ui.updateSidebar();
