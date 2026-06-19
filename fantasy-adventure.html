@@ -1539,7 +1539,7 @@
       let defaultDesc = null;
       for (const desc of loc.descriptions) {
         if (desc.conditions && desc.conditions.length > 0) {
-          if (Game.engine.evaluateConditions(desc.conditions)) {
+          if (Game.conditions.matches(desc.conditions)) {
             Game.ui.print(`${desc.text}`, 'output-narrative');
             defaultDesc = null;
             break;
@@ -1990,7 +1990,7 @@
       let defaultDesc = null;
       for (const desc of loc.descriptions) {
         if (desc.conditions && desc.conditions.length > 0) {
-          if (Game.engine.evaluateConditions(desc.conditions)) {
+          if (Game.conditions.matches(desc.conditions)) {
             Game.ui.print(`${desc.text}`, 'output-narrative');
             defaultDesc = null;
             break;
@@ -2926,6 +2926,73 @@
       return total;
     };
 
+    Game.conditions.matches = function(conditions, context) {
+      if (!conditions || !Array.isArray(conditions)) return true;
+      if (conditions.length === 0) return true;
+
+      const ctx = context || {};
+      const player = ctx.player || Game.state.player || {};
+      const clock = ctx.clock || Game.state.clock || { hour: 0, minute: 0 };
+
+      let flags = ctx.flags;
+      if (!flags) {
+        const stateFlags = Game.state.flags || {};
+        const playerFlags = (player && player.flags) || {};
+        flags = Object.assign({}, playerFlags, stateFlags);
+      }
+
+      for (const cond of conditions) {
+        if (cond.flag !== undefined) {
+          const raw = flags[cond.flag];
+          const flagValue = raw === undefined ? false : raw;
+          if (cond.equals !== undefined) {
+            if (flagValue !== cond.equals) return false;
+          } else {
+            if (!flagValue) return false;
+          }
+        }
+        if (cond.variable !== undefined) {
+          const varValue = (Game.state.variables && Game.state.variables[cond.variable]) || 0;
+          if (cond.equals !== undefined && varValue !== cond.equals) return false;
+          if (cond.gt !== undefined && !(varValue > cond.gt)) return false;
+          if (cond.gte !== undefined && !(varValue >= cond.gte)) return false;
+          if (cond.lt !== undefined && !(varValue < cond.lt)) return false;
+          if (cond.lte !== undefined && !(varValue <= cond.lte)) return false;
+        }
+        if (cond.hasItem !== undefined) {
+          if (!Game.inventory.hasItem(cond.hasItem)) return false;
+        }
+        if (cond.lacksItem !== undefined) {
+          if (Game.inventory.hasItem(cond.lacksItem)) return false;
+        }
+        if (cond.timeBetween !== undefined) {
+          const currentMinutes = clock.hour * 60 + clock.minute;
+          const start = Array.isArray(cond.timeBetween) ? cond.timeBetween[0] : cond.timeBetween.start;
+          const end = Array.isArray(cond.timeBetween) ? cond.timeBetween[1] : cond.timeBetween.end;
+          if (start <= end) {
+            if (currentMinutes < start || currentMinutes >= end) return false;
+          } else {
+            if (currentMinutes >= end && currentMinutes < start) return false;
+          }
+        }
+        if (cond.npcAtLocation !== undefined) {
+          const npc = Game.engine.getNpc(cond.npcAtLocation.npcId);
+          if (!npc) return false;
+          const loc = Game.schedules.resolveNPCLocation(npc);
+          if (loc !== cond.npcAtLocation.locationId) return false;
+        }
+        if (cond.reputation !== undefined) {
+          const repValue = (player.reputation && player.reputation[cond.reputation]) || 0;
+          if (cond.equals !== undefined && repValue !== cond.equals) return false;
+          if (cond.gt !== undefined && !(repValue > cond.gt)) return false;
+          if (cond.gte !== undefined && !(repValue >= cond.gte)) return false;
+          if (cond.lt !== undefined && !(repValue < cond.lt)) return false;
+          if (cond.lte !== undefined && !(repValue <= cond.lte)) return false;
+        }
+      }
+      return true;
+    };
+
     Game.checks.rollDice = function(expression) {
       if (!expression) return { total: 0, rolls: [], modifier: 0, expression: '' };
       const expr = expression.toString().trim().toLowerCase();
@@ -3677,56 +3744,7 @@
     };
 
     Game.engine.evaluateConditions = function(conditions) {
-      if (!conditions || !Array.isArray(conditions)) return true;
-      if (conditions.length === 0) return true;
-      const player = Game.state.player;
-      const clock = Game.state.clock;
-      for (const cond of conditions) {
-        if (cond.flag !== undefined) {
-          const flagValue = Game.state.flags[cond.flag];
-          if (cond.equals !== undefined && flagValue !== cond.equals) return false;
-          if (cond.equals === undefined && !flagValue) return false;
-        }
-        if (cond.variable !== undefined) {
-          const varValue = Game.state.variables[cond.variable] || 0;
-          if (cond.equals !== undefined && varValue !== cond.equals) return false;
-          if (cond.gt !== undefined && !(varValue > cond.gt)) return false;
-          if (cond.gte !== undefined && !(varValue >= cond.gte)) return false;
-          if (cond.lt !== undefined && !(varValue < cond.lt)) return false;
-          if (cond.lte !== undefined && !(varValue <= cond.lte)) return false;
-        }
-        if (cond.hasItem !== undefined) {
-          if (!Game.inventory.hasItem(cond.hasItem)) return false;
-        }
-        if (cond.lacksItem !== undefined) {
-          if (Game.inventory.hasItem(cond.lacksItem)) return false;
-        }
-        if (cond.timeBetween !== undefined) {
-          const currentMinutes = clock.hour * 60 + clock.minute;
-          const start = Array.isArray(cond.timeBetween) ? cond.timeBetween[0] : cond.timeBetween.start;
-          const end = Array.isArray(cond.timeBetween) ? cond.timeBetween[1] : cond.timeBetween.end;
-          if (start <= end) {
-            if (currentMinutes < start || currentMinutes >= end) return false;
-          } else {
-            if (currentMinutes >= end && currentMinutes < start) return false;
-          }
-        }
-        if (cond.npcAtLocation !== undefined) {
-          const npc = Game.engine.getNpc(cond.npcAtLocation.npcId);
-          if (!npc) return false;
-          const loc = Game.schedules.resolveNPCLocation(npc);
-          if (loc !== cond.npcAtLocation.locationId) return false;
-        }
-        if (cond.reputation !== undefined) {
-          const repValue = (player.reputation && player.reputation[cond.reputation]) || 0;
-          if (cond.equals !== undefined && repValue !== cond.equals) return false;
-          if (cond.gt !== undefined && !(repValue > cond.gt)) return false;
-          if (cond.gte !== undefined && !(repValue >= cond.gte)) return false;
-          if (cond.lt !== undefined && !(repValue < cond.lt)) return false;
-          if (cond.lte !== undefined && !(repValue <= cond.lte)) return false;
-        }
-      }
-      return true;
+      return Game.conditions.matches(conditions);
     };
 
     Game.dialogue.init = function() {
@@ -3762,7 +3780,7 @@
       Game.ui.print('', '');
       Game.ui.print(node.text, 'output-narrative');
       Game.ui.print('', '');
-      const availableResponses = node.responses.filter(r => !r.conditions || Game.engine.evaluateConditions(r.conditions));
+      const availableResponses = node.responses.filter(r => !r.conditions || Game.conditions.matches(r.conditions));
       if (availableResponses.length === 0) {
         this.endDialogue();
         return;
@@ -3782,7 +3800,7 @@
         this.endDialogue();
         return;
       }
-      const availableResponses = node.responses.filter(r => !r.conditions || Game.engine.evaluateConditions(r.conditions));
+      const availableResponses = node.responses.filter(r => !r.conditions || Game.conditions.matches(r.conditions));
       if (normalized === 'exit' || normalized === 'quit' || normalized === 'end') {
         this.endDialogue();
         return;
