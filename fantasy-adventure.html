@@ -442,8 +442,11 @@
       combat: {},
       dialogue: {},
       effects: {},
-      utilities: {}
+      utilities: {},
+      validation: {}
     };
+
+    globalThis.Game = Game;
 
     const GameModes = {
       TITLE: "title",
@@ -978,7 +981,8 @@
         { name: 'reset', description: 'Erase all saves and restart' },
         { name: 'help', description: 'Show available commands' },
         { name: 'clear', description: 'Clear the screen' },
-        { name: 'about', description: 'Display game information' }
+        { name: 'about', description: 'Display game information' },
+        { name: 'validate', description: 'Run data integrity validation and print a summary (dev)' }
       ]
     };
 
@@ -1268,6 +1272,8 @@
         Game.ui.clearOutput();
       } else if (normalized === 'about') {
         Game.ui.showAbout();
+      } else if (normalized === 'validate') {
+        Game.validation.validateData();
       } else if (normalized === 'look' || normalized === 'l') {
         this.look();
       } else if (normalized === 'north' || normalized === 'n') {
@@ -3754,6 +3760,213 @@
     Game.engine.getSkill = function(id) { return Game.index.skillsById[id]; };
     Game.engine.getStat = function(id) { return Game.index.statsById[id]; };
     Game.engine.getQuest = function(id) { return Game.index.questsById[id]; };
+
+    Game.validation.validateData = function() {
+      const issues = [];
+      const collections = [
+        ['items', 'itemsById'],
+        ['locations', 'locationsById'],
+        ['npcs', 'npcsById'],
+        ['monsters', 'monstersById'],
+        ['schedules', 'schedulesById'],
+        ['conditions', 'conditionsById'],
+        ['spells', 'spellsById'],
+        ['dialogues', 'dialoguesById'],
+        ['backgrounds', 'backgroundsById'],
+        ['skills', 'skillsById'],
+        ['stats', 'statsById'],
+        ['quests', 'questsById']
+      ];
+
+      const addIssue = function(severity, collection, id, problem) {
+        issues.push({ severity: severity, collection: collection, id: id, problem: problem });
+      };
+
+      const checkItemRef = function(itemId, collection, ownerId, context) {
+        if (itemId == null || itemId === '') return;
+        if (itemId === 'gold_coins') return;
+        if (!Game.index.itemsById[itemId]) {
+          addIssue('WARNING', collection, ownerId, 'references unknown item "' + itemId + '" (' + context + ')');
+        }
+      };
+
+      const checkEffects = function(effects, collection, ownerId) {
+        if (!Array.isArray(effects)) return;
+        for (const effect of effects) {
+          if (!effect) continue;
+          if (effect.giveItem) checkItemRef(effect.giveItem, collection, ownerId, 'effect giveItem');
+          if (effect.itemId && (effect.type === 'giveItem' || effect.type === 'removeItem')) {
+            checkItemRef(effect.itemId, collection, ownerId, 'effect ' + effect.type);
+          }
+          if (effect.type === 'addCondition' && effect.conditionId) {
+            if (!Game.index.conditionsById[effect.conditionId]) {
+              addIssue('WARNING', collection, ownerId, 'effect addCondition references unknown condition "' + effect.conditionId + '"');
+            }
+          }
+          if (typeof effect.addCondition === 'string') {
+            if (!Game.index.conditionsById[effect.addCondition]) {
+              addIssue('WARNING', collection, ownerId, 'effect addCondition references unknown condition "' + effect.addCondition + '"');
+            }
+          }
+        }
+      };
+
+      for (const [dataKey, indexKey] of collections) {
+        const arr = Game.data[dataKey];
+        if (!Array.isArray(arr)) continue;
+        const seen = {};
+        for (const el of arr) {
+          if (!el || el.id == null) {
+            addIssue('CRITICAL', dataKey, '(missing id)', 'element is missing an "id" field');
+            continue;
+          }
+          if (seen[el.id] !== undefined) {
+            addIssue('CRITICAL', dataKey, el.id, 'duplicate id (appears more than once in ' + dataKey + ')');
+          } else {
+            seen[el.id] = true;
+          }
+        }
+      }
+
+      for (const loc of Game.data.locations) {
+        if (!loc || loc.id == null) continue;
+        if (Array.isArray(loc.items)) {
+          for (const itemId of loc.items) {
+            checkItemRef(itemId, 'locations', loc.id, 'location.items');
+          }
+        }
+        if (loc.exits && typeof loc.exits === 'object') {
+          for (const dir of Object.keys(loc.exits)) {
+            const exit = loc.exits[dir];
+            if (exit && exit.to != null && !Game.engine.getLocation(exit.to)) {
+              addIssue('CRITICAL', 'locations', loc.id, 'exit "' + dir + '" points to unknown location "' + exit.to + '"');
+            }
+          }
+        }
+      }
+
+      for (const npc of Game.data.npcs) {
+        if (!npc || npc.id == null) continue;
+        if (npc.scheduleId != null && !Game.engine.getSchedule(npc.scheduleId)) {
+          addIssue('WARNING', 'npcs', npc.id, 'references unknown schedule "' + npc.scheduleId + '"');
+        }
+        if (npc.dialogueId != null && !Game.engine.getDialogue(npc.dialogueId)) {
+          addIssue('WARNING', 'npcs', npc.id, 'references unknown dialogue "' + npc.dialogueId + '"');
+        }
+        if (npc.defaultLocation != null && !Game.engine.getLocation(npc.defaultLocation)) {
+          addIssue('WARNING', 'npcs', npc.id, 'defaultLocation references unknown location "' + npc.defaultLocation + '"');
+        }
+      }
+
+      for (const monster of Game.data.monsters) {
+        if (!monster || monster.id == null) continue;
+        if (monster.scheduleId != null && !Game.engine.getSchedule(monster.scheduleId)) {
+          addIssue('WARNING', 'monsters', monster.id, 'references unknown schedule "' + monster.scheduleId + '"');
+        }
+        if (monster.defaultLocation != null && !Game.engine.getLocation(monster.defaultLocation)) {
+          addIssue('WARNING', 'monsters', monster.id, 'defaultLocation references unknown location "' + monster.defaultLocation + '"');
+        }
+        if (Array.isArray(monster.loot)) {
+          for (const entry of monster.loot) {
+            if (entry && entry.itemId) checkItemRef(entry.itemId, 'monsters', monster.id, 'loot');
+          }
+        }
+      }
+
+      for (const schedule of Game.data.schedules) {
+        if (!schedule || schedule.id == null) continue;
+        if (Array.isArray(schedule.entries)) {
+          for (const entry of schedule.entries) {
+            if (entry && entry.location != null && !Game.engine.getLocation(entry.location)) {
+              addIssue('CRITICAL', 'schedules', schedule.id, 'entry references unknown location "' + entry.location + '"');
+            }
+            if (entry && entry.npcId != null && !Game.engine.getNpc(entry.npcId)) {
+              addIssue('WARNING', 'schedules', schedule.id, 'entry references unknown npc "' + entry.npcId + '"');
+            }
+          }
+        }
+      }
+
+      for (const dialogue of Game.data.dialogues) {
+        if (!dialogue || dialogue.id == null) continue;
+        if (dialogue.npcId != null && !Game.engine.getNpc(dialogue.npcId)) {
+          addIssue('WARNING', 'dialogues', dialogue.id, 'npcId references unknown npc "' + dialogue.npcId + '"');
+        }
+        const nodeIds = {};
+        if (Array.isArray(dialogue.nodes)) {
+          for (const node of dialogue.nodes) {
+            if (node && node.id != null) nodeIds[node.id] = true;
+          }
+          for (const node of dialogue.nodes) {
+            if (!node || node.id == null) continue;
+            checkEffects(node.effects, 'dialogues', dialogue.id + '/' + node.id);
+            if (Array.isArray(node.responses)) {
+              for (const response of node.responses) {
+                if (!response) continue;
+                if (response.next != null && !nodeIds[response.next]) {
+                  addIssue('CRITICAL', 'dialogues', dialogue.id, 'node "' + node.id + '" response next points to unknown node "' + response.next + '"');
+                }
+                checkEffects(response.effects, 'dialogues', dialogue.id + '/' + node.id);
+              }
+            }
+          }
+        }
+      }
+
+      for (const spell of Game.data.spells) {
+        if (!spell || spell.id == null) continue;
+        checkEffects(spell.effects, 'spells', spell.id);
+      }
+
+      for (const bg of Game.data.backgrounds) {
+        if (!bg || bg.id == null) continue;
+        if (Array.isArray(bg.startingItems)) {
+          for (const entry of bg.startingItems) {
+            if (entry && entry.itemId) checkItemRef(entry.itemId, 'backgrounds', bg.id, 'startingItems');
+          }
+        }
+      }
+
+      const out = function(text, className) {
+        Game.ui.print(text, className || 'output-system');
+        if (typeof console !== 'undefined' && console.log) {
+          console.log(text);
+        }
+      };
+
+      const critical = issues.filter(i => i.severity === 'CRITICAL');
+      const warnings = issues.filter(i => i.severity === 'WARNING');
+
+      out('', '');
+      out('═══════════════════════════════════════', 'separator');
+      out('DATA VALIDATION', 'output-highlight');
+      out('═══════════════════════════════════════', 'separator');
+      out('', '');
+
+      if (issues.length === 0) {
+        out('All data valid.', 'output-highlight');
+      } else {
+        if (critical.length > 0) {
+          out('CRITICAL (' + critical.length + '):', 'output-error');
+          for (const issue of critical) {
+            out('  [' + issue.collection + '] ' + issue.id + ': ' + issue.problem, 'output-error');
+          }
+          out('', '');
+        }
+        if (warnings.length > 0) {
+          out('WARNING (' + warnings.length + '):', 'output-system');
+          for (const issue of warnings) {
+            out('  [' + issue.collection + '] ' + issue.id + ': ' + issue.problem, 'output-system');
+          }
+          out('', '');
+        }
+      }
+
+      const finalLine = 'Validation complete: ' + critical.length + ' critical, ' + warnings.length + ' warnings.';
+      out(finalLine, issues.length === 0 ? 'output-highlight' : 'output-system');
+
+      return { critical: critical.length, warnings: warnings.length, issues: issues };
+    };
 
     Game.effects.apply = function(effects, context) {
       if (!effects || !Array.isArray(effects)) return;
